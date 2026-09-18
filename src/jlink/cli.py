@@ -227,11 +227,10 @@ def _link(args: argparse.Namespace) -> None:
     left, right, on, blockers = _inputs(args)
     from .linker import Linker
 
-    linker = Linker(entity=args.entity, definition=args.definition, on=on, blockers=blockers)
+    linker = Linker(entity=args.entity, definition=args.definition, on=on, blockers=blockers,
+                    api=args.api, model=args.model, cache=not args.no_cache, concurrency=args.concurrency)
     result = linker.link(left, right, left_id=args.left_id, right_id=args.right_id, how=args.how,
-                         threshold=args.threshold, min_margin=args.min_margin, budget=args.budget,
-                         api=args.api, model=args.model, cache=not args.no_cache,
-                         concurrency=args.concurrency)
+                         threshold=args.threshold, min_margin=args.min_margin, budget=args.budget)
     if args.output:
         write_table(result.links, args.output)
     else:

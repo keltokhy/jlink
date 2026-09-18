@@ -25,14 +25,15 @@ def downstream(monkeypatch):
                                    report=lambda: "# Firm linkage\n\nOne link.\n")
 
     class Linker:
-        def __init__(self, *, entity, definition, on, blockers):
-            calls.constructor = dict(entity=entity, definition=definition, on=on, blockers=blockers)
+        def __init__(self, *, entity, definition, on, blockers, api=None, model=None, cache=True,
+                     concurrency=32):
+            calls.constructor = dict(entity=entity, definition=definition, on=on, blockers=blockers,
+                                     api=api, model=model, cache=cache, concurrency=concurrency)
 
         def link(self, left, right, *, left_id=None, right_id=None, how="one-to-one", threshold=0.5,
-                 min_margin=0.0, budget=5.0, api=None, model=None, cache=True, concurrency=32):
+                 min_margin=0.0, budget=5.0):
             calls.link = dict(left=left, right=right, left_id=left_id, right_id=right_id, how=how,
-                              threshold=threshold, min_margin=min_margin, budget=budget, api=api,
-                              model=model, cache=cache, concurrency=concurrency)
+                              threshold=threshold, min_margin=min_margin, budget=budget)
             return calls.result
 
     linker = ModuleType("jlink.linker")
