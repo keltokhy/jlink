@@ -153,6 +153,7 @@ def _parser() -> argparse.ArgumentParser:
                "--on name --left-id gvkey --right-id id -o audit.csv",
     )
     audit.add_argument("scores", metavar="SCORES", help="saved candidate scores table")
+    audit.add_argument("--links", metavar="LINKS", help="actual final links table; adds selected membership")
     audit.add_argument("-n", type=_positive, default=200, help="number of pairs to sample (default: 200)")
     audit.add_argument("--left", metavar="LEFT", help="original left data, for side-by-side fields")
     audit.add_argument("--right", metavar="RIGHT", help="original right data, for side-by-side fields")
@@ -161,13 +162,16 @@ def _parser() -> argparse.ArgumentParser:
     audit.set_defaults(run=_audit)
     evaluate = sub.add_parser(
         "evaluate", help="report accuracy from the hand-labeled audit",
-        description="Estimate precision, candidate-pair recall, F1 and calibration from a labeled audit. "
-                    "Recall excludes true matches lost during blocking.",
+        description="Evaluate thresholded pair scores or saved final-link membership from a labeled audit. "
+                    "Recall covers judged candidates only; Brier and calibration always assess pair scores.",
         epilog="Example: jev-link evaluate labeled_firms.dta --threshold 0.8 --markdown",
     )
     evaluate.add_argument("labeled", metavar="LABELED", help="audit table with completed is_match labels")
+    evaluate.add_argument("--mode", choices=("threshold", "selected"), default="threshold",
+                          help="threshold assesses pair scores (default); "
+                               "selected assesses saved final links")
     evaluate.add_argument("--threshold", type=_probability, default=0.5,
-                          help="match probability cutoff to assess (default: 0.5)")
+                          help="pair probability cutoff, used only in threshold mode (default: 0.5)")
     evaluate.add_argument("--markdown", action="store_true",
                           help="print a Markdown table for a data appendix")
     evaluate.set_defaults(run=_evaluate)
@@ -288,17 +292,26 @@ def _audit(args: argparse.Namespace) -> None:
     enrich = any((args.left, args.right, args.on, args.left_id, args.right_id))
     if enrich and not all((args.left, args.right, args.on)):
         raise ValueError("audit needs --left, --right and --on together to show record fields")
-    _outputs([args.scores] + ([args.left, args.right] if enrich else []), [args.output])
+    _outputs([args.scores] + ([args.links] if args.links else [])
+             + ([args.left, args.right] if enrich else []), [args.output])
     scores = read_table(args.scores)
     check_columns(scores, ["left_id", "right_id"], args.scores)
     _numeric(scores, ["p"], args.scores)
+    links = read_table(args.links) if args.links else None
+    if links is not None:
+        check_columns(links, ["left_id", "right_id"], args.links)
     kwargs = {}
     if enrich:
         left, right = read_table(args.left), read_table(args.right)
         on = _fields(args, left, right)
         _align_ids(scores, left, args.left_id, "left")
         _align_ids(scores, right, args.right_id, "right")
+        if links is not None:
+            _align_ids(links, left, args.left_id, "left")
+            _align_ids(links, right, args.right_id, "right")
         kwargs = dict(left=left, right=right, on=on, left_id=args.left_id, right_id=args.right_id)
+    if links is not None:
+        kwargs["links"] = links
     from .audit import audit_sample
 
     write_table(audit_sample(scores, n=args.n, **kwargs), args.output)
@@ -310,7 +323,7 @@ def _evaluate(args: argparse.Namespace) -> None:
     _numeric(labeled, ["p", "weight"], args.labeled)
     from .audit import evaluate
 
-    result = evaluate(labeled, threshold=args.threshold)
+    result = evaluate(labeled, threshold=args.threshold, mode=args.mode)
     print(result.to_markdown() if args.markdown else result.summary())
 
 
