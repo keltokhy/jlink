@@ -147,7 +147,8 @@ def test_margin_uses_below_threshold_pairs_ties_and_both_sides():
     assert result.loc[("e", "q"), "margin"] == pytest.approx(.5)
     assert result.loc[("c", "z"), "margin"] == 0
     assert np.isnan(result.loc[("d", "v"), "margin"])
-    assert ("b", "x") not in pairs(resolve(frame, how="many-to-many"))
+    assert ("b", "x") not in pairs(resolve(frame, how="many-to-many", min_margin=0))
+    assert ("b", "x") in pairs(resolve(frame, how="many-to-many"))  # no margin filter unless asked
     assert ("d", "v") in pairs(resolve(frame, min_margin=1))
 
 
@@ -168,7 +169,8 @@ def test_vectorized_margin_matches_rowwise_definition_with_repeated_index():
 
 def test_margin_is_applied_after_assignment_without_rematching():
     frame = scores([("a", "x", .9, .8), ("a", "y", .8, .8), ("b", "x", .8, .8)])
-    assert resolve(frame).empty
+    assert resolve(frame, min_margin=0).empty
+    assert set(pairs(resolve(frame))) == {("a", "y"), ("b", "x")}  # the optimal assignment, unfiltered
 
 
 def test_large_component_warns_and_uses_deterministic_greedy():

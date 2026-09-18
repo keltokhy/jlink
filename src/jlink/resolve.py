@@ -314,7 +314,7 @@ def _one_to_one(pairs: pd.DataFrame) -> np.ndarray:
 
 
 def resolve(scores: pd.DataFrame, *, how: str = "one-to-one", threshold: float = 0.5,
-            min_margin: float = 0.0) -> pd.DataFrame:
+            min_margin: float | None = None) -> pd.DataFrame:
     """Choose links under the requested cardinality rule, then apply the ambiguity margin.
 
     Margins use all judged pairs, including those below the threshold. Applying min_margin
@@ -325,7 +325,8 @@ def resolve(scores: pd.DataFrame, *, how: str = "one-to-one", threshold: float =
     if how not in modes:
         raise ValueError(f"how must be one of {', '.join(modes)}; got {how!r}")
     threshold = _number(threshold, "threshold", probability=True)
-    min_margin = _number(min_margin, "min_margin")
+    if min_margin is not None:
+        min_margin = _number(min_margin, "min_margin")
     _pairs(scores, "scores")
     frame = scores.copy().reset_index(drop=True)
     frame["p"] = _probabilities(frame)
@@ -344,6 +345,7 @@ def resolve(scores: pd.DataFrame, *, how: str = "one-to-one", threshold: float =
         pairs = pairs.drop_duplicates("right_id")
     elif how == "one-to-one" and len(pairs):
         pairs = pairs.iloc[_one_to_one(pairs)]
-    pairs = pairs.loc[pairs["margin"].isna() | pairs["margin"].ge(min_margin)]
+    if min_margin is not None:
+        pairs = pairs.loc[pairs["margin"].isna() | pairs["margin"].ge(min_margin)]
     return pairs.sort_values(["p", "left_id", "right_id"], ascending=[False, True, True],
                              kind="stable").reset_index(drop=True)

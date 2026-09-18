@@ -139,7 +139,7 @@ likeliest pairs first. Returns the scores table and the cost meter.
 
 ```python
 def resolve(scores: pd.DataFrame, *, how: str = "one-to-one", threshold: float = 0.5,
-            min_margin: float = 0.0) -> pd.DataFrame
+            min_margin: float | None = None) -> pd.DataFrame
 ```
 
 Rows with NaN `p` are ignored. `how` is one of:
@@ -152,7 +152,9 @@ Rows with NaN `p` are ignored. `how` is one of:
   for a component with more than 2,000 nodes on a side, fall back to greedy by descending `p`
   and warn. Ties break by higher `sim`, then by ID order, so output is deterministic.
 
-Then compute `margin` and drop links with `margin < min_margin` (NaN margins pass).
+Then compute `margin`. When `min_margin` is given, drop links with `margin < min_margin` (NaN margins
+pass). The default is no margin filter: a filter at 0 would silently remove every link that has a
+higher-scoring competitor, which guts `many-to-many`.
 
 ## audit.py
 
@@ -188,7 +190,7 @@ def score_against_truth(links, truth, candidates=None) -> dict
 linker = jlink.Linker(entity="firm", definition="...", on=["name", ("city", "town")],
                       blockers=[jlink.block.ngrams("name", k=10), jlink.block.initials("name")])
 result = linker.link(left, right, left_id="gvkey", right_id="id", how="one-to-one",
-                     threshold=0.5, min_margin=0.0, budget=5.0)
+                     threshold=0.5, min_margin=None, budget=5.0)
 result.links, result.scores, result.candidates, result.meter, result.settings
 result.relink(how=..., threshold=..., min_margin=...)   # no new API calls
 result.merged(left, right)                             # left and right columns side by side, plus p
@@ -205,7 +207,7 @@ strings to numbers (`dtype=str` for delimited files, then leave conversion to th
 ```
 jlink link LEFT RIGHT --on name [--on city=town] --entity firm [--define "..."]
            [--left-id COL] [--right-id COL] [--block ngrams:name:10] [--block exact:state]
-           [--block initials:name] [--how one-to-one] [--threshold 0.5] [--min-margin 0]
+           [--block initials:name] [--how one-to-one] [--threshold 0.5] [--min-margin M]
            [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md]
            [--api typesafe|openrouter] [--model ID] [--no-cache] [-j 32]
 jlink estimate LEFT RIGHT --on ...      # blocking only: pair count, cost and time estimate, no API calls

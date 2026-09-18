@@ -123,8 +123,9 @@ def _parser() -> argparse.ArgumentParser:
                            "(default: one-to-one)")
     link.add_argument("--threshold", type=_probability, default=0.5,
                       help="minimum match probability, 0 to 1 (default: 0.5)")
-    link.add_argument("--min-margin", type=_margin, default=0.0,
-                      help="minimum probability lead over any competing pair, -1 to 1 (default: 0)")
+    link.add_argument("--min-margin", type=_margin, default=None,
+                      help="keep a link only if its probability leads every competing pair by this much, "
+                           "-1 to 1 (default: no such requirement)")
     link.add_argument("--budget", type=_nonnegative, default=5.0,
                       help="maximum API spending in US dollars (default: 5)")
     link.add_argument("-o", "--output", metavar="FILE", help="links table; default: CSV on standard output")

@@ -16,6 +16,7 @@ from .fields import ids, parse_on
 from .judge import judge, question
 from .resolve import resolve
 
+_KEEP = object()  # relink: "leave this setting as it is", distinct from None, which turns the margin off
 HOWS = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
 # Measured on OpenRouter in September 2026; used only for estimates.
 TOKENS_PER_PAIR, PAIRS_PER_SECOND, PRICE_PER_MTOK = 330, 200, 0.042
@@ -54,7 +55,7 @@ class Linker:
 
     def link(self, left: pd.DataFrame, right: pd.DataFrame, *, left_id: str | None = None,
              right_id: str | None = None, how: str = "one-to-one", threshold: float = 0.5,
-             min_margin: float = 0.0, budget: float | None = 5.0, max_pairs: int | None = 5_000_000,
+             min_margin: float | None = None, budget: float | None = 5.0, max_pairs: int | None = 5_000_000,
              progress: bool = True, transport=None) -> "Result":
         _check_how(how, threshold)
         ids(left, left_id, "left"), ids(right, right_id, "right")
@@ -98,12 +99,15 @@ class Result:
         return self.scores[["left_id", "right_id", "block", "sim"]]
 
     def relink(self, *, how: str | None = None, threshold: float | None = None,
-               min_margin: float | None = None) -> "Result":
-        """Choose links again under different rules. Uses the probabilities already paid for."""
+               min_margin: float | None = _KEEP) -> "Result":
+        """Choose links again under different rules. Uses the probabilities already paid for.
+
+        `min_margin=None` removes a margin requirement; leave it out to keep the current one.
+        """
         s = dict(self.settings)
         s["how"] = how or s["how"]
         s["threshold"] = s["threshold"] if threshold is None else threshold
-        s["min_margin"] = s["min_margin"] if min_margin is None else min_margin
+        s["min_margin"] = s["min_margin"] if min_margin is _KEEP else min_margin
         _check_how(s["how"], s["threshold"])
         links = resolve(self.scores, how=s["how"], threshold=s["threshold"], min_margin=s["min_margin"])
         return Result(links, self.scores, s, self.meter, self._left, self._right)
@@ -142,7 +146,7 @@ class Result:
                 ("jev", "by Jev"), ("exact", "identical after normalization"), ("error", "failed"),
                 ("unjudged", "left unjudged by the budget")) if by_source.get(k, 0)),
             f"Links: {len(self.links):,} ({s['how']}, p >= {s['threshold']:g}"
-            + (f", margin >= {s['min_margin']:g}" if s["min_margin"] else "") + ")",
+            + (f", margin >= {s['min_margin']:g}" if s["min_margin"] is not None else "") + ")",
         ]
         if len(self.links):
             p = self.links["p"]
@@ -175,7 +179,7 @@ class Result:
             f"that the following statement is true: \"{s['question']}\" "
             f"{rules[s['how']]}, among pairs with probability of at least {s['threshold']:g}"
             + (f", and dropped links whose probability exceeded that of the best competing pair by less than "
-               f"{s['min_margin']:g}" if s["min_margin"] else "")
+               f"{s['min_margin']:g}" if s["min_margin"] is not None else "")
             + f". This yielded {len(self.links):,} links, covering "
             f"{self.links['left_id'].nunique() / max(s['n_left'], 1):.1%} of records in the first source. "
             "The model's probabilities are stored with the replication files, so these links can be reproduced "
