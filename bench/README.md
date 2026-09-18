@@ -33,16 +33,14 @@ page provides research downloads without an explicit redistribution license. See
 [FIRM_DATA.md](FIRM_DATA.md) for the firm-source investigation and [BASELINES.md](BASELINES.md)
 for actual measured results and limitations.
 
-The baseline functions use `jlink.fields` and an independent pair scorer. They work while the
-rest of jlink is being implemented. `bench/run.py` lazily detects `jlink.block`; until it lands,
-the report records blocking as unavailable. Once it lands, the same command runs the specified
-character n-gram blocker with `k=10`, measures its blocking recall, and reports estimated cost.
-Internal import errors are surfaced, rather than mislabeled as an unavailable module.
+The legacy baseline functions use `jlink.fields` and an independent pair scorer. Blocking and
+the full pipeline are now implemented; `bench/run.py` runs the character n-gram blocker with
+`k=10`. Its import guard remains for older/incomplete checkouts. Internal import errors surface.
 
-Normal runs initialize no API client and perform no API calls. **Only `--live` enables the
-real linker**, using the dataset definition, fields and cardinality, a probability threshold of
-0.5, zero minimum margin, and the supplied dollar budget. The lead controls that pass. It has
-not been run on this branch; unit tests exercise the call contract with fake modules only.
+Normal runs initialize no API client and perform no API calls. The legacy `--live` flag enables
+real API calls with its historical settings; `bench/live.py` was used for the saved live runs
+summarized in [BASELINES.md](BASELINES.md). `bench/heldout.py`
+has no live flag and cannot send requests. It replays saved scores.
 
 For a small pass, `--sample 1000` samples left records with seed 0, restricts truth to those
 left IDs, and keeps all right records as competitors. The sample IDs have a recorded digest.
