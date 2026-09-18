@@ -208,6 +208,10 @@ jlink audit scores.csv --left compustat.dta --right patents.csv --on conm=assign
 jlink evaluate audit.csv --markdown
 ```
 
+The Stata and R wrappers are single files in this repository, not part of the Python package: copy
+`stata/jlink.ado` and `stata/jlink.sthlp` to your personal ado directory (`sysdir` shows it), and
+`source()` `r/jlink.R`. Both call the installed command, so install the package first.
+
 macOS ships a Java tool at `/usr/bin/jlink`. If `jlink` opens a Java prompt, use `jev-link`,
 which is the same program, or `python -m jlink`.
 
