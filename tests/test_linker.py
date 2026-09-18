@@ -97,3 +97,52 @@ def test_bad_arguments():
         run(how="1:1")
     with pytest.raises(ValueError, match="duplicate IDs"):
         linker().link(pd.concat([LEFT, LEFT]), RIGHT, left_id="gvkey", right_id="id", progress=False)
+
+
+def test_literal_na_ids_survive_save_relink_and_merge(tmp_path):
+    left = pd.DataFrame({"key": ["NA", "NULL", "001"], "name": ["Alpha", "Beta", "Gamma"]})
+    right = pd.DataFrame({"key": ["NULL", "001", "NA"], "name": ["Alpha", "Beta", "Gamma"]})
+    result = jlink.Linker("firm", "name").link(left, right, left_id="key", right_id="key", progress=False,
+                                               transport=FakeJev().transport)
+    back = jlink.load(result.save(tmp_path / "out"))
+    pd.testing.assert_frame_equal(back.links[["left_id", "right_id"]], result.links[["left_id", "right_id"]])
+    assert len(back.relink(threshold=0.9).merged(left, right)) == 3
+    assert back.scores["error"].isna().all()
+
+
+def test_missing_scores_and_literal_errors_are_separate_from_id_strings(tmp_path):
+    result = run()
+    # Exercise the persisted tables without issuing more requests.
+    result.scores = pd.DataFrame({
+        "left_id": ["NA", "NULL", "001", ""], "right_id": ["NULL", "001", "NA", "nan"],
+        "p": [0.12345678901234568, float("nan"), float("nan"), 0.8], "sim": [0.8, 0.7, 0.6, 0.5],
+        "block": ["test"] * 4, "source": ["jev", "error", "unjudged", "error"],
+        "error": [pd.NA, "NA", None, "NULL"],
+    })
+    result = result.relink(threshold=0.1)
+    back = jlink.load(result.save(tmp_path / "nulls"))
+    assert back.scores["left_id"].tolist() == ["NA", "NULL", "001", ""]
+    assert back.scores["right_id"].tolist() == ["NULL", "001", "NA", "nan"]
+    assert back.scores["p"].isna().tolist() == [False, True, True, False]
+    assert back.scores.loc[0, "p"] == result.scores.loc[0, "p"]
+    assert back.scores["error"].isna().tolist() == [True, False, True, False]
+    assert back.scores.loc[1, "error"] == "NA" and back.scores.loc[3, "error"] == "NULL"
+
+
+def test_invalid_budget_is_rejected_before_blocking(monkeypatch):
+    configured = linker()
+
+    def blocked(*args, **kwargs):
+        pytest.fail("invalid budgets must be rejected before blocking")
+
+    monkeypatch.setattr(configured, "candidates", blocked)
+    with pytest.raises(ValueError, match="budget"):
+        configured.link(LEFT, RIGHT, budget=-1)
+
+
+def test_merged_accepts_ids_already_named_left_id_and_right_id(tmp_path):
+    left = pd.DataFrame({"left_id": ["NA"], "name": ["Alpha"]})
+    right = pd.DataFrame({"right_id": ["NULL"], "name": ["ALPHA"]})
+    result = jlink.Linker("firm", "name").link(left, right, left_id="left_id", right_id="right_id", progress=False)
+    back = jlink.load(result.save(tmp_path / "named"))
+    assert len(back.relink().merged(left, right)) == 1
