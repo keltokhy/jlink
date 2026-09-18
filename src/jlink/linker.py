@@ -150,14 +150,15 @@ class Result:
         return out
 
     def audit_sample(self, n: int = 200, *, seed: int = 0, left=None, right=None, **kwargs) -> pd.DataFrame:
-        """A stratified sample of judged pairs to label by hand. Pass the labeled file to `jlink.evaluate`."""
+        """Sample judged pairs, with actual link membership for evaluate(..., mode="selected")."""
         try:
             left, right = self._frames(left, right)
         except ValueError:
             left = right = None
         on = [(lc, rc) for lc, rc in self.settings["on"]]
         return audit.audit_sample(self.scores, n=n, seed=seed, left=left, right=right, on=on if left is not None else None,
-                                  left_id=self.settings["left_id"], right_id=self.settings["right_id"], **kwargs)
+                                  left_id=self.settings["left_id"], right_id=self.settings["right_id"],
+                                  links=self.links, **kwargs)
 
     def report(self) -> str:
         s, sc = self.settings, self.scores
