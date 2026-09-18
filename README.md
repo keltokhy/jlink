@@ -120,8 +120,8 @@ What the table says:
 - **The firm benchmark has a ceiling that no name-based method can pass.** A third of the NBER
   crosswalk's links are ownership facts with nothing in common in the names ("Homogeneous
   Metals Inc" to "United Technologies Corp"), so blocking can propose only 67% of true links.
-  jlink found 93% of those. Its precision is also understated: Compustat lists some firms twice
-  under one name with different IDs, so a correct name match can be scored as wrong.
+  jlink found 93% of those. (A sliver of its error is the benchmark's: 11 Compustat names appear
+  under two IDs, which accounts for 14 of jlink's 331 false links.)
 - **Amazon to Google is hard for everyone**, because listings differ in version and edition
   details that the records often omit.
 
@@ -133,7 +133,7 @@ CPY, Ltd, GmbH, N V). A subsidiary or division counts as its parent company."*
 **Are the probabilities calibrated?** Roughly, and it depends on the data. On the firm
 benchmark, pairs scored above 0.8 were true matches 95 to 98% of the time and pairs scored
 below 0.2 were true 0.1% of the time, but the 0.5 to 0.8 band was overconfident (mean 0.64,
-true 39% of the time, partly for the duplicate-name reason above). On FEBRL4 Jev was
+true 39% of the time). On FEBRL4 Jev was
 underconfident: pairs in the 0.2 to 0.5 band were true matches 66% of the time. Treat `p` as a
 strong ranking and check the middle band with an audit sample before using it as a literal
 probability.
