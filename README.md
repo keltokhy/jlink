@@ -49,8 +49,8 @@ agreement allows it. Only the `on` fields leave your machine; blocking runs loca
 ## Install
 
 ```bash
-uv add git+https://github.com/keltokhy/jlink            # in a project, for `import jlink`
-uv tool install git+https://github.com/keltokhy/jlink   # the command line, which Stata and R also use
+uv add jlink            # in a project, for `import jlink`
+uv tool install jlink   # the command line, which Stata and R also use
 ```
 
 Both need [uv](https://docs.astral.sh/uv/). Add `pyarrow` if you read or write `.parquet`.
