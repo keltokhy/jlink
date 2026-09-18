@@ -1,5 +1,6 @@
 """Offline checks of benchmark scoring, source preparation and pipeline integration."""
 
+import importlib.util
 import json
 from pathlib import Path
 import struct
@@ -20,6 +21,10 @@ from bench import baselines, prepare
 from bench import run as runner
 from bench.report import render_report
 from bench.data import load_dataset, sample_left, validate_dataset, write_dataset
+
+needs_bench = pytest.mark.skipif(
+    any(importlib.util.find_spec(m) is None for m in ("jellyfish", "recordlinkage")),
+    reason="needs the bench dependency group: uv sync --group bench")
 
 
 @pytest.fixture(autouse=True)
@@ -70,6 +75,7 @@ def test_exact_normalization_fields_and_missing_values():
     assert result.tuned_on_truth is False
 
 
+@needs_bench
 @pytest.mark.parametrize("method", [baselines.exact_match, baselines.jaro_winkler, baselines.tfidf_cosine])
 def test_methods_validate_and_support_index_ids(method):
     left, right = records(["same"]), records(["same"])
@@ -85,6 +91,7 @@ def test_methods_validate_and_support_index_ids(method):
         method(left, right, pairs(), on="name", left_id="id")
 
 
+@needs_bench
 def test_jaro_first_character_block_recall_and_tie_break():
     left = records(["apple", "ibm", ""], "L")
     right = records(["apple", "apple", "zibm", ""], "R")
@@ -263,6 +270,7 @@ def test_prepare_continues_after_unreachable_source(monkeypatch, capsys):
     assert "unreachable" in capsys.readouterr().err
 
 
+@needs_bench
 def test_febrl_uses_bundled_pinned_data_offline():
     left, right, truth, meta = prepare._febrl()
     assert (len(left), len(right), len(truth)) == (5000, 5000, 5000)
@@ -288,6 +296,7 @@ def test_legacy_nber_zip_fallback_verifies_payload_crc(tmp_path, monkeypatch):
         prepare._nber_csv(path)
 
 
+@needs_bench
 def test_offline_harness_never_imports_live_modules(tmp_path, monkeypatch):
     left, right = records(["alpha", "beta"]), records(["alpha", "beta", "gamma"])
     write_dataset(tmp_path / "data" / "nber-firms", left, right, pairs([("0", "0"), ("1", "1")]), metadata())

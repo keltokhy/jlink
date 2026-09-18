@@ -49,8 +49,11 @@ agreement allows it. Only the `on` fields leave your machine; blocking runs loca
 ## Install
 
 ```bash
-pip install git+https://github.com/keltokhy/jlink
+uv add git+https://github.com/keltokhy/jlink            # in a project, for `import jlink`
+uv tool install git+https://github.com/keltokhy/jlink   # the command line, which Stata and R also use
 ```
+
+Both need [uv](https://docs.astral.sh/uv/). Add `pyarrow` if you read or write `.parquet`.
 
 You need a key for one of two APIs. With keys for both, jlink uses TypeSafe's.
 
@@ -244,7 +247,7 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 ## Development
 
 ```bash
-uv sync && uv run pytest     # 279 tests, offline, no key needed; Stata and R tests run if installed
+uv sync --group bench && uv run pytest   # 279 tests, offline, no key; Stata and R tests skip if absent
 ```
 
 `SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the

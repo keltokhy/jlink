@@ -26,7 +26,7 @@ def _require_arrow(path: Path) -> None:
         import pyarrow  # noqa: F401
     except ImportError:
         raise ValueError(f"{str(path)!r}: Parquet needs pyarrow; "
-                         "install it with 'pip install pyarrow'") from None
+                         "install it with 'uv add pyarrow' (or 'uv pip install pyarrow')") from None
 
 
 def read_table(path: str | Path) -> pd.DataFrame:
