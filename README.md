@@ -24,9 +24,8 @@ String distance links "Acme Widgets Inc." to "ACME WIDGETS, INC". It does not li
 from its parent. A research assistant can do both, slowly. jlink asks
 [Jev](https://docs.typesafe.ai), a decision model from TypeSafe, the question a research
 assistant would answer: given these two records and this rule, are they the same firm? Jev
-returns a probability in about a fifth of a second for about a thousandth of a cent, so
-comparing a hundred thousand candidate pairs costs about a dollar and a half and takes about
-ten minutes.
+returns a probability in about a fifth of a second for about a thousandth of a cent. In the
+benchmarks below, 146,119 candidate pairs cost $2.49 in total, at about 250 pairs a second.
 
 jlink is built for the way applied economists link data:
 
@@ -62,6 +61,92 @@ You need a key for one of two APIs. With keys for both, jlink uses TypeSafe's.
 
 A key can also live in `~/.config/jev/typesafe.key` or `~/.config/jev/openrouter.key`.
 
+## Try it
+
+The repository ships a toy example: twelve Compustat-style firms and sixteen patent assignees.
+
+```bash
+jev-link link examples/compustat_sample.csv examples/patent_assignees.csv \
+    --on conm=assignee --entity firm --left-id gvkey --right-id assignee_id --how many-to-many \
+    --define "A subsidiary or division counts as its parent company. Different companies that merely share a word are not a match." \
+    --block ngrams:conm=assignee:5 --block initials:conm=assignee --block exact:state -o links.csv
+```
+
+```
+0.97  INTL BUSINESS MACHINES CORP   <- IBM                                      [initials]
+0.98  INTL BUSINESS MACHINES CORP   <- International Business Machines Corporation
+0.97  MINNESOTA MINING & MFG CO     <- 3M Company                               [exact:state]
+0.94  UNITED TECHNOLOGIES CORP      <- Pratt & Whitney (United Technologies)
+0.87  CORNING INC                   <- Corning Glass Works
+0.80  EXXON CORP                    <- Exxon Research and Engineering Co.
+0.69  FORD MOTOR CO                 <- Ford Global Technologies
+      ... and five plain matches (Abbott Labs, The Boeing Company, ...)
+not linked: Westinghouse Air Brake Company, Abbott Ball Company, General Electrodynamics Corp, Rockwell Automation
+```
+
+Fifty pairs, $0.0007. Jev knows that 3M is Minnesota Mining and that Westinghouse Air Brake is
+not Westinghouse Electric. It can only judge pairs that blocking proposes, though: "3M Company"
+shares no letters with "Minnesota Mining & Mfg", so it was found only because the
+`exact:state` pass paired firms within a state.
+
+## Benchmarks
+
+Five public datasets with known matches, run end to end (blocking, judging, resolving) on
+2026-09-18 with Jev 1.13 through OpenRouter. jlink used its default threshold of 0.5 everywhere.
+Nothing was tuned on the answers. Each string baseline, by contrast, was given the single
+threshold that maximizes its F1 on the answers, so the baseline column is an upper bound on
+what that method can do.
+
+| Dataset | Records | jlink precision / recall | jlink F1 | Best string baseline F1 | Pairs judged | Cost |
+|---|---:|---:|---:|---:|---:|---:|
+| Firms: NBER patent assignees to Compustat | 4,585 x 2,488 | 0.90 / 0.62 | **0.73** | 0.69 | 45,567 | $0.62 |
+| Publications: DBLP to ACM | 2,616 x 2,294 | 0.99 / 1.00 | **0.996** | 0.975 | 26,146 | $0.45 |
+| Products: Abt to Buy | 1,081 x 1,092 | 0.90 / 0.93 | **0.92** | 0.86 | 10,796 | $0.22 |
+| Software: Amazon to Google | 1,363 x 3,226 | 0.60 / 0.74 | **0.66** | 0.64 | 13,610 | $0.22 |
+| People: FEBRL4, synthetic typos | 5,000 x 5,000 | 1.00 / 0.92 | 0.96 | **0.998** | 50,000 | $0.97 |
+
+The string baselines are best-match Jaro-Winkler and best-match TF-IDF cosine; the table shows
+the better of the two. Exact matching after normalization scores 0.26, 0.41, 0.00, 0.00 and
+0.22.
+
+What the table says:
+
+- **Where names carry meaning, jlink wins without tuning.** On firms, products and publications
+  it beats string similarity that was handed its best threshold.
+- **Where records differ only by typos, you do not need it.** FEBRL4 is synthetic person data
+  with character-level corruption, and TF-IDF cosine is nearly perfect there and free. jlink
+  made no false links (precision 1.00) but was too cautious at 0.5; at a threshold of 0.3 its
+  F1 is 0.98.
+- **The firm benchmark has a ceiling that no name-based method can pass.** A third of the NBER
+  crosswalk's links are ownership facts with nothing in common in the names ("Homogeneous
+  Metals Inc" to "United Technologies Corp"), so blocking can propose only 67% of true links.
+  jlink found 93% of those. Its precision is also understated: Compustat lists some firms twice
+  under one name with different IDs, so a correct name match can be scored as wrong.
+- **Amazon to Google is hard for everyone**, because listings differ in version and edition
+  details that the records often omit.
+
+The firm rule was revised once, after reading the errors of a 300-record pilot, as a user
+would: the first draft did not tell Jev that `CPY` means Company in these data. That changed F1
+by two points. The final rule is two sentences: *"Ignore legal-form suffixes (Inc, Corp, Co,
+CPY, Ltd, GmbH, N V). A subsidiary or division counts as its parent company."*
+
+**Are the probabilities calibrated?** Roughly, and it depends on the data. On the firm
+benchmark, pairs scored above 0.8 were true matches 95 to 98% of the time and pairs scored
+below 0.2 were true 0.1% of the time, but the 0.5 to 0.8 band was overconfident (mean 0.64,
+true 39% of the time, partly for the duplicate-name reason above). On FEBRL4 Jev was
+underconfident: pairs in the 0.2 to 0.5 band were true matches 66% of the time. Treat `p` as a
+strong ranking and check the middle band with an audit sample before using it as a literal
+probability.
+
+**Speed.** The firm run judged 45,567 pairs in 176 seconds (259 pairs a second, 64 calls in
+flight, median latency 214 ms, one retry). Blocking 100,000 by 100,000 records takes about four
+minutes and 1 GB on an M3 Ultra; blocking time grows roughly with the square of the data, so
+beyond that size add an `exact` pass on a field such as state or year to split the problem.
+
+Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`, then
+`uv run python bench/live.py nber-firms --budget 1.00`. Baselines and data provenance are in
+`bench/BASELINES.md` and `bench/FIRM_DATA.md`.
+
 ## How it works
 
 1. **Block.** Comparing every record with every other is wasteful, so jlink first proposes
@@ -85,8 +170,9 @@ linker = jlink.Linker(
     entity="firm", on=[("conm", "assignee"), "state"], definition="...",
     blockers=[jlink.block.ngrams(("conm", "assignee"), k=10), jlink.block.initials(("conm", "assignee"))],
 )
-linker.estimate(compustat, patents, left_id="gvkey", right_id="assignee_id")
-# {'left': 9000, 'right': 40000, 'pairs': 93112, 'dollars': 1.29, 'seconds': 465.6}
+linker.estimate(compustat, patents, left_id="gvkey", right_id="assignee_id")   # blocking only, no API calls
+# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': 0.6316, 'seconds': 227.8}
+# (the real run on these data cost $0.62 and took 176 seconds)
 
 result = linker.link(compustat, patents, left_id="gvkey", right_id="assignee_id", budget=2.00)
 strict = result.relink(threshold=0.9, min_margin=0.3)     # no new calls
@@ -136,3 +222,30 @@ source("r/jlink.R")
 links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "firm",
                left_id = "gvkey", right_id = "assignee_id")
 ```
+
+## Limits
+
+- These are a model's judgments. Audit a sample before you rely on the links.
+- Jev can only judge pairs that blocking proposes. If the names share nothing, add a pass that
+  brings the pair together some other way (`exact` on state, year or industry).
+- Jev reads the fields you give it and nothing else. It does not look anything up, and what it
+  knows about firms stops at its training data.
+- Repeated calls return nearly but not exactly the same probability (within 0.03 in our tests).
+  Saved scores make results exact: keep `scores.csv` with your replication files.
+- The default model ID is an alias for the latest Jev. Pin one with `model=` or `--model`
+  (for example `typesafe/jev-1.13` on OpenRouter) and report it; `result.methods()` does.
+- The Stata and R wrappers were run on macOS against Stata 19.5 and R 4.5.1. They do not
+  support Windows yet.
+
+## Development
+
+```bash
+uv sync && uv run pytest     # 279 tests, offline, no key needed; Stata and R tests run if installed
+```
+
+`SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the
+Jev client (two backends, retries, cache, cost meter), shared verbatim with
+[jgrep](https://github.com/keltokhy/jgrep), which is grep with a description in place of a
+pattern.
+
+MIT license. The benchmark datasets keep their own terms; see `bench/FIRM_DATA.md`.
