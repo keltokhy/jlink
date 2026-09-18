@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "jlink definition-sensitivity fixture v1",
+  "type": "object",
+  "required": ["schema_version", "title", "provenance", "rules", "model_settings", "pairs"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "title": {"type": "string", "minLength": 1},
+    "provenance": {"type": "string", "minLength": 1},
+    "rules": {
+      "type": "object",
+      "required": ["same_legal_entity", "corporate_family"],
+      "additionalProperties": false,
+      "properties": {
+        "same_legal_entity": {"type": "string", "minLength": 1},
+        "corporate_family": {"type": "string", "minLength": 1}
+      }
+    },
+    "model_settings": {
+      "type": "object",
+      "required": ["api", "model", "exact_shortcut"],
+      "properties": {
+        "api": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "exact_shortcut": {"const": false}
+      }
+    },
+    "pairs": {
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["pair_id", "group_id", "split", "record_a", "record_b", "labels", "source"],
+        "properties": {
+          "pair_id": {"type": "string", "minLength": 1},
+          "group_id": {"type": "string", "minLength": 1},
+          "split": {"enum": ["dev", "test"]},
+          "record_a": {"type": "object", "minProperties": 1},
+          "record_b": {"type": "object", "minProperties": 1},
+          "labels": {
+            "type": "object", "required": ["same_legal_entity", "corporate_family"],
+            "additionalProperties": false,
+            "properties": {"same_legal_entity": {"type": "boolean"}, "corporate_family": {"type": "boolean"}}
+          },
+          "source": {
+            "type": "object", "required": ["kind", "reference", "rationale"],
+            "properties": {
+              "kind": {"enum": ["synthetic", "primary_source"]},
+              "reference": {"type": "string", "minLength": 1},
+              "rationale": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    }
+  }
+}
