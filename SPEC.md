@@ -13,6 +13,11 @@ Modules are built in parallel by different people. This file is the contract bet
 Do not change a signature or a column name here without raising it; note the problem in your
 DONE.md instead.
 
+The correctness/provenance update supersedes the original exact-match, budget, saved-result,
+and shared-core assumptions below. See [run provenance](docs/run-provenance.md) for the
+fieldwise nonmissing exact policy, cache-only zero budgets, additive score/settings metadata,
+backward-compatible cache extensions, and the documented divergence from jgrep's core.
+
 ## Pipeline and modules
 
 ```

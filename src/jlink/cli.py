@@ -127,7 +127,8 @@ def _parser() -> argparse.ArgumentParser:
                       help="keep a link only if its probability leads every competing pair by this much, "
                            "-1 to 1 (default: no such requirement)")
     link.add_argument("--budget", type=_nonnegative, default=5.0,
-                      help="maximum API spending in US dollars (default: 5)")
+                      help="stop new requests at this observed USD cost; in-flight calls may overshoot "
+                           "(default: 5; 0: cached/exact only)")
     link.add_argument("-o", "--output", metavar="FILE", help="links table; default: CSV on standard output")
     link.add_argument("--scores", metavar="FILE", help="save all candidate scores for a later audit")
     link.add_argument("--report", metavar="FILE", help="save the linkage report as Markdown")

@@ -127,3 +127,100 @@ def test_runs_inside_a_running_event_loop():
 
     scores, _ = asyncio.run(notebook_cell())
     assert scores.loc[0, "p"] == 0.8
+
+
+def test_exact_shortcut_preserves_field_boundaries():
+    left = pd.DataFrame({"first": ["Mary Ann"], "last": ["Smith"]})
+    right = pd.DataFrame({"first": ["Mary"], "last": ["Ann Smith"]})
+    fake = FakeJev(lambda s, q: 0.12)
+    scores, _ = judge(pairs([(0, 0, 1.0)]), left, right, on=["first", "last"], entity="person",
+                      progress=False, transport=fake.transport)
+    assert scores.loc[0, "source"] == "jev"
+    assert scores.loc[0, "p"] == 0.12 and len(fake.bodies) == 1
+
+
+def test_zero_budget_keeps_cached_and_exact_scores_without_paid_calls():
+    cached = pairs([("a1", 10, 0.1)])
+    run(cached, FakeJev(lambda s, q: 0.8), on=[("name", "firm")])
+    fake = FakeJev()
+    # The cache hit comes after a miss in descending similarity order.
+    cands = pairs([("a3", 12, 0.9), ("a2", 11, 1.0), ("a1", 10, 0.1)])
+    with pytest.warns(UserWarning, match="budget ran out"):
+        scores, meter = run(cands, fake, on=[("name", "firm")], budget=0)
+    assert not fake.bodies and meter.calls == 0 and meter.cached == 1
+    assert scores["source"].tolist() == ["unjudged", "exact", "jev"]
+    assert scores.loc[2, "p"] == 0.8 and pd.isna(scores.loc[0, "p"])
+
+
+@pytest.mark.parametrize("missing", [None, np.nan, pd.NA, pd.NaT, np.datetime64("NaT", "ns"),
+                                     "", "   ", "---"])
+def test_incomplete_records_are_never_accepted_as_exact(missing):
+    left = pd.DataFrame({"first": ["Mary"], "last": [missing]})
+    right = pd.DataFrame({"first": ["MARY"], "last": [missing]})
+    fake = FakeJev()
+    scores, _ = judge(pairs([(0, 0, 1.0)]), left, right, on=["first", "last"], entity="person",
+                      progress=False, transport=fake.transport)
+    assert scores.loc[0, "source"] == "jev" and len(fake.bodies) == 1
+
+
+def test_normalized_complete_fields_still_match_without_a_key(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY")
+    left = pd.DataFrame({"name": ["Ácme & Sons, Inc."], "year": [1985.0]})
+    right = pd.DataFrame({"name": ["ACME and SONS INC"], "year": [1985]})
+    scores, meter = judge(pairs([(0, 0, 1.0)]), left, right, on=["name", "year"], entity="firm", progress=False)
+    assert scores.loc[0, "source"] == "exact" and meter.calls == 0
+
+
+@pytest.mark.parametrize("budget", [-1, float("inf"), -float("inf"), float("nan"), True, False, "0"])
+def test_invalid_budgets_fail_before_api_setup(budget, monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY")
+    with pytest.raises(ValueError, match="budget.*finite nonnegative"):
+        run(pairs([("a1", 10, 0.1)]), FakeJev(), budget=budget)
+
+
+def test_none_budget_is_explicitly_unlimited():
+    scores, meter = run(pairs([("a1", 10, 0.1), ("a3", 12, 0.2)]), FakeJev(cost=10.0),
+                        budget=None, concurrency=1)
+    assert scores["p"].notna().all() and meter.cost == 20.0
+
+
+def test_positive_exhausted_budget_still_reads_later_cache_hits():
+    run(pairs([("a1", 10, 0.1)]), FakeJev(lambda s, q: 0.7))
+    fake = FakeJev(cost=0.02)
+    with pytest.warns(UserWarning, match="budget ran out"):
+        scores, meter = run(pairs([("a3", 12, 0.9), ("a2", 11, 0.8), ("a1", 10, 0.1)]), fake,
+                            budget=0.01, concurrency=1)
+    assert scores["source"].tolist() == ["jev", "unjudged", "jev"]
+    assert scores.loc[2, "p"] == 0.7 and meter.cached == 1 and len(fake.bodies) == 1
+
+
+def test_in_flight_calls_finish_and_may_overshoot_positive_budget():
+    import asyncio
+    import httpx
+
+    fake = FakeJev(cost=0.02)
+
+    async def handler(request):
+        await asyncio.sleep(0.01)
+        return fake(request)
+
+    cands = pairs([("a1", 10, 0.9), ("a1", 11, 0.8), ("a3", 12, 0.7), ("a3", 10, 0.6)])
+    with pytest.warns(UserWarning, match="budget ran out"):
+        scores, meter = judge(cands, LEFT, RIGHT, on=ON, entity="firm", left_id="gvkey", right_id="id",
+                              budget=0.001, concurrency=2, progress=False, transport=httpx.MockTransport(handler))
+    assert meter.calls == 2 and meter.cost == 0.04
+    assert scores["source"].tolist() == ["jev", "jev", "unjudged", "unjudged"]
+
+
+def test_zero_budget_can_read_cache_without_credentials(monkeypatch):
+    cands = pairs([("a1", 10, 0.1)])
+    run(cands, FakeJev(), api="openrouter")
+    monkeypatch.delenv("OPENROUTER_API_KEY")
+    scores, meter = run(cands, FakeJev(), api="openrouter", budget=0)
+    assert meter.calls == 0 and meter.cached == 1 and scores.loc[0, "source"] == "jev"
+
+
+@pytest.mark.parametrize("concurrency", [0, -1, True, 1.5])
+def test_bad_concurrency_fails_instead_of_hanging(concurrency):
+    with pytest.raises(ValueError, match="concurrency.*positive integer"):
+        run(pairs([("a1", 10, 0.1)]), FakeJev(), concurrency=concurrency)

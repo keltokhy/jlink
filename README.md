@@ -157,9 +157,9 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
    ten nearest right records by character n-grams. Add passes for what n-grams miss:
    `jlink.block.initials("name")` pairs "IBM" with "International Business Machines", and
    `jlink.block.exact("state")` pairs everything within a state.
-2. **Judge.** Each candidate pair goes to Jev with your rule. Pairs whose fields are identical
-   after normalizing case, accents and punctuation are accepted without a call. Likelier pairs
-   are judged first, so if a budget runs out it is the long shots that go unjudged.
+2. **Judge.** Each candidate pair goes to Jev with your rule. Pairs whose compared fields are all
+   nonempty and individually equal after normalizing case, accents and punctuation are accepted
+   without a call. Likelier pairs are judged first; cached scores remain available after the budget runs out.
 3. **Resolve.** Choose links from the probabilities: `one-to-one` (the default; the best
    overall assignment with no record used twice), `many-to-one`, `one-to-many` or
    `many-to-many`, with a probability threshold and an optional margin over the runner-up.
@@ -182,6 +182,11 @@ strict = result.relink(threshold=0.9, min_margin=0.3)     # no new calls
 panel = strict.merged()                                   # both tables side by side, plus p
 result.save("linkage/")                                   # links.csv, scores.csv, settings.json
 ```
+
+`budget=0` allows exact matches and cache hits only; `budget=None` is unlimited. A positive
+budget stops new requests at the observed cost, but calls already in flight can overshoot it.
+Saved runs retain input fingerprints, blocker parameters, and model identities, including
+cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
 
 ## Checking the links
 
@@ -251,8 +256,9 @@ uv sync --group bench && uv run pytest   # 279 tests, offline, no key; Stata and
 ```
 
 `SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the
-Jev client (two backends, retries, cache, cost meter), shared verbatim with
+Jev client (two backends, retries, cache, cost meter), historically shared with
 [jgrep](https://github.com/keltokhy/jgrep), which is grep with a description in place of a
-pattern.
+pattern. jlink's additive cache/provenance extensions are documented in
+[run provenance](docs/run-provenance.md#backward-compatibility-and-unknown-provenance).
 
 MIT license. The benchmark datasets keep their own terms; see `bench/FIRM_DATA.md`.
