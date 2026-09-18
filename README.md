@@ -199,6 +199,10 @@ easy ends, and the estimates are weighted back to all judged pairs. Recall is me
 candidate pairs. A true match that blocking never proposed is invisible to the audit, so widen
 blocking (a larger `k`, an extra pass) and see whether new links appear.
 
+For a local side-by-side review page with accept/reject/unsure decisions, durable history,
+and offline recomputation, see [Local human review](docs/review.md). Start with
+`jlink.create_review(result).write_html("review.html")` or `jev-link review --help`.
+
 ## Command line, Stata and R
 
 ```bash
@@ -247,7 +251,7 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 ## Development
 
 ```bash
-uv sync --group bench && uv run pytest   # 279 tests, offline, no key; Stata and R tests skip if absent
+uv sync --group bench && uv run pytest   # offline, no key; Stata and R tests skip if absent
 ```
 
 `SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the
