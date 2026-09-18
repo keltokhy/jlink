@@ -22,3 +22,10 @@ def test_record_text_and_ids():
     assert list(ids(df, "id", "left")) == [1, 2]
     with pytest.raises(ValueError, match="duplicate"):
         ids(pd.DataFrame({"id": [1, 1]}), "id", "left")
+
+
+def test_record_text_on_empty_and_all_missing_frames():
+    empty = pd.DataFrame({"name": pd.Series([], dtype=float), "city": pd.Series([], dtype=float)})
+    assert list(record_text(empty, ["name", "city"])) == []
+    missing = pd.DataFrame({"name": [float("nan")] * 2, "city": ["Cairo", None]})
+    assert list(record_text(missing, ["name", "city"])) == ["cairo", ""]

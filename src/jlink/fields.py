@@ -46,7 +46,8 @@ def normalize(text: object) -> str:
 
 def record_text(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
     """One normalized string per row: the listed columns joined by a space."""
-    parts = [frame[c].map(normalize) for c in columns]
+    # astype(object) keeps the .str accessor working when a frame is empty or a column is all-missing floats
+    parts = [frame[c].astype(object).map(normalize).astype(object) for c in columns]
     text = parts[0]
     for part in parts[1:]:
         text = text.str.cat(part, sep=" ")
