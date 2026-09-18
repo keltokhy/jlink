@@ -124,8 +124,12 @@ For integrations requiring pair-level selection, `review.candidates` returns a c
 original scores with a Boolean `selected` column derived from original link membership.
 `reviewed.selected_scores()` instead derives Boolean `selected` from the **reviewed** links.
 Both use `(left_id, right_id)` membership, never `p >= threshold`; neither mutates the
-original scores. These tables can be used by a selected-link evaluator once that separate
-interface is available. Review itself neither samples nor estimates accuracy.
+original scores. To audit reviewed links with model scores, draw a sample with
+`jlink.audit_sample(reviewed.scores, links=reviewed.links)`, fill its `is_match` labels,
+then call `jlink.evaluate(labeled, mode="selected")`. Review itself neither samples nor
+estimates accuracy. The score-stratified audit requires a probability for every selected
+link and rejects manually accepted unjudged pairs. Such pairs need a separate audit that
+includes links without model scores; do not assign them fabricated probabilities.
 
 ## Command line
 
@@ -145,11 +149,10 @@ jev-link review apply exported-review.json -o strict-reviewed-links.json \
 # Use --no-margin to remove the original margin requirement.
 ```
 
-The CLI create adapter reads the existing saved-run CSV files through the lossless table
-reader, preserving literal `NA`/`NULL` and leading-zero string IDs. It honors saved integer
-ID metadata and checks candidate IDs against the original records. It does not change
-`Result.save`, `jlink.load`, or saved-run provenance. JSON-only `page` and `apply` do not
-require the saved-run directory or the original table files.
+The CLI create adapter uses `jlink.load` to preserve saved probabilities exactly, together
+with literal `NA`/`NULL`, leading-zero string IDs, and recorded provenance. It honors saved
+integer ID metadata and checks candidate IDs against the original records. JSON-only
+`page` and `apply` do not require the saved-run directory or the original table files.
 
 Output paths cannot replace input files. Invalid artifacts and acceptance conflicts exit
 with status 2 and an actionable message. A conflict is detected before output is written.

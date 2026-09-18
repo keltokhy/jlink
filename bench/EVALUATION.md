@@ -111,7 +111,7 @@ The three metric groups are:
 3. `final_assignment`: actual resolved membership scored against all truth in the partition,
    including truths missed in blocking. For the explicit unmatched experiment it also reports
    distinct records falsely linked and correct abstention by side. This uses actual selection,
-   consistent with the audit API's proposed `mode="selected"`; it does not infer links by
+   consistent with the audit API's `mode="selected"`; it does not infer links by
    thresholding probabilities again.
 
 Undefined candidate recall and explicit-unmatched rates are null. The legacy pair scorer's
@@ -192,11 +192,11 @@ Current factories are `ngrams`, `exact`, `initials`. `evaluation.propose(..., re
 accepts a factory returning a public `Blocker`, so new retrieval experiments need no changes to
 the metric code. `candidate.attrs['blocking']`, when provided by the blocker, is saved.
 
-After the blocking branch is integrated, `kwargs={"k":10,"reverse":true}` can form a reverse
+`kwargs={"k":10,"reverse":true}` forms a reverse
 pass alongside a forward pass. A registry factory can wrap a pass with
 `block.within(block.ngrams(*columns, **kwargs), "state", missing="drop")`. Nested serialization
-can later use `Blocker.to_config()`. These are integration hooks, not experiments claimed here;
-this branch imports only the baseline APIs.
+uses `Blocker.to_config()`. The integrated registry supports these configurations; the
+measured results in this report still use the recorded historical candidate pools.
 
 Each held-out run saves source/dataset hashes, source metadata, split definitions and CSV,
 explicit unmatched/removal labels, candidates, all method scores, final links, settings,

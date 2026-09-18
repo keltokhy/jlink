@@ -64,17 +64,17 @@ def _outputs(inputs: list, outputs: list[tuple[str | None, str]]) -> None:
 def _create(args) -> None:
     from .fields import ids
     from .io import read_table
-    from .linker import Result
-    from .cli import _align_ids, _numeric
+    from .linker import load
+    from .cli import _align_ids
 
     directory = Path(args.run_directory).expanduser()
     run_files = [directory / name for name in ("settings.json", "scores.csv", "links.csv")]
     _outputs([*run_files, args.left, args.right], [(args.output, ".html"), (args.artifact, ".json")])
     settings = json.loads(run_files[0].read_text(encoding="utf-8"))
     left, right = read_table(args.left), read_table(args.right)
-    scores, links = read_table(run_files[1]), read_table(run_files[2])
-    # Read CSV with the existing lossless table reader: NA/NULL and leading zeros are IDs.
-    # Saved integer IDs are restored before aligning both tables to the original records.
+    result = load(directory)
+    # The saved-result loader preserves both literal IDs and exact floating-point scores.
+    # Restore integer IDs in the original tables before aligning to the loaded result.
     for side, frame in (("left", left), ("right", right)):
         column = settings.get(f"{side}_id")
         kind = settings.get("id_kinds", {}).get(f"{side}_id")
@@ -88,12 +88,9 @@ def _create(args) -> None:
             except (ValueError, TypeError, OverflowError):
                 raise ValueError(
                     f"original {side} ID column {column!r} disagrees with saved integer IDs") from None
-        for table in (scores, links):
+        for table in (result.scores, result.links):
             _align_ids(table, frame, column, side)
-    _numeric(scores, ["p", "sim"], str(run_files[1]))
-    _numeric(links, ["p", "sim", "margin"], str(run_files[2]))
-    settings.pop("id_kinds", None)
-    review = create_review(Result(links, scores, settings), left=left, right=right,
+    review = create_review(result, left=left, right=right,
                            close_margin=args.close_margin)
     review.write_html(Path(args.output).expanduser())
     if args.artifact:
