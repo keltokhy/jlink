@@ -214,6 +214,10 @@ only, excluding unjudged pairs and true matches lost in blocking. Brier and cali
 assess pair scores. See [evaluation modes and limitations](docs/evaluation.md) for incomplete
 labels, bootstrap assumptions and the exported table contract.
 
+For a local side-by-side review page with accept/reject/unsure decisions, durable history,
+and offline recomputation, see [Local human review](docs/review.md). Start with
+`jlink.create_review(result).write_html("review.html")` or `jev-link review --help`.
+
 ## Command line, Stata and R
 
 ```bash
@@ -263,7 +267,7 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 ## Development
 
 ```bash
-uv sync --group bench && uv run pytest   # 279 tests, offline, no key; Stata and R tests skip if absent
+uv sync --group bench && uv run pytest   # offline, no key; Stata and R tests skip if absent
 ```
 
 `SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the
