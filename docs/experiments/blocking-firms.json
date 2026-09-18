@@ -1,0 +1,520 @@
+{
+  "experiment": "firms",
+  "left": 4585,
+  "right": 2488,
+  "truth": 4591,
+  "source_sha256": {
+    "left.parquet": "5cd9a270659dcc64192638ee985e65744eb714f74af00ac97e4a273c5590bfcf",
+    "right.parquet": "8cb3381911e440139fec56ce573a0419febcedb2414383e2ba1338d19e84c8a2",
+    "truth.parquet": "86b1dc95e2d92e9d1470f1b1276db460b51ca93c8c5145f2dd86ce367d093151",
+    "meta.json": "78409822c7331c7ad88ba9f0e5765fbf0a51de8fd404d3882ced6756761e1b80"
+  },
+  "grouping": "Derived first normalized name character only; no state/year available. No truth or ownership fields used in candidate generation.",
+  "results": [
+    {
+      "variant": "forward_k10",
+      "pairs": 45567,
+      "truth_found": 3061,
+      "recall": 0.6667392724896537,
+      "seconds": 0.46261316699974486,
+      "additional_truth_vs_forward_k10": 0,
+      "lost_truth_vs_forward_k10": 0,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 45567,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 10,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": false
+            },
+            "proposed_pairs": 45567,
+            "unique_pairs": 45567,
+            "added_pairs": 45567,
+            "overlapping_pairs": 0,
+            "union_pairs": 45567,
+            "exclusive_pairs": 45567
+          }
+        ]
+      }
+    },
+    {
+      "variant": "reverse_k10",
+      "pairs": 24848,
+      "truth_found": 2992,
+      "recall": 0.6517098671313439,
+      "seconds": 0.41642412500004866,
+      "additional_truth_vs_forward_k10": 19,
+      "lost_truth_vs_forward_k10": 88,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 24848,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams-reverse:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams-reverse:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 10,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": true
+            },
+            "proposed_pairs": 24848,
+            "unique_pairs": 24848,
+            "added_pairs": 24848,
+            "overlapping_pairs": 0,
+            "union_pairs": 24848,
+            "exclusive_pairs": 24848
+          }
+        ]
+      }
+    },
+    {
+      "variant": "symmetric_k10",
+      "pairs": 54976,
+      "truth_found": 3080,
+      "recall": 0.6708778043999128,
+      "seconds": 0.7669574589999684,
+      "additional_truth_vs_forward_k10": 19,
+      "lost_truth_vs_forward_k10": 0,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 54976,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 10,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": false
+            },
+            "proposed_pairs": 45567,
+            "unique_pairs": 45567,
+            "added_pairs": 45567,
+            "overlapping_pairs": 0,
+            "union_pairs": 45567,
+            "exclusive_pairs": 30128
+          },
+          {
+            "pass": 1,
+            "name": "ngrams-reverse:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams-reverse:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 10,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": true
+            },
+            "proposed_pairs": 24848,
+            "unique_pairs": 24848,
+            "added_pairs": 9409,
+            "overlapping_pairs": 15439,
+            "union_pairs": 54976,
+            "exclusive_pairs": 9409
+          }
+        ]
+      }
+    },
+    {
+      "variant": "forward_k20",
+      "pairs": 89465,
+      "truth_found": 3089,
+      "recall": 0.672838161620562,
+      "seconds": 0.530847458000153,
+      "additional_truth_vs_forward_k10": 28,
+      "lost_truth_vs_forward_k10": 0,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 89465,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 20,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": false
+            },
+            "proposed_pairs": 89465,
+            "unique_pairs": 89465,
+            "added_pairs": 89465,
+            "overlapping_pairs": 0,
+            "union_pairs": 89465,
+            "exclusive_pairs": 89465
+          }
+        ]
+      }
+    },
+    {
+      "variant": "forward_k50",
+      "pairs": 197350,
+      "truth_found": 3126,
+      "recall": 0.6808974079721194,
+      "seconds": 0.6727165839997724,
+      "additional_truth_vs_forward_k10": 65,
+      "lost_truth_vs_forward_k10": 0,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 197350,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 50,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": false
+            },
+            "proposed_pairs": 197350,
+            "unique_pairs": 197350,
+            "added_pairs": 197350,
+            "overlapping_pairs": 0,
+            "union_pairs": 197350,
+            "exclusive_pairs": 197350
+          }
+        ]
+      }
+    },
+    {
+      "variant": "forward_k100",
+      "pairs": 300842,
+      "truth_found": 3141,
+      "recall": 0.6841646700065345,
+      "seconds": 0.8321323749996736,
+      "additional_truth_vs_forward_k10": 80,
+      "lost_truth_vs_forward_k10": 0,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 300842,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 100,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": false
+            },
+            "proposed_pairs": 300842,
+            "unique_pairs": 300842,
+            "added_pairs": 300842,
+            "overlapping_pairs": 0,
+            "union_pairs": 300842,
+            "exclusive_pairs": 300842
+          }
+        ]
+      }
+    },
+    {
+      "variant": "forward_k10_plus_initials",
+      "pairs": 45568,
+      "truth_found": 3062,
+      "recall": 0.6669570899586147,
+      "seconds": 0.4757062910002787,
+      "additional_truth_vs_forward_k10": 1,
+      "lost_truth_vs_forward_k10": 0,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 45568,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "ngrams:name",
+            "config": {
+              "type": "ngrams",
+              "name": "ngrams:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "k": 10,
+              "n": [
+                2,
+                4
+              ],
+              "min_sim": 0.1,
+              "reverse": false
+            },
+            "proposed_pairs": 45567,
+            "unique_pairs": 45567,
+            "added_pairs": 45567,
+            "overlapping_pairs": 0,
+            "union_pairs": 45567,
+            "exclusive_pairs": 45567
+          },
+          {
+            "pass": 1,
+            "name": "initials:name",
+            "config": {
+              "type": "initials",
+              "name": "initials:name",
+              "columns": [
+                [
+                  "name",
+                  "name"
+                ]
+              ],
+              "min_len": 2
+            },
+            "proposed_pairs": 1,
+            "unique_pairs": 1,
+            "added_pairs": 1,
+            "overlapping_pairs": 0,
+            "union_pairs": 45568,
+            "exclusive_pairs": 1
+          }
+        ]
+      }
+    },
+    {
+      "variant": "first_letter_k10",
+      "pairs": 35956,
+      "truth_found": 2969,
+      "recall": 0.6467000653452407,
+      "seconds": 0.3416208749999896,
+      "additional_truth_vs_forward_k10": 39,
+      "lost_truth_vs_forward_k10": 131,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 35956,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "within:first_letter[drop](ngrams:name)",
+            "config": {
+              "type": "within",
+              "name": "within:first_letter[drop](ngrams:name)",
+              "columns": [
+                [
+                  "first_letter",
+                  "first_letter"
+                ]
+              ],
+              "missing": "drop",
+              "blocker": {
+                "type": "ngrams",
+                "name": "ngrams:name",
+                "columns": [
+                  [
+                    "name",
+                    "name"
+                  ]
+                ],
+                "k": 10,
+                "n": [
+                  2,
+                  4
+                ],
+                "min_sim": 0.1,
+                "reverse": false
+              }
+            },
+            "proposed_pairs": 35956,
+            "unique_pairs": 35956,
+            "added_pairs": 35956,
+            "overlapping_pairs": 0,
+            "union_pairs": 35956,
+            "exclusive_pairs": 35956
+          }
+        ]
+      }
+    },
+    {
+      "variant": "first_letter_symmetric_k10",
+      "pairs": 40113,
+      "truth_found": 2975,
+      "recall": 0.6480069701590068,
+      "seconds": 0.5406513749999249,
+      "additional_truth_vs_forward_k10": 43,
+      "lost_truth_vs_forward_k10": 129,
+      "blocking": {
+        "schema_version": 1,
+        "max_pairs": 5000000,
+        "pair_count": 40113,
+        "passes": [
+          {
+            "pass": 0,
+            "name": "within:first_letter[drop](ngrams:name)",
+            "config": {
+              "type": "within",
+              "name": "within:first_letter[drop](ngrams:name)",
+              "columns": [
+                [
+                  "first_letter",
+                  "first_letter"
+                ]
+              ],
+              "missing": "drop",
+              "blocker": {
+                "type": "ngrams",
+                "name": "ngrams:name",
+                "columns": [
+                  [
+                    "name",
+                    "name"
+                  ]
+                ],
+                "k": 10,
+                "n": [
+                  2,
+                  4
+                ],
+                "min_sim": 0.1,
+                "reverse": false
+              }
+            },
+            "proposed_pairs": 35956,
+            "unique_pairs": 35956,
+            "added_pairs": 35956,
+            "overlapping_pairs": 0,
+            "union_pairs": 35956,
+            "exclusive_pairs": 17275
+          },
+          {
+            "pass": 1,
+            "name": "within:first_letter[drop](ngrams-reverse:name)",
+            "config": {
+              "type": "within",
+              "name": "within:first_letter[drop](ngrams-reverse:name)",
+              "columns": [
+                [
+                  "first_letter",
+                  "first_letter"
+                ]
+              ],
+              "missing": "drop",
+              "blocker": {
+                "type": "ngrams",
+                "name": "ngrams-reverse:name",
+                "columns": [
+                  [
+                    "name",
+                    "name"
+                  ]
+                ],
+                "k": 10,
+                "n": [
+                  2,
+                  4
+                ],
+                "min_sim": 0.1,
+                "reverse": true
+              }
+            },
+            "proposed_pairs": 22838,
+            "unique_pairs": 22838,
+            "added_pairs": 4157,
+            "overlapping_pairs": 18681,
+            "union_pairs": 40113,
+            "exclusive_pairs": 4157
+          }
+        ]
+      }
+    }
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "packages": {
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1"
+    }
+  }
+}

@@ -120,10 +120,12 @@ What the table says:
   with character-level corruption, and TF-IDF cosine is nearly perfect there and free. jlink
   made no false links (precision 1.00) but was too cautious at 0.5; at a threshold of 0.3 its
   F1 is 0.98.
-- **The firm benchmark has a ceiling that no name-based method can pass.** A third of the NBER
-  crosswalk's links are ownership facts with nothing in common in the names ("Homogeneous
-  Metals Inc" to "United Technologies Corp"), so blocking can propose only 67% of true links.
-  jlink found 93% of those. (A sliver of its error is the benchmark's: 11 Compustat names appear
+- **The firm run was limited by its candidate search.** The default forward top-10 n-gram
+  pass proposed 67% of known links; this is measured blocking recall, not a ceiling for
+  name-based methods. Ownership links such as "Homogeneous Metals Inc" to "United Technologies
+  Corp" can be difficult to retrieve from names. jlink found 93% of the proposed true links.
+  [Offline blocking comparisons](docs/blocking.md) show the recall and pair-count tradeoffs of
+  reverse search and larger `k`. (A sliver of its error is the benchmark's: 11 Compustat names appear
   under two IDs, which accounts for 14 of jlink's 331 false links.)
 - **Amazon to Google is hard for everyone**, because listings differ in version and edition
   details that the records often omit.
@@ -144,7 +146,11 @@ probability.
 **Speed.** The firm run judged 45,567 pairs in 176 seconds (259 pairs a second, 64 calls in
 flight, median latency 214 ms, one retry). Blocking 100,000 by 100,000 records takes about four
 minutes and 1 GB on an M3 Ultra; blocking time grows roughly with the square of the data, so
-beyond that size add an `exact` pass on a field such as state or year to split the problem.
+beyond that size, a reliable shared field such as state or year can restrict the search with
+`jlink.block.within(jlink.block.ngrams("name"), "state")`. This searches separately inside
+matching groups. Adding a separate `exact("state")` pass unions more pairs and does not split
+the existing search. Grouping can lose matches when group values disagree or are missing;
+see [grouping, reverse search, and pair limits](docs/blocking.md).
 
 Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`, then
 `uv run python bench/live.py nber-firms --budget 1.00`. Baselines and data provenance are in

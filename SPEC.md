@@ -98,11 +98,16 @@ class Blocker:
     name: str
     def pairs(self, left: pd.DataFrame, right: pd.DataFrame) -> np.ndarray: ...
         # shape (m, 2), dtype int64: positions (not IDs) of left and right rows
+    def iter_pairs(self, left: pd.DataFrame, right: pd.DataFrame) -> Iterator[np.ndarray]: ...
+        # bounded batches for built-ins; fallback calls pairs() for existing custom passes
+    def to_config(self) -> dict: ...  # JSON-safe configuration; recursive for within
 
 def exact(*columns: str | tuple[str, str], name: str | None = None) -> Blocker
 def ngrams(*columns: str | tuple[str, str], k: int = 10, n: tuple[int, int] = (2, 4),
-           min_sim: float = 0.1, name: str | None = None) -> Blocker
+           min_sim: float = 0.1, name: str | None = None, reverse: bool = False) -> Blocker
 def initials(column: str | tuple[str, str], min_len: int = 2, name: str | None = None) -> Blocker
+def within(blocker: Blocker, *columns: str | tuple[str, str], missing: str = "drop",
+           name: str | None = None) -> Blocker
 def candidates(left, right, *, on, blockers: list[Blocker] | None = None, left_id=None, right_id=None,
                max_pairs: int | None = 5_000_000) -> pd.DataFrame
 def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
@@ -115,6 +120,13 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   similarity >= `min_sim`. Must scale: 100,000 by 100,000 rows in a few minutes and under
   4 GB, so multiply sparse matrices in row chunks and take top-k per chunk. Never build a
   dense n-by-m matrix. Default name `ngrams:<columns>`.
+  With `reverse=True`, select up to `k` left neighbors per right row, still returning
+  `(left_position, right_position)`; default name `ngrams-reverse:<columns>`. Union forward
+  and reverse passes for symmetric search. The default remains forward only.
+- `within`: run its child blocker separately in each matching normalized exact group,
+  supporting mapped left/right columns and restoring original positions. N-gram TF-IDF is
+  fit within each group. `missing="drop"` omits incomplete keys; `missing="match"` allows
+  identical incomplete keys (empty components are equal, not wildcards).
 - `initials`: pairs where one side's normalized text, read as one token of at least `min_len`
   letters, equals the initials of the other side's tokens, in either direction ("IBM" and
   "International Business Machines"). Ignore the stop words `and`, `of`, `the`, `for` and
@@ -123,8 +135,12 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   `initials:<column>`.
 - `candidates`: run each blocker, union the pairs, fill `block` and `sim`, map positions to
   IDs. `blockers=None` means `[ngrams(*all on fields, k=10)]`. If the union exceeds
-  `max_pairs`, raise `ValueError` that says how many pairs there were and suggests a smaller
-  `k` or an `exact` pass.
+  `max_pairs`, raise `ValueError` at the first excess unique pair, reporting an "at least"
+  count and suggesting smaller `k`, `within(...)`, or constraining/removing broad passes.
+  Built-ins stream bounded pair batches via `iter_pairs`; custom `pairs` implementations
+  remain supported. Adding `exact` cannot constrain another pass because passes are unioned.
+  `Blocker.to_config()` and `candidates.attrs["blocking"]` expose nested configurations and
+  per-pass contributions; see [the schema and ordering contract](docs/blocking.md).
 - `pairs_completeness`: share of `truth` pairs (columns `left_id`, `right_id`) present in
   `candidates`. This is blocking recall.
 

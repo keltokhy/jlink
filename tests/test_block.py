@@ -285,7 +285,7 @@ def test_max_pairs_counts_union_not_repeated_proposals():
     assert len(block.candidates(frame, frame, on="name", blockers=passes, max_pairs=None)) == 4
     with pytest.raises(ValueError, match=r"4 pairs.*max_pairs=3.*smaller `k`.*`exact`"):
         block.candidates(frame, frame, on="name", blockers=passes, max_pairs=3)
-    with pytest.raises(ValueError, match="4 pairs"):
+    with pytest.raises(ValueError, match="at least 1 pairs"):
         block.candidates(frame, frame, on="name", blockers=passes, max_pairs=0)
     assert block.candidates(frame, frame, on="name", blockers=[], max_pairs=0).empty
 
