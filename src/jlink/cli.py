@@ -175,6 +175,9 @@ def _parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--markdown", action="store_true",
                           help="print a Markdown table for a data appendix")
     evaluate.set_defaults(run=_evaluate)
+    from .review_cli import add_parser as add_review_parser
+
+    add_review_parser(sub)
     return parser
 
 

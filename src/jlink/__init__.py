@@ -14,6 +14,8 @@ from .audit import Evaluation, audit_sample, evaluate, score_against_truth  # no
 from .judge import judge  # noqa: E402
 from .linker import Linker, Result, link, load  # noqa: E402
 from .resolve import resolve  # noqa: E402
+from .review import Review, ReviewedLinks, create_review, read_review  # noqa: E402
 
 __all__ = ["Linker", "Result", "link", "load", "block", "judge", "resolve", "audit_sample", "evaluate",
-           "score_against_truth", "Evaluation", "__version__"]
+           "score_against_truth", "Evaluation", "__version__", "Review", "ReviewedLinks", "create_review",
+           "read_review"]
