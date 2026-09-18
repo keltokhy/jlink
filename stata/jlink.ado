@@ -1,7 +1,8 @@
 *! jlink 0.1.0 -- thin POSIX wrapper, requires Stata 14 or later
 * Run on real Stata/SE 19.5 on macOS using an offline fake jev-link. Tested:
 * temp files, quoted definitions, spaces in paths, saving/merge, unchanged data,
-* empty links, command errors, and python3 fallback. No real Linker/API or Windows testing.
+* empty links, command errors, and python3 fallback. Also run once end to end against the real
+* command and the live Jev API on examples/ (2026-09-18). Not tested on Windows.
 * Rerun: uv run python tests/wrappers/run.py --stata
 program define jlink, rclass
     version 14

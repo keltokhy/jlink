@@ -1,6 +1,7 @@
 # Thin jlink wrapper. Run on real R 4.5.1 on macOS with an offline fake jev-link:
 # CSV round trips, spaces/quotes in arguments, executable fallback, cleanup and errors.
-# Not tested against the real Linker, Jev API, Windows, or other R versions.
+# Also run once end to end against the real command and the live Jev API on examples/ (2026-09-18).
+# Not tested on Windows or other R versions.
 # Rerun: uv run python tests/wrappers/run.py --r
 # Install jlink into an environment on PATH. Prefer jev-link; macOS's jlink is Java.
 # Example: jlink(firms, "registry.dta", on=c("name", "city=town"), entity="firm",

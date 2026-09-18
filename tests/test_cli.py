@@ -31,7 +31,7 @@ def downstream(monkeypatch):
                                      api=api, model=model, cache=cache, concurrency=concurrency)
 
         def link(self, left, right, *, left_id=None, right_id=None, how="one-to-one", threshold=0.5,
-                 min_margin=0.0, budget=5.0):
+                 min_margin=None, budget=5.0, progress=True):
             calls.link = dict(left=left, right=right, left_id=left_id, right_id=right_id, how=how,
                               threshold=threshold, min_margin=min_margin, budget=budget)
             return calls.result
