@@ -117,9 +117,9 @@ def test_stdout_and_summary(downstream, inputs, capsys):
     captured = capsys.readouterr()
     assert captured.out.startswith("left_id,right_id,") and "00123,00007" in captured.out
     assert "2 left records, 2 right records; 2 candidate pairs; 1 links; 2 calls; $0.0010" in captured.err
-    assert downstream.constructor == dict(entity="firm", definition="", on=["name"], blockers=None)
+    assert downstream.constructor == dict(entity="firm", definition="", on=["name"], blockers=None,
+                                          api=None, model=None, cache=True, concurrency=32)
     assert downstream.link["left"].id.tolist() == ["00123", "00456"]
-    assert downstream.link["cache"] and downstream.link["concurrency"] == 32
 
 
 def test_link_all_options_and_files(downstream, inputs, tmp_path, capsys):
@@ -142,9 +142,10 @@ def test_link_all_options_and_files(downstream, inputs, tmp_path, capsys):
         ("ngrams", ("name",), {"k": 10}), ("ngrams", ("name", "city"), {"k": 20}),
         ("exact", ("state",), {}), ("exact", (("state", "st"),), {}), ("initials", ("name",), {}),
     ]
-    for key, value in dict(how="many-to-one", threshold=0.8, min_margin=-0.2, budget=0,
-                           api="openrouter", model="fake/jev", cache=False, concurrency=4).items():
+    for key, value in dict(how="many-to-one", threshold=0.8, min_margin=-0.2, budget=0).items():
         assert downstream.link[key] == value
+    for key, value in dict(api="openrouter", model="fake/jev", cache=False, concurrency=4).items():
+        assert downstream.constructor[key] == value
 
 
 @pytest.mark.parametrize("rule", ["", "random:name", "ngrams:name", "ngrams:name:0", "ngrams:name:-1",
