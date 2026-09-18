@@ -1,0 +1,19 @@
+{
+  "experiment": "guard",
+  "rows_per_side": 100000,
+  "possible_exact_pairs": 10000000000,
+  "max_pairs": 1000,
+  "error": "blocking produced at least 1,001 pairs, exceeding max_pairs=1,000 during 'within:state[drop](exact:name)'; use a smaller `k`, wrap a pass with `within(...)`, or remove/better constrain broad passes; adding an `exact` pass unions more pairs and does not restrict other passes",
+  "seconds": 0.29973708299985447,
+  "peak_rss_mib": 193.796875,
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "packages": {
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1"
+    }
+  }
+}

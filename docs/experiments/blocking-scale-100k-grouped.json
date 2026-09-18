@@ -1,0 +1,67 @@
+{
+  "experiment": "scale",
+  "rows_per_side": 100000,
+  "groups": 50,
+  "symmetric": false,
+  "pairs": 1000000,
+  "seconds": 14.099698083000021,
+  "synthetic_truth_found": 100000,
+  "synthetic_recall": 1.0,
+  "peak_rss_mib": 920.5625,
+  "seed": 20260918,
+  "blocking": {
+    "schema_version": 1,
+    "max_pairs": 5000000,
+    "pair_count": 1000000,
+    "passes": [
+      {
+        "pass": 0,
+        "name": "within:state[drop](ngrams:name)",
+        "config": {
+          "type": "within",
+          "name": "within:state[drop](ngrams:name)",
+          "columns": [
+            [
+              "state",
+              "state"
+            ]
+          ],
+          "missing": "drop",
+          "blocker": {
+            "type": "ngrams",
+            "name": "ngrams:name",
+            "columns": [
+              [
+                "name",
+                "name"
+              ]
+            ],
+            "k": 10,
+            "n": [
+              2,
+              4
+            ],
+            "min_sim": 0.1,
+            "reverse": false
+          }
+        },
+        "proposed_pairs": 1000000,
+        "unique_pairs": 1000000,
+        "added_pairs": 1000000,
+        "overlapping_pairs": 0,
+        "union_pairs": 1000000,
+        "exclusive_pairs": 1000000
+      }
+    ]
+  },
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "packages": {
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1"
+    }
+  }
+}
