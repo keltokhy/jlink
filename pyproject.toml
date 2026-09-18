@@ -1,0 +1,43 @@
+[project]
+name = "jlink"
+version = "0.1.0"
+description = "Record linkage for economists: match rules in plain English, judged by TypeSafe's Jev model"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Khaled Eltokhy" }]
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+    "scikit-learn>=1.3",
+    "tqdm>=4.60",
+]
+keywords = ["record linkage", "entity resolution", "fuzzy matching", "economics", "jev", "typesafe"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.urls]
+Repository = "https://github.com/keltokhy/jlink"
+
+[project.scripts]
+jlink = "jlink.cli:cli"
+# macOS ships /usr/bin/jlink (a Java tool), which can shadow the name above.
+jev-link = "jlink.cli:cli"
+
+[dependency-groups]
+dev = ["pytest>=8", "pyarrow>=14"]
+bench = ["recordlinkage>=0.16", "jellyfish>=1.0", "requests>=2.31"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jlink"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
