@@ -84,7 +84,22 @@ def test_save_and_load_round_trip(tmp_path):
 
 def test_audit_sample_shows_both_records():
     sample = run().audit_sample(n=6)
-    assert {"is_match", "a_name", "b_name", "a_state", "b_state", "p", "weight"} <= set(sample.columns)
+    assert {"is_match", "a_name", "b_name", "a_state", "b_state", "p", "weight", "selected"} <= set(
+        sample.columns)
+
+
+def test_audit_uses_actual_result_links_after_relink_and_load(tmp_path):
+    result = run()
+    for current in (result, result.relink(how="many-to-many"), result.relink(min_margin=.5),
+                    result.relink(threshold=.99), jlink.load(result.save(tmp_path / "saved"))):
+        sample = current.audit_sample(n=len(current.scores))
+        expected = set(zip(current.links.left_id, current.links.right_id))
+        selected = sample.loc[sample.selected]
+        assert set(zip(selected.left_id, selected.right_id)) == expected
+        assert sample.selected.dtype == bool
+    # Membership comes from the actual table, even if it differs from current settings.
+    result.links = result.links.iloc[:0]
+    assert not result.audit_sample(n=len(result.scores)).selected.any()
 
 
 def test_estimate_makes_no_calls():

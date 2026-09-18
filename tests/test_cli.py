@@ -55,8 +55,9 @@ def downstream(monkeypatch):
         calls.sample = frame, kwargs
         return frame[["left_id", "right_id", "p"]].assign(bin="(0.95, 1]", weight=1.0, is_match="")
 
-    def evaluate(frame, *, threshold):
+    def evaluate(frame, *, threshold, mode):
         calls.evaluate = frame, threshold
+        calls.evaluate_mode = mode
         return SimpleNamespace(
             summary=lambda: "precision 0.9; recall among candidate pairs 0.8",
             to_markdown=lambda: "| precision | recall among candidate pairs |\n| 0.9 | 0.8 |",
@@ -219,6 +220,7 @@ def test_audit_and_evaluate(downstream, tmp_path, inputs, capsys):
     assert "| precision |" in capsys.readouterr().out
     frame, threshold = downstream.evaluate
     assert threshold == 0.8 and frame.weight.dtype.kind == "f"
+    assert downstream.evaluate_mode == "threshold"
     assert frame.left_id.iloc[0] == "00123" and frame.is_match.tolist() == ["yes", "no"]
     command.cli(["evaluate", str(audit)])
     assert "recall among candidate pairs" in capsys.readouterr().out
@@ -244,6 +246,60 @@ def test_audit_aligns_numeric_stata_ids(downstream, tmp_path):
     command.cli(["audit", str(scores), "--left", str(left), "--right", str(right), "--on", "name",
                  "--left-id", "id", "--right-id", "id", "-o", str(output)])
     assert downstream.sample[0].left_id.iloc[0] == 123
+
+
+def test_selected_cli_roundtrip_and_old_audit_files(tmp_path, capsys):
+    scores, links, output = [tmp_path / file for file in ("scores.csv", "links.csv", "audit.csv")]
+    frame = pd.DataFrame({"left_id": ["001", "001"], "right_id": ["007", "008"], "p": [.9, .8]})
+    frame.to_csv(scores, index=False)
+    frame.iloc[:1].to_csv(links, index=False)
+    command.cli(["audit", str(scores), "--links", str(links), "-o", str(output)])
+    sample = read_table(output)
+    assert set(sample.selected) == {"True", "False"}
+    assert set(sample.left_id) == {"001"}
+    sample["is_match"] = sample.right_id.eq("007")
+    sample.to_csv(output, index=False)
+    command.cli(["evaluate", str(output), "--mode", "selected", "--markdown"])
+    summary = capsys.readouterr().out
+    assert "Final-link evaluation using saved selected membership" in summary
+    assert "| Precision | 1.0000 |" in summary
+    assert "| Judged-candidate recall | 1.0000 |" in summary
+    command.cli(["evaluate", str(output)])
+    assert "Precision 0.5000" in capsys.readouterr().out
+    command.cli(["evaluate", str(output), "--threshold", "0.85"])
+    assert "Precision 1.0000" in capsys.readouterr().out
+    sample.drop(columns="selected").to_csv(output, index=False)
+    command.cli(["evaluate", str(output)])
+    assert "Pair-scoring evaluation at threshold 0.5" in capsys.readouterr().out
+    assert_error(["evaluate", str(output), "--mode", "selected"], capsys, "'selected' column")
+    command.cli(["audit", str(scores), "-o", str(output)])
+    assert "selected" not in read_table(output)
+
+
+def test_selected_cli_aligns_ids_with_sources_and_protects_links(tmp_path, capsys):
+    left, right, scores, links, output = [tmp_path / name for name in
+                                          ("left.dta", "right.dta", "scores.csv", "links.csv", "audit.csv")]
+    pd.DataFrame({"id": [123], "name": ["Acme"]}).to_stata(left, write_index=False)
+    pd.DataFrame({"id": [7, 8], "name": ["ACME", "Other"]}).to_stata(right, write_index=False)
+    frame = pd.DataFrame({"left_id": [123, 123], "right_id": [7, 8], "p": [.9, .8]})
+    frame.to_csv(scores, index=False)
+    frame.iloc[:1].to_csv(links, index=False)
+    args = ["audit", str(scores), "--links", str(links), "--left", str(left), "--right", str(right),
+            "--on", "name", "--left-id", "id", "--right-id", "id"]
+    command.cli([*args, "-o", str(output)])
+    sample = read_table(output)
+    assert sample.loc[sample.selected.eq("True"), "right_id"].tolist() == ["7"]
+    assert_error([*args, "-o", str(links)], capsys, "separate output file")
+    frame.iloc[:1].assign(right_id=999).to_csv(links, index=False)
+    assert_error(["audit", str(scores), "--links", str(links), "-o", str(output)], capsys,
+                 "absent from scores")
+
+
+def test_selected_cli_rejects_invalid_flags(tmp_path, capsys):
+    path = tmp_path / "labeled.csv"
+    pd.DataFrame({"left_id": ["A"], "right_id": ["B"], "p": [.9], "bin": ["all"],
+                  "weight": [1], "is_match": [1], "selected": ["yes"]}).to_csv(path, index=False)
+    assert_error(["evaluate", str(path), "--mode", "selected"], capsys, "nonmissing 1/0 or True/False")
 
 
 @pytest.mark.parametrize("program", [[sys.executable, "-m", "jlink"], ["jev-link"], ["jlink"]])

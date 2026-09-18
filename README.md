@@ -166,7 +166,7 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
    `result.relink(...)` tries other rules without paying again.
 4. **Audit.** `result.audit_sample(200)` draws pairs across the probability range, links and
    non-links alike, with both records side by side. Label them in a spreadsheet, then
-   `jlink.evaluate(labeled)` reports precision, recall and calibration.
+   `jlink.evaluate(labeled, mode="selected")` evaluates the delivered links and pair-score calibration.
 
 ```python
 linker = jlink.Linker(
@@ -189,15 +189,19 @@ result.save("linkage/")                                   # links.csv, scores.cs
 sample = result.audit_sample(n=200)
 sample.to_csv("audit.csv", index=False)      # fill in is_match with 1 or 0, then:
 
-ev = jlink.evaluate(pd.read_csv("audit.csv"))
+labeled = pd.read_csv("audit.csv", dtype={"left_id": str, "right_id": str})
+ev = jlink.evaluate(labeled, mode="selected")
 print(ev.summary())
 print(ev.to_markdown())                      # a table for the appendix
 ```
 
 The sample is stratified by probability, so the uncertain middle is covered and not only the
-easy ends, and the estimates are weighted back to all judged pairs. Recall is measured among
-candidate pairs. A true match that blocking never proposed is invisible to the audit, so widen
-blocking (a larger `k`, an extra pass) and see whether new links appear.
+easy ends, and the estimates are weighted back to all judged pairs. Selected mode uses the
+sample's saved membership in the final links; the default `mode="threshold"` instead assesses
+`p >= threshold`, before assignment and margin filtering. Recall covers judged candidates
+only, excluding unjudged pairs and true matches lost in blocking. Brier and calibration always
+assess pair scores. See [evaluation modes and limitations](docs/evaluation.md) for incomplete
+labels, bootstrap assumptions and the exported table contract.
 
 ## Command line, Stata and R
 
@@ -207,8 +211,9 @@ jlink link compustat.dta patents.csv --on conm=assignee --on state --entity firm
       --define "A parent company and its subsidiary are different firms." \
       --left-id gvkey --right-id assignee_id --block ngrams:conm=assignee:10 --block initials:conm=assignee \
       -o links.csv --scores scores.csv --report report.md
-jlink audit scores.csv --left compustat.dta --right patents.csv --on conm=assignee -n 200 -o audit.csv
-jlink evaluate audit.csv --markdown
+jlink audit scores.csv --links links.csv --left compustat.dta --right patents.csv --on conm=assignee \
+      --left-id gvkey --right-id assignee_id -n 200 -o audit.csv
+jlink evaluate audit.csv --mode selected --markdown
 ```
 
 The Stata and R wrappers are single files in this repository, not part of the Python package: copy

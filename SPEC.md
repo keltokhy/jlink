@@ -158,6 +158,10 @@ higher-scoring competitor, which guts `many-to-many`.
 
 ## audit.py
 
+The evaluation extension in [docs/evaluation.md](docs/evaluation.md) adds optional `links=`
+to `audit_sample` and `mode="threshold"|"selected"` to `evaluate`. It supersedes this older
+section where noted; threshold evaluation remains the backward-compatible default.
+
 ```python
 def audit_sample(scores, *, n=200, bins=(0, 0.05, 0.2, 0.5, 0.8, 0.95, 1.0), seed=0,
                  left=None, right=None, on=None, left_id=None, right_id=None) -> pd.DataFrame
