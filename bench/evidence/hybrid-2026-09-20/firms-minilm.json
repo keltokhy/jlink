@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "dataset": "nber-firms",
+  "seed": 1729,
+  "k": 10,
+  "split": "30% development / 70% test; disjoint observed entities",
+  "prior_exposure": "existing public benchmark; not an untouched external test",
+  "label_policy": "positive-only crosswalk; unlisted pairs unknown",
+  "definition": {
+    "entity": "firm",
+    "how": "many-to-one",
+    "definition": "Ignore legal-form suffixes (Inc, Corp, Co, CPY, Ltd, GmbH, N V). A subsidiary or division counts as its parent company."
+  },
+  "exact_shortcut": false,
+  "judge_status": "not_run",
+  "linktransformer": "retrieval only; its LLM judge was not run",
+  "budget_usd": 0,
+  "new_api_calls": 0,
+  "new_api_cost_usd": 0.0,
+  "source_hashes": {
+    "left.parquet": "5cd9a270659dcc64192638ee985e65744eb714f74af00ac97e4a273c5590bfcf",
+    "right.parquet": "8cb3381911e440139fec56ce573a0419febcedb2414383e2ba1338d19e84c8a2",
+    "truth.parquet": "86b1dc95e2d92e9d1470f1b1276db460b51ca93c8c5145f2dd86ce367d093151",
+    "meta.json": "78409822c7331c7ad88ba9f0e5765fbf0a51de8fd404d3882ced6756761e1b80"
+  },
+  "partitions": {
+    "dev": {
+      "records": {
+        "left": 1334,
+        "right": 744,
+        "truth": 1335
+      },
+      "retrieval_seconds": {
+        "lexical": 0.11447883301298134,
+        "semantic": 3.200255667004967
+      },
+      "retrieval": {
+        "lexical": {
+          "pairs": 12724,
+          "known_matches_found": 925,
+          "known_matches": 1335,
+          "candidate_recall": 0.6928838951310862,
+          "added_pairs": 0,
+          "recovered_matches": 0,
+          "lost_matches": 0
+        },
+        "semantic": {
+          "pairs": 13340,
+          "known_matches_found": 923,
+          "known_matches": 1335,
+          "candidate_recall": 0.6913857677902622,
+          "added_pairs": 9945,
+          "recovered_matches": 13,
+          "lost_matches": 15
+        },
+        "hybrid": {
+          "pairs": 22669,
+          "known_matches_found": 938,
+          "known_matches": 1335,
+          "candidate_recall": 0.702621722846442,
+          "added_pairs": 9945,
+          "recovered_matches": 13,
+          "lost_matches": 0
+        },
+        "linktransformer": {
+          "pairs": 13340,
+          "known_matches_found": 923,
+          "known_matches": 1335,
+          "candidate_recall": 0.6913857677902622,
+          "added_pairs": 9945,
+          "recovered_matches": 13,
+          "lost_matches": 15
+        }
+      },
+      "linktransformer_metadata": {
+        "api": "linktransformer.merge_knn",
+        "seconds_including_model_load": 0.8668033750145696,
+        "version": "0.1.18",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "requested_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "resolved_snapshot": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "infer_sha256": "4016bbd6833414d84910bae5f15186d6e3b48fed275068b90f38073dd5e62e4a",
+        "score_semantics": "embedding cosine, not match probability",
+        "new_api_calls": 0,
+        "OMP_NUM_THREADS": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "packages": {
+          "sentence-transformers": "5.2.2",
+          "torch": "2.10.0",
+          "transformers": "5.1.0",
+          "numpy": "2.4.2",
+          "pandas": "3.0.0",
+          "faiss-cpu": "1.13.2"
+        }
+      }
+    },
+    "test": {
+      "records": {
+        "left": 3251,
+        "right": 1744,
+        "truth": 3256
+      },
+      "retrieval_seconds": {
+        "lexical": 0.28679725000984035,
+        "semantic": 2.0121357909811195
+      },
+      "retrieval": {
+        "lexical": {
+          "pairs": 32101,
+          "known_matches_found": 2157,
+          "known_matches": 3256,
+          "candidate_recall": 0.6624692874692875,
+          "added_pairs": 0,
+          "recovered_matches": 0,
+          "lost_matches": 0
+        },
+        "semantic": {
+          "pairs": 32510,
+          "known_matches_found": 2144,
+          "known_matches": 3256,
+          "candidate_recall": 0.6584766584766585,
+          "added_pairs": 24030,
+          "recovered_matches": 30,
+          "lost_matches": 43
+        },
+        "hybrid": {
+          "pairs": 56131,
+          "known_matches_found": 2187,
+          "known_matches": 3256,
+          "candidate_recall": 0.6716830466830467,
+          "added_pairs": 24030,
+          "recovered_matches": 30,
+          "lost_matches": 0
+        },
+        "linktransformer": {
+          "pairs": 32510,
+          "known_matches_found": 2144,
+          "known_matches": 3256,
+          "candidate_recall": 0.6584766584766585,
+          "added_pairs": 24030,
+          "recovered_matches": 30,
+          "lost_matches": 43
+        }
+      },
+      "linktransformer_metadata": {
+        "api": "linktransformer.merge_knn",
+        "seconds_including_model_load": 1.9210222080000676,
+        "version": "0.1.18",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "requested_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "resolved_snapshot": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "infer_sha256": "4016bbd6833414d84910bae5f15186d6e3b48fed275068b90f38073dd5e62e4a",
+        "score_semantics": "embedding cosine, not match probability",
+        "new_api_calls": 0,
+        "OMP_NUM_THREADS": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "packages": {
+          "sentence-transformers": "5.2.2",
+          "torch": "2.10.0",
+          "transformers": "5.1.0",
+          "numpy": "2.4.2",
+          "pandas": "3.0.0",
+          "faiss-cpu": "1.13.2"
+        }
+      }
+    }
+  },
+  "embedding_config": {
+    "type": "embeddings",
+    "name": "embeddings:name",
+    "columns": [
+      [
+        "name",
+        "name"
+      ]
+    ],
+    "k": 10,
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "resolved_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "min_sim": 0.0,
+    "reverse": false,
+    "batch_size": 64,
+    "device": "cpu",
+    "serialization": "single_text_or_labeled_json_v1",
+    "search": "chunked_exact_cosine_v1",
+    "custom_encoder": false,
+    "reconstructable": true
+  },
+  "environment": {
+    "python": "3.12.14 (main, Sep  1 2026, 14:09:38) [Clang 22.1.3 ]",
+    "packages": {
+      "jlink": "0.1.0",
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.9.1",
+      "sentence-transformers": "5.7.0"
+    }
+  },
+  "code_hashes": {
+    "bench/hybrid.py": "4439fc3afea1b130632f068a2f8bff9b7c5c747d82ed867b12d90d90e52ba82b",
+    "bench/linktransformer_retrieval.py": "a7ffdfe0ccfbd363a21fee175f29169e48a8fe62a33f9cae598d4d6fc242cb29",
+    "bench/evaluation.py": "c0b8d493caf76bf6b4acb00ba66e0d01c50bcdab93accc040e1d125f333c2bce",
+    "src/jlink/embeddings.py": "b18b2d394dcb88e1d2767cbc4e1d7b95c4a32b0fbf7a54a52669063527c4e947",
+    "src/jlink/block.py": "1a2497d41559d4a3ba6cfd2cc52f429b034f7ce55d4e3f53b5b8c582f231608b",
+    "src/jlink/judge.py": "9d0c4aba4fae0c4c07506f6985b217358e169774e4fa069664c8388fbab7ddd7"
+  },
+  "artifacts": {
+    "dev-hybrid-candidates.csv": "dfd2c9bb69184f2a12435504e8a11d59748997a15b0773147dfc52506cb800bb",
+    "dev-lexical-candidates.csv": "b0bc95fa04e49b7a485085bd4a17c3ebfd458e49dcd356ab1767ee89bc69d790",
+    "dev-linktransformer/candidates.csv": "eb82e257dffba20baaab21f802e8fcb4006b179276dbc2f78b1d3658ad1d6780",
+    "dev-linktransformer/left.parquet": "ebc0613e24b9c6f5dda675e239d6cb715be798393fd65282555ba93ee10aebb4",
+    "dev-linktransformer/metadata.json": "e26a7a6334081d23f3e6afb8dff78a99f35a385dcf7dfc150249336c8292c545",
+    "dev-linktransformer/process.log": "2c8145d4fbc9e454a2719b2c80890c83e77a3b4c30abdd10092fa766ea8b16df",
+    "dev-linktransformer/request.json": "2bd544452b866790e9690d723c1894fdddee3fcd957892cdf2a15eb282c2c4b6",
+    "dev-linktransformer/right.parquet": "ddf0d35de3acf925c35b403a010151f5aaafabf03d2c92e3bd1ff174b910cfdb",
+    "dev-linktransformer-candidates.csv": "3d9abce33c010f4dfb9652ed89c4517bcd3ae17e7ca651e9a053356d7d748e84",
+    "dev-semantic-candidates.csv": "bc4e0201a1163349e2f26bd9739b278ab8c9976cde358da8e685d5f67208f1a4",
+    "split.csv": "1870332e13b12f37134c45269185b29c23ce72da1a4fab185d35f50d3fec6a00",
+    "test-hybrid-candidates.csv": "7a45ccd3a7923465d750a49128a3045fddf3d2295d2e2507eb91e3535aaf939a",
+    "test-lexical-candidates.csv": "5ec5fd67e821991271b0b0a3be7e45b773a5e04693b060cce62b2570d4507720",
+    "test-linktransformer/candidates.csv": "4dd23a92f75c288ff3fb9ab5b1aa67c5cab215bb94660f5913143d06cb0d1215",
+    "test-linktransformer/left.parquet": "a530ea735707650149d7b54d4a130344674db5b58615ee6b0caeb915ba097b3b",
+    "test-linktransformer/metadata.json": "7b99652197c05c13b03e9d2906308400db262270ec672b254130d353499a9dce",
+    "test-linktransformer/process.log": "e46596d018633e15bba9ed8d458c211a0254d846691c480f741abd8b64b66606",
+    "test-linktransformer/request.json": "2bd544452b866790e9690d723c1894fdddee3fcd957892cdf2a15eb282c2c4b6",
+    "test-linktransformer/right.parquet": "9454b54fec43cb2ef0101c10de2e3d6ec2b7ffb2b52bf1eef9a0e973e6faece4",
+    "test-linktransformer-candidates.csv": "d2e2b4ef98c17e5403e5b582970e9fa822d3ef0f12abfc7d07a14bd5fed94bc9",
+    "test-semantic-candidates.csv": "b4bd851fd1a085519e077a1e5061fa21ab5f0869eff02bd4128efece183b4bcf"
+  }
+}

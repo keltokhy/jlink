@@ -26,9 +26,10 @@ def downstream(monkeypatch):
 
     class Linker:
         def __init__(self, *, entity, definition, on, blockers, api=None, model=None, cache=True,
-                     concurrency=32):
+                     concurrency=32, exact_shortcut=False):
             calls.constructor = dict(entity=entity, definition=definition, on=on, blockers=blockers,
-                                     api=api, model=model, cache=cache, concurrency=concurrency)
+                                     api=api, model=model, cache=cache, concurrency=concurrency,
+                                     exact_shortcut=exact_shortcut)
 
         def link(self, left, right, *, left_id=None, right_id=None, how="one-to-one", threshold=0.5,
                  min_margin=None, budget=5.0, progress=True):
@@ -40,7 +41,7 @@ def downstream(monkeypatch):
     linker.Linker = Linker
     monkeypatch.setitem(sys.modules, "jlink.linker", linker)
     block = importlib.import_module("jlink.block")
-    for kind in ("ngrams", "exact", "initials"):
+    for kind in ("ngrams", "exact", "initials", "embeddings"):
         factory = lambda *cols, _kind=kind, **kwargs: (_kind, cols, kwargs)
         monkeypatch.setattr(block, kind, factory, raising=False)
 
@@ -119,7 +120,7 @@ def test_stdout_and_summary(downstream, inputs, capsys):
     assert captured.out.startswith("left_id,right_id,") and "00123,00007" in captured.out
     assert "2 left records, 2 right records; 2 candidate pairs; 1 links; 2 calls; $0.0010" in captured.err
     assert downstream.constructor == dict(entity="firm", definition="", on=["name"], blockers=None,
-                                          api=None, model=None, cache=True, concurrency=32)
+                                          api=None, model=None, cache=True, concurrency=32, exact_shortcut=False)
     assert downstream.link["left"].id.tolist() == ["00123", "00456"]
 
 
@@ -147,6 +148,15 @@ def test_link_all_options_and_files(downstream, inputs, tmp_path, capsys):
         assert downstream.link[key] == value
     for key, value in dict(api="openrouter", model="fake/jev", cache=False, concurrency=4).items():
         assert downstream.constructor[key] == value
+
+
+def test_semantic_cli_and_explicit_identity_policy(downstream, inputs, capsys):
+    command.cli(link_args(inputs) + ["--block", "embeddings:name:7", "--embedding-model", "org/model",
+                                    "--embedding-revision", "fixed-commit", "--embedding-device", "cpu",
+                                    "--exact-shortcut"])
+    assert downstream.constructor["exact_shortcut"] is True
+    assert downstream.constructor["blockers"] == [
+        ("embeddings", ("name",), {"k": 7, "model": "org/model", "revision": "fixed-commit", "device": "cpu"})]
 
 
 @pytest.mark.parametrize("rule", ["", "random:name", "ngrams:name", "ngrams:name:0", "ngrams:name:-1",

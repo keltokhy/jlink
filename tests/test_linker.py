@@ -117,7 +117,7 @@ def test_bad_arguments():
 def test_literal_na_ids_survive_save_relink_and_merge(tmp_path):
     left = pd.DataFrame({"key": ["NA", "NULL", "001"], "name": ["Alpha", "Beta", "Gamma"]})
     right = pd.DataFrame({"key": ["NULL", "001", "NA"], "name": ["Alpha", "Beta", "Gamma"]})
-    result = jlink.Linker("firm", "name").link(left, right, left_id="key", right_id="key", progress=False,
+    result = jlink.Linker("firm", "name", exact_shortcut=True).link(left, right, left_id="key", right_id="key", progress=False,
                                                transport=FakeJev().transport)
     back = jlink.load(result.save(tmp_path / "out"))
     pd.testing.assert_frame_equal(back.links[["left_id", "right_id"]], result.links[["left_id", "right_id"]])
@@ -158,6 +158,6 @@ def test_invalid_budget_is_rejected_before_blocking(monkeypatch):
 def test_merged_accepts_ids_already_named_left_id_and_right_id(tmp_path):
     left = pd.DataFrame({"left_id": ["NA"], "name": ["Alpha"]})
     right = pd.DataFrame({"right_id": ["NULL"], "name": ["ALPHA"]})
-    result = jlink.Linker("firm", "name").link(left, right, left_id="left_id", right_id="right_id", progress=False)
+    result = jlink.Linker("firm", "name", exact_shortcut=True).link(left, right, left_id="left_id", right_id="right_id", progress=False)
     back = jlink.load(result.save(tmp_path / "named"))
     assert len(back.relink().merged(left, right)) == 1

@@ -158,7 +158,8 @@ def test_nested_dataclass_config_and_opaque_custom_blocker_are_explicit():
 
 def test_default_and_empty_blockers_are_distinct():
     frame = pd.DataFrame({"name": ["Alpha"]})
-    default = jlink.Linker("firm", "name").link(frame, frame, progress=False)
+    default = jlink.Linker("firm", "name").link(frame, frame, progress=False,
+                                                   transport=ResolvedJev().transport)
     empty = jlink.Linker("firm", "name", blockers=[]).link(frame, frame, progress=False)
     assert '"k": 10' in json.dumps(default.settings["blocker_configs"])
     assert empty.settings["blockers"] == empty.settings["blocker_configs"] == []

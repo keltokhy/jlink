@@ -18,6 +18,11 @@ and shared-core assumptions below. See [run provenance](docs/run-provenance.md) 
 fieldwise nonmissing exact policy, cache-only zero budgets, additive score/settings metadata,
 backward-compatible cache extensions, and the documented divergence from jgrep's core.
 
+The [hybrid linkage update](docs/hybrid-linkage.md) further supersedes the original automatic
+exact policy: `exact_shortcut=False` is now the default, with explicit Python/CLI opt-in.
+It adds optional `block.embeddings` and an optional install extra; the base runtime dependency
+set and candidate/score/link column meanings remain unchanged. Historical scores are preserved.
+
 ## Pipeline and modules
 
 ```

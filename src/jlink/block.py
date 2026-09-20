@@ -458,3 +458,10 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float:
         return float("nan")
     proposed = pd.MultiIndex.from_frame(candidates[columns].drop_duplicates())
     return float(known.isin(proposed).mean())
+
+
+def embeddings(*columns: str | tuple[str, str], **kwargs) -> Blocker:
+    """Optional local semantic neighbors; see ``jlink.embeddings.embeddings`` for options."""
+    from .embeddings import embeddings as factory
+
+    return factory(*columns, **kwargs)

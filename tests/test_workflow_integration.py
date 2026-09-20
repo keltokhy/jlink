@@ -45,7 +45,7 @@ def test_grouped_cached_run_survives_review_and_selected_evaluation(tmp_path, mo
     fake = FakeJev(lambda state, question: 0.8 if state["record_a"]["name"] == "Alfa"
                   and state["record_b"]["name"] == "Alpha" else 0.1)
     linker = jlink.Linker("firm", "name", blockers=[blocker], api="openrouter",
-                          model="offline-pinned", cache=tmp_path / "answers.sqlite")
+                          model="offline-pinned", cache=tmp_path / "answers.sqlite", exact_shortcut=True)
     first = linker.link(left, right, left_id="id", right_id="id", transport=fake.transport,
                         progress=False)
     calls = len(fake.bodies)

@@ -1,0 +1,26 @@
+{
+  "method": "block.candidates(left_test, right_test, on=meta[on], blockers=[block.ngrams(*meta[on], k=20)], left_id=id, right_id=id)",
+  "purpose": "twice the lexical neighbor budget; partitions identical to hybrid experiments",
+  "datasets": {
+    "nber-firms": {
+      "pairs": 61969,
+      "known_matches_found": 2176,
+      "known_matches": 3256,
+      "split_sha256": "1870332e13b12f37134c45269185b29c23ce72da1a4fab185d35f50d3fec6a00",
+      "candidate_recall": 0.6683046683046683,
+      "data_source": "bench/data/nber-firms"
+    },
+    "abt-buy": {
+      "pairs": 14934,
+      "known_matches_found": 765,
+      "known_matches": 766,
+      "split_sha256": "87ba1a0243ebd50528d0c6b5b08b4cf1d08a8e9058e42d8c2c8453653df235e9",
+      "candidate_recall": 0.9986945169712794,
+      "data_source": "bench/data/abt-buy"
+    }
+  },
+  "new_api_calls": 0,
+  "code_sha256": {
+    "src/jlink/block.py": "1a2497d41559d4a3ba6cfd2cc52f429b034f7ce55d4e3f53b5b8c582f231608b"
+  }
+}

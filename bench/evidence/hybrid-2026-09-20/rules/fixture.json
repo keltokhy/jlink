@@ -1,0 +1,446 @@
+{
+  "schema_version": 1,
+  "title": "Controlled synthetic legal identity versus corporate family",
+  "provenance": "All companies, relationships and dates in these 18 pairs are invented benchmark facts. No claims about real firms.",
+  "rules": {
+    "same_legal_entity": "Match only the same legal entity. Trade names and a name change without a new entity count. Separately incorporated parents, subsidiaries and sister companies are different entities.",
+    "corporate_family": "Match the same legal entity or entities under common corporate control at the records’ stated date. Parents, subsidiaries and sister companies under that control count. Former owners after divestiture and unrelated namesakes do not count."
+  },
+  "model_settings": {
+    "api": "openrouter",
+    "model": "typesafe/jev-1.13-20260917",
+    "exact_shortcut": false,
+    "temperature": null,
+    "temperature_policy": "not sent; provider default",
+    "cache_policy": "request hash must include rule, records and settings",
+    "endpoint": "https://openrouter.ai/api/alpha/decisions"
+  },
+  "pairs": [
+    {
+      "pair_id": "alder-alias",
+      "group_id": "alder",
+      "split": "dev",
+      "record_a": {
+        "name": "Alder Tools Incorporated",
+        "jurisdiction": "NY",
+        "note": "Also trades as AT"
+      },
+      "record_b": {
+        "name": "AT",
+        "jurisdiction": "NY",
+        "note": "Trade name of Alder Tools Incorporated"
+      },
+      "labels": {
+        "same_legal_entity": true,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:alder:v1",
+        "rationale": "An explicitly stated trade name of one legal entity."
+      }
+    },
+    {
+      "pair_id": "alder-parent",
+      "group_id": "alder",
+      "split": "dev",
+      "record_a": {
+        "name": "Alder Holdings",
+        "as_of": "2020-01-01",
+        "note": "Owns 100% of Bay Tools LLC"
+      },
+      "record_b": {
+        "name": "Bay Tools LLC",
+        "as_of": "2020-01-01",
+        "note": "Separate incorporated subsidiary of Alder Holdings"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:alder:v1",
+        "rationale": "Separate legal entities under the same corporate control on the stated date."
+      }
+    },
+    {
+      "pair_id": "alder-siblings",
+      "group_id": "alder",
+      "split": "dev",
+      "record_a": {
+        "name": "Bay Metals LLC",
+        "as_of": "2020-01-01",
+        "note": "Wholly owned subsidiary of Alder Holdings"
+      },
+      "record_b": {
+        "name": "Crest Plastics Inc",
+        "as_of": "2020-01-01",
+        "note": "Separately incorporated wholly owned subsidiary of Alder Holdings"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:alder:v1",
+        "rationale": "Sister subsidiaries are distinct legal entities in one family."
+      }
+    },
+    {
+      "pair_id": "alder-homonym",
+      "group_id": "alder",
+      "split": "dev",
+      "record_a": {
+        "name": "Dune Products LLC",
+        "jurisdiction": "NY",
+        "note": "Independent private firm; no subsidiaries or parent"
+      },
+      "record_b": {
+        "name": "Dune Products LLC",
+        "jurisdiction": "CA",
+        "note": "Unrelated independent firm, distinct legal registration"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": false
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:alder:v1",
+        "rationale": "Identical names do not establish legal identity or common control."
+      }
+    },
+    {
+      "pair_id": "alder-sold",
+      "group_id": "alder",
+      "split": "dev",
+      "record_a": {
+        "name": "Alder Holdings",
+        "as_of": "2020-01-01",
+        "note": "Sold all ownership of Dune Services in 2018; no continuing control"
+      },
+      "record_b": {
+        "name": "Dune Services",
+        "as_of": "2020-01-01",
+        "note": "Independent since the 2018 divestiture"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": false
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:alder:v1",
+        "rationale": "A former subsidiary is not in the same current family at this date."
+      }
+    },
+    {
+      "pair_id": "alder-rename",
+      "group_id": "alder",
+      "split": "dev",
+      "record_a": {
+        "name": "Crest Devices Ltd",
+        "note": "Renamed Crest Systems Ltd in 2019 without a new legal entity"
+      },
+      "record_b": {
+        "name": "Crest Systems Ltd",
+        "note": "Previously named Crest Devices Ltd; same registration"
+      },
+      "labels": {
+        "same_legal_entity": true,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:alder:v1",
+        "rationale": "An explicit name change preserves the legal entity."
+      }
+    },
+    {
+      "pair_id": "elm-alias",
+      "group_id": "elm",
+      "split": "test",
+      "record_a": {
+        "name": "Elm Tools Incorporated",
+        "jurisdiction": "NY",
+        "note": "Also trades as AT"
+      },
+      "record_b": {
+        "name": "AT",
+        "jurisdiction": "NY",
+        "note": "Trade name of Elm Tools Incorporated"
+      },
+      "labels": {
+        "same_legal_entity": true,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:elm:v1",
+        "rationale": "An explicitly stated trade name of one legal entity."
+      }
+    },
+    {
+      "pair_id": "elm-parent",
+      "group_id": "elm",
+      "split": "test",
+      "record_a": {
+        "name": "Elm Holdings",
+        "as_of": "2020-01-01",
+        "note": "Owns 100% of Fern Tools LLC"
+      },
+      "record_b": {
+        "name": "Fern Tools LLC",
+        "as_of": "2020-01-01",
+        "note": "Separate incorporated subsidiary of Elm Holdings"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:elm:v1",
+        "rationale": "Separate legal entities under the same corporate control on the stated date."
+      }
+    },
+    {
+      "pair_id": "elm-siblings",
+      "group_id": "elm",
+      "split": "test",
+      "record_a": {
+        "name": "Fern Metals LLC",
+        "as_of": "2020-01-01",
+        "note": "Wholly owned subsidiary of Elm Holdings"
+      },
+      "record_b": {
+        "name": "Glen Plastics Inc",
+        "as_of": "2020-01-01",
+        "note": "Separately incorporated wholly owned subsidiary of Elm Holdings"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:elm:v1",
+        "rationale": "Sister subsidiaries are distinct legal entities in one family."
+      }
+    },
+    {
+      "pair_id": "elm-homonym",
+      "group_id": "elm",
+      "split": "test",
+      "record_a": {
+        "name": "Heath Products LLC",
+        "jurisdiction": "NY",
+        "note": "Independent private firm; no subsidiaries or parent"
+      },
+      "record_b": {
+        "name": "Heath Products LLC",
+        "jurisdiction": "CA",
+        "note": "Unrelated independent firm, distinct legal registration"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": false
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:elm:v1",
+        "rationale": "Identical names do not establish legal identity or common control."
+      }
+    },
+    {
+      "pair_id": "elm-sold",
+      "group_id": "elm",
+      "split": "test",
+      "record_a": {
+        "name": "Elm Holdings",
+        "as_of": "2020-01-01",
+        "note": "Sold all ownership of Heath Services in 2018; no continuing control"
+      },
+      "record_b": {
+        "name": "Heath Services",
+        "as_of": "2020-01-01",
+        "note": "Independent since the 2018 divestiture"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": false
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:elm:v1",
+        "rationale": "A former subsidiary is not in the same current family at this date."
+      }
+    },
+    {
+      "pair_id": "elm-rename",
+      "group_id": "elm",
+      "split": "test",
+      "record_a": {
+        "name": "Glen Devices Ltd",
+        "note": "Renamed Glen Systems Ltd in 2019 without a new legal entity"
+      },
+      "record_b": {
+        "name": "Glen Systems Ltd",
+        "note": "Previously named Glen Devices Ltd; same registration"
+      },
+      "labels": {
+        "same_legal_entity": true,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:elm:v1",
+        "rationale": "An explicit name change preserves the legal entity."
+      }
+    },
+    {
+      "pair_id": "iris-alias",
+      "group_id": "iris",
+      "split": "test",
+      "record_a": {
+        "name": "Iris Tools Incorporated",
+        "jurisdiction": "NY",
+        "note": "Also trades as AT"
+      },
+      "record_b": {
+        "name": "AT",
+        "jurisdiction": "NY",
+        "note": "Trade name of Iris Tools Incorporated"
+      },
+      "labels": {
+        "same_legal_entity": true,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:iris:v1",
+        "rationale": "An explicitly stated trade name of one legal entity."
+      }
+    },
+    {
+      "pair_id": "iris-parent",
+      "group_id": "iris",
+      "split": "test",
+      "record_a": {
+        "name": "Iris Holdings",
+        "as_of": "2020-01-01",
+        "note": "Owns 100% of Juniper Tools LLC"
+      },
+      "record_b": {
+        "name": "Juniper Tools LLC",
+        "as_of": "2020-01-01",
+        "note": "Separate incorporated subsidiary of Iris Holdings"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:iris:v1",
+        "rationale": "Separate legal entities under the same corporate control on the stated date."
+      }
+    },
+    {
+      "pair_id": "iris-siblings",
+      "group_id": "iris",
+      "split": "test",
+      "record_a": {
+        "name": "Juniper Metals LLC",
+        "as_of": "2020-01-01",
+        "note": "Wholly owned subsidiary of Iris Holdings"
+      },
+      "record_b": {
+        "name": "Kestrel Plastics Inc",
+        "as_of": "2020-01-01",
+        "note": "Separately incorporated wholly owned subsidiary of Iris Holdings"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:iris:v1",
+        "rationale": "Sister subsidiaries are distinct legal entities in one family."
+      }
+    },
+    {
+      "pair_id": "iris-homonym",
+      "group_id": "iris",
+      "split": "test",
+      "record_a": {
+        "name": "Larch Products LLC",
+        "jurisdiction": "NY",
+        "note": "Independent private firm; no subsidiaries or parent"
+      },
+      "record_b": {
+        "name": "Larch Products LLC",
+        "jurisdiction": "CA",
+        "note": "Unrelated independent firm, distinct legal registration"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": false
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:iris:v1",
+        "rationale": "Identical names do not establish legal identity or common control."
+      }
+    },
+    {
+      "pair_id": "iris-sold",
+      "group_id": "iris",
+      "split": "test",
+      "record_a": {
+        "name": "Iris Holdings",
+        "as_of": "2020-01-01",
+        "note": "Sold all ownership of Larch Services in 2018; no continuing control"
+      },
+      "record_b": {
+        "name": "Larch Services",
+        "as_of": "2020-01-01",
+        "note": "Independent since the 2018 divestiture"
+      },
+      "labels": {
+        "same_legal_entity": false,
+        "corporate_family": false
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:iris:v1",
+        "rationale": "A former subsidiary is not in the same current family at this date."
+      }
+    },
+    {
+      "pair_id": "iris-rename",
+      "group_id": "iris",
+      "split": "test",
+      "record_a": {
+        "name": "Kestrel Devices Ltd",
+        "note": "Renamed Kestrel Systems Ltd in 2019 without a new legal entity"
+      },
+      "record_b": {
+        "name": "Kestrel Systems Ltd",
+        "note": "Previously named Kestrel Devices Ltd; same registration"
+      },
+      "labels": {
+        "same_legal_entity": true,
+        "corporate_family": true
+      },
+      "source": {
+        "kind": "synthetic",
+        "reference": "synthetic-world:iris:v1",
+        "rationale": "An explicit name change preserves the legal entity."
+      }
+    }
+  ]
+}

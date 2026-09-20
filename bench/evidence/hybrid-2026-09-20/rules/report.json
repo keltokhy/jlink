@@ -1,0 +1,81 @@
+{
+  "status": "cached_live_complete",
+  "fixture_sha256": "ad291e4ad2fa51873c3c5eacfa96b030677daceeb3c1d495b744978773a1b0c4",
+  "requests": 36,
+  "responses": 36,
+  "missing_responses": 0,
+  "threshold": 0.5,
+  "threshold_policy": "fixed before model evaluation",
+  "metrics": {
+    "dev": {
+      "pairs": 6,
+      "complete_paired_responses": 6,
+      "by_rule": {
+        "corporate_family": {
+          "responses": 6,
+          "correct": 5,
+          "accuracy": 0.8333333333333334
+        },
+        "same_legal_entity": {
+          "responses": 6,
+          "correct": 6,
+          "accuracy": 1.0
+        }
+      },
+      "changed_definition": {
+        "n": 2,
+        "both_correct": 1,
+        "correct_direction": 2
+      },
+      "invariant_definition": {
+        "n": 4,
+        "both_correct": 4
+      }
+    },
+    "test": {
+      "pairs": 12,
+      "complete_paired_responses": 12,
+      "by_rule": {
+        "corporate_family": {
+          "responses": 12,
+          "correct": 10,
+          "accuracy": 0.8333333333333334
+        },
+        "same_legal_entity": {
+          "responses": 12,
+          "correct": 12,
+          "accuracy": 1.0
+        }
+      },
+      "changed_definition": {
+        "n": 4,
+        "both_correct": 2,
+        "correct_direction": 4
+      },
+      "invariant_definition": {
+        "n": 8,
+        "both_correct": 8
+      }
+    }
+  },
+  "new_api_calls": 36,
+  "new_api_cost_usd": 0.000617484,
+  "budget_usd": 0.02,
+  "errors": [],
+  "resolved_models": [
+    "typesafe/jev-1.13-20260917"
+  ],
+  "synthetic_fixture": true,
+  "cost_sources": {
+    "reported_by_api": 36
+  },
+  "code_hashes": {
+    "/Volumes/K3/GitHub/jlink/bench/rule_live.py": "314092f9a35d21dd915362a93d16d630a477bedc104dcdb6f087f343c341f64c",
+    "/Volumes/K3/GitHub/jlink/bench/rule_sensitivity.py": "f8b29662d7c75f123a14fbb7922c9b12918fd68b0c438a9560850870a2a7bee6"
+  },
+  "artifacts": {
+    "fixture.json": "76f5e6ecbf07e60dcd783b83fd332765cda4d319f1c6c3dfe04fdfae9efae8f6",
+    "requests.jsonl": "7e72cdc8a7500da8a0fe52dab883538a450527c32aa3b07fcef0f38967b5861d",
+    "responses.jsonl": "fb43526a740dddeba555b07dc2e9110c8366e737e0cfee4a5a07b235c253e381"
+  }
+}
