@@ -4,6 +4,10 @@ These are exploratory measurements on previously inspected public datasets. They
 establish that jlink beats LinkTransformer end to end or the historical entity-linking paper.
 No default retrieval change is justified by the firm results below.
 
+The [follow-up error audit](../docs/linkage-next-experiment.md) isolates product decision
+errors and missing distinguishing fields, and records an unsuccessful development-threshold
+control. It proposes the next experiments without changing the results below.
+
 ## Firm retrieval
 
 Both model experiments use the same observed-entity split: 3,251 left records, 1,744 right
