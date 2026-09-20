@@ -1,5 +1,9 @@
 # Firm linkage under different research definitions
 
+A [subsequent wording experiment](firm-rule-wording.md) tests a neutral rule prefix on
+fresh company families. Both wordings score 39 / 40 there; the proposed prompt change
+does not meet its adoption criterion. Those fresh results are separate from this pilot.
+
 ## Observed results, 2026-09-20
 
 All 96 live requests completed with `typesafe/jev-1.13-20260917`. The fixed test set contains

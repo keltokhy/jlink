@@ -6,6 +6,11 @@ plain-English rule-sensitivity fixture, use [EVALUATION.md](EVALUATION.md).
 [EVIDENCE.md](EVIDENCE.md) separates newly measured offline results from pending live experiments.
 The commands below retain the original in-sample oracle comparison.
 
+The [source-backed firm pilot](../docs/firm-rules-pilot.md) compares rich records with names
+and dates under four research definitions. The [wording experiment](../docs/firm-rule-wording.md)
+then tests one prompt change on fresh company families; it found no improvement. Both isolate
+judging on prescribed pairs and preserve the live provider responses under `bench/evidence/`.
+
 Prepare public sources, run offline comparisons, and regenerate the measured report:
 
 ```sh

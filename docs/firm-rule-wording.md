@@ -1,5 +1,53 @@
 # Explicit rule wording experiment
 
+## Result: no improvement on the fresh cases
+
+The frozen comparison completed all 80 fresh-test requests on 2026-09-20. Both wordings
+made exactly the same binary decisions: **39 / 40 correct (97.5%)**. For the ten pairs whose
+answers differ across research definitions, both got every known rule right on **9 / 10**.
+
+| Fresh-test rule | Current identity wording | Explicit rule wording |
+|---|---:|---:|
+| Legal entity | 8 / 8 | 8 / 8 |
+| Corporate group at the record dates | 16 / 17 | 16 / 17 |
+| Physical site | 3 / 3 | 3 / 3 |
+| Operating business continuity | 12 / 12 | 12 / 12 |
+| **All supported decisions** | **39 / 40** | **39 / 40** |
+
+The alternative **fails the predeclared adoption criterion**, which required a higher correct
+count. It remains a benchmark experiment; no new public `judge()`, `Linker`, `link()` or CLI
+option is introduced, and production wording stays unchanged. A tie in this small sample
+does not establish equivalence on other data.
+
+Both errors concern `linkedin-acquired`: LinkedIn before and after the Microsoft acquisition
+is the same legal entity and operating business, but has different ultimate controllers at
+the two record dates. Both styles correctly identify the first two relations yet incorrectly
+accept common corporate group: p=0.92 with identity wording and p=0.82 with rule wording.
+The payload already states independence before acquisition and Microsoft control afterward;
+the failure is not simply missing ownership facts. The threshold stays at the frozen 0.5.
+
+These manually prepared records support a promising use case for rule-dependent linkage,
+but neither the 97.5% figure nor this prompt comparison establishes performance on raw data
+or superiority over another linking system. A subsequent experiment could extract each
+record's dated controller separately and compare normalized controller identities. That is
+a hypothesis, not an implemented or validated improvement, and would need its own fresh
+cases including renamings, sales, and unresolved ownership.
+
+The fresh run cost **$0.001693104**, with no cached answers, no failed requests and the
+resolved model `typesafe/jev-1.13-20260917`. Including the development comparison, this
+experiment made 110 calls for **$0.002322600**. The protocol and fresh fixture were committed
+at `400fc86` before fresh-test collection. Raw requests, responses, hashes and decisions
+are preserved in the [fresh evidence bundle](../bench/evidence/firm-wording-fresh-2026-09-20/)
+and [development bundle](../bench/evidence/firm-wording-dev-2026-09-20/).
+
+The fresh report's `collection_complete: true` covers all 80 requested test calls. Its
+overall `status: live_partial` and 30 missing responses refer to deliberately uncalled
+development requests retained in the same manifest, not failed or omitted test decisions.
+
+Validation: **525 offline tests passed**. All three firm-pilot evidence bundles reconstruct
+their frozen requests and replay to their saved metrics; artifact hashes verify, and the
+fresh collection's code files still match its frozen code hashes.
+
 ## Frozen protocol
 
 The current question begins with `Record A and record B refer to the same firm.` even when
