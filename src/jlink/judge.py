@@ -1,8 +1,8 @@
 """Pair probabilities from Jev: one yes/no question per candidate pair.
 
 The question is the user's match rule. The state is the two records, field by field. Pairs are
-judged in descending cheap similarity, so a budget is spent on the likeliest pairs first, and
-pairs whose fields are identical after normalization are settled without a call.
+judged in descending cheap similarity, so a budget is spent on the likeliest pairs first.
+Exact-text acceptance is opt-in: equal names need not mean equal entities.
 """
 
 from __future__ import annotations
@@ -42,10 +42,12 @@ def question(entity: str, definition: str = "") -> dict:
 def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, on, entity: str,
           definition: str = "", left_id: str | None = None, right_id: str | None = None,
           api: str | None = None, model: str | None = None, concurrency: int = 32,
-          budget: float | None = 5.0, cache: bool | str | Path | Cache = True, exact_shortcut: bool = True,
+          budget: float | None = 5.0, cache: bool | str | Path | Cache = True, exact_shortcut: bool = False,
           progress: bool = True, transport=None) -> tuple[pd.DataFrame, Meter]:
     """Score every candidate pair. Returns the scores table (candidates plus p, source, error) and the meter."""
     validate_budget(budget)
+    if not isinstance(exact_shortcut, (bool, np.bool_)):
+        raise ValueError("`exact_shortcut` must be a boolean; enable only when equal fields establish identity")
     if isinstance(concurrency, (bool, np.bool_)) or not isinstance(concurrency, Integral) or concurrency < 1:
         raise ValueError("`concurrency` must be a positive integer")
     if not entity or not entity.strip():

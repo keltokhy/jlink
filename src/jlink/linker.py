@@ -36,11 +36,13 @@ class Linker:
 
     def __init__(self, entity: str, on, definition: str = "", blockers: list | None = None, *,
                  api: str | None = None, model: str | None = None, concurrency: int = 32,
-                 cache=True, exact_shortcut: bool = True):
+                 cache=True, exact_shortcut: bool = False):
         if not entity or not entity.strip():
             raise ValueError('`entity` says what a record is, for example "firm" or "person"; it cannot be empty')
         self.entity, self.definition, self.on = entity.strip(), (definition or "").strip(), on
         self.fields = parse_on(on)
+        if not isinstance(exact_shortcut, bool):
+            raise ValueError("`exact_shortcut` must be a boolean; equal names alone do not establish identity")
         self.blockers = blockers
         self.api, self.model, self.concurrency = api, model, concurrency
         self.cache, self.exact_shortcut = cache, exact_shortcut
@@ -107,9 +109,9 @@ class Linker:
 
 
 def link(left: pd.DataFrame, right: pd.DataFrame, *, entity: str, on, definition: str = "", blockers=None,
-         **kwargs) -> "Result":
+         exact_shortcut: bool = False, **kwargs) -> "Result":
     """One call for the common case. Keyword arguments are those of `Linker.link`."""
-    return Linker(entity, on, definition, blockers).link(left, right, **kwargs)
+    return Linker(entity, on, definition, blockers, exact_shortcut=exact_shortcut).link(left, right, **kwargs)
 
 
 @dataclass

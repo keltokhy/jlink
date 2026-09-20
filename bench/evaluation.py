@@ -121,7 +121,8 @@ def make_unmatched(left, right, truth, *, fraction: float, seed: int = 1729):
 
 def propose(left, right, *, on, specs: list[dict], registry: dict | None = None):
     """Build existing public blockers from JSON; registry is the hook for future blockers."""
-    factories = {"ngrams": block.ngrams, "exact": block.exact, "initials": block.initials}
+    factories = {"ngrams": block.ngrams, "exact": block.exact, "initials": block.initials,
+                 "embeddings": block.embeddings}
     factories.update(registry or {})
     passes = []
     for spec in specs:

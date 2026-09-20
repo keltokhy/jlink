@@ -6,7 +6,12 @@ frames to `merged(left, right)`. Saving does not embed those input frames or API
 
 ## Exact matches
 
-The exact shortcut compares each `on` field separately after cleaning missing values and
+**Exact-text acceptance is disabled by default.** Equal names can refer to different people
+or firms. `Linker(..., exact_shortcut=True)`, `jlink.link(..., exact_shortcut=True)`, or CLI
+`--exact-shortcut` explicitly asserts that equality on all compared fields establishes identity
+under your rule. This changes the earlier default; historical saved scores are unchanged.
+
+When explicitly enabled, the shortcut compares each `on` field separately after cleaning missing values and
 normalizing case, accents, punctuation, and whitespace. Every field must normalize to a
 nonempty value on both sides. For example:
 
@@ -18,13 +23,12 @@ nonempty value on both sides. For example:
 | missing, missing | missing, missing | Sent to the judge |
 
 Whitespace-only and punctuation-only fields count as empty. Missing on both sides is not
-evidence of a match. Disable the shortcut with `Linker(..., exact_shortcut=False)` when the
-match rule requires model judgment even for complete, normalized-identical records.
+evidence of a match. Keep the default when equal text still requires model judgment.
 The settings record `exact_policy="all_fields_nonempty_and_equal_v1"`.
 
 ## Budget semantics
 
-- `budget=0` prohibits new paid requests. Exact matches and cached answers remain available.
+- `budget=0` prohibits new paid requests. Cached answers and explicitly enabled exact shortcuts remain available.
 - `budget=None` allows unlimited new requests.
 - A positive budget stops launching new requests once the observed cost reaches the budget.
   New requests are prioritized by descending candidate similarity; cache hits are still read

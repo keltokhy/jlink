@@ -23,6 +23,9 @@ classifiers = [
 [project.urls]
 Repository = "https://github.com/keltokhy/jlink"
 
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=3,<6"]
+
 [project.scripts]
 jlink = "jlink.cli:cli"
 # macOS ships /usr/bin/jlink (a Java tool), which can shadow the name above.

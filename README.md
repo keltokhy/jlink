@@ -163,9 +163,10 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
    ten nearest right records by character n-grams. Add passes for what n-grams miss:
    `jlink.block.initials("name")` pairs "IBM" with "International Business Machines", and
    `jlink.block.exact("state")` pairs everything within a state.
-2. **Judge.** Each candidate pair goes to Jev with your rule. Pairs whose compared fields are all
-   nonempty and individually equal after normalizing case, accents and punctuation are accepted
-   without a call. Likelier pairs are judged first; cached scores remain available after the budget runs out.
+2. **Judge.** Each candidate pair goes to Jev with your rule, including equal names: identical
+   text need not identify the same entity. If equal compared fields establish identity in your
+   data, explicitly enable `Linker(..., exact_shortcut=True)` to accept complete normalized
+   equalities without a call. Likelier pairs are judged first; cached scores remain available after the budget runs out.
 3. **Resolve.** Choose links from the probabilities: `one-to-one` (the default; the best
    overall assignment with no record used twice), `many-to-one`, `one-to-many` or
    `many-to-many`, with a probability threshold and an optional margin over the runner-up.
@@ -189,10 +190,30 @@ panel = strict.merged()                                   # both tables side by 
 result.save("linkage/")                                   # links.csv, scores.csv, settings.json
 ```
 
-`budget=0` allows exact matches and cache hits only; `budget=None` is unlimited. A positive
+`budget=0` allows cache hits and explicitly enabled exact shortcuts only; `budget=None` is unlimited. A positive
 budget stops new requests at the observed cost, but calls already in flight can overshoot it.
 Saved runs retain input fingerprints, blocker parameters, and model identities, including
 cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
+
+### Optional semantic candidate search
+
+Install `uv add 'jlink[embeddings]'` (or `uv sync --extra embeddings` in this checkout), then
+combine local embeddings with character matching:
+
+```python
+passes = [
+    jlink.block.ngrams(("conm", "assignee"), k=10),
+    jlink.block.embeddings(("conm", "assignee"), k=10,
+        model="sentence-transformers/all-MiniLM-L6-v2",
+        revision="1110a243fdf4706b3f48f1d95db1a4f5529b4d41"),
+]
+linker = jlink.Linker("firm", [("conm", "assignee")], definition="...", blockers=passes)
+```
+
+The embedding model runs locally; its weights download on first use. The union can recover
+aliases that character similarity misses, at the cost of more candidate pairs. This is an
+optional retrieval method, not a claim that any particular encoder beats other systems.
+See [semantic retrieval and benchmark instructions](docs/hybrid-linkage.md).
 
 ## Checking the links
 

@@ -14,7 +14,7 @@ from . import __version__
 from .fields import check_columns, ids, parse_on
 from .io import FORMATS, read_table, write_table
 
-_BLOCK_FORMS = "ngrams:name:10, ngrams:name+city:20, exact:state, exact:state=st, initials:name"
+_BLOCK_FORMS = "ngrams:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name"
 _HOW = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
 
 
@@ -34,7 +34,7 @@ def _block_spec(value: str) -> tuple[str, list, int | None]:
     parts = value.split(":")
     try:
         kind = parts[0]
-        if kind == "ngrams" and len(parts) == 3:
+        if kind in ("ngrams", "embeddings") and len(parts) == 3:
             if not parts[2].isascii() or not parts[2].isdigit() or int(parts[2]) < 1:
                 raise ValueError
             k = int(parts[2])
@@ -94,6 +94,10 @@ def _add_pair_inputs(parser: argparse.ArgumentParser) -> None:
                         help="ngrams finds similar text, exact requires equal fields, initials finds "
                              f"abbreviations; repeat to combine passes. Forms: {_BLOCK_FORMS}. "
                              "Default: 10 nearest text matches across all --on fields")
+    parser.add_argument("--embedding-model", default="sentence-transformers/all-MiniLM-L6-v2",
+                        help="local SentenceTransformer for embeddings passes (optional install)")
+    parser.add_argument("--embedding-revision", help="pin the embedding model to a Hub commit")
+    parser.add_argument("--embedding-device", default="cpu", help="embedding device (default: cpu)")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -136,6 +140,9 @@ def _parser() -> argparse.ArgumentParser:
                       help="API provider (default: configured provider)")
     link.add_argument("--model", metavar="ID", help="model identifier (default: provider's Jev model)")
     link.add_argument("--no-cache", action="store_true", help="do not reuse or save cached judgments")
+    link.add_argument("--exact-shortcut", action="store_true",
+                      help="accept equal nonempty normalized fields without judging; opt in only "
+                           "when those fields establish identity (default: judge equal text too)")
     link.add_argument("-j", type=_positive, default=32, dest="concurrency", metavar="N",
                       help="maximum simultaneous API requests (default: 32)")
     link.set_defaults(run=_link)
@@ -206,7 +213,11 @@ def _inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame, list,
                 check_columns(left, [a], args.left)
                 check_columns(right, [b], args.right)
             factory = getattr(block, kind)
-            blockers.append(factory(*columns, **({"k": k} if kind == "ngrams" else {})))
+            kwargs = {"k": k} if kind in ("ngrams", "embeddings") else {}
+            if kind == "embeddings":
+                kwargs.update(model=args.embedding_model, revision=args.embedding_revision,
+                              device=args.embedding_device)
+            blockers.append(factory(*columns, **kwargs))
     return left, right, on, blockers
 
 
@@ -237,7 +248,8 @@ def _link(args: argparse.Namespace) -> None:
     from .linker import Linker
 
     linker = Linker(entity=args.entity, definition=args.definition, on=on, blockers=blockers,
-                    api=args.api, model=args.model, cache=not args.no_cache, concurrency=args.concurrency)
+                    api=args.api, model=args.model, cache=not args.no_cache, concurrency=args.concurrency,
+                    exact_shortcut=args.exact_shortcut)
     result = linker.link(left, right, left_id=args.left_id, right_id=args.right_id, how=args.how,
                          threshold=args.threshold, min_margin=args.min_margin, budget=args.budget,
                          progress=sys.stderr.isatty())  # no progress bar in Stata logs, R output or pipes
