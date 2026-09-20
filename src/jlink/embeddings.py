@@ -131,6 +131,7 @@ class _Embeddings(_StreamingBlocker):
             for offset in range(0, len(valid_y), _INDEX_ROWS):
                 positions = valid_y[offset:offset + _INDEX_ROWS]
                 product = np.clip(q @ y[positions].T, -1, 1)
+                product[np.abs(product - 1) <= 1e-14] = 1
                 for i, scores in enumerate(product):
                     if not np.any(q[i]):
                         continue

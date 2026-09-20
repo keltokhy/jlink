@@ -187,7 +187,8 @@ def test_normalized_complete_fields_still_match_without_a_key(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY")
     left = pd.DataFrame({"name": ["Ácme & Sons, Inc."], "year": [1985.0]})
     right = pd.DataFrame({"name": ["ACME and SONS INC"], "year": [1985]})
-    scores, meter = judge(pairs([(0, 0, 1.0)]), left, right, on=["name", "year"], entity="firm", progress=False, exact_shortcut=True)
+    scores, meter = judge(pairs([(0, 0, 1.0)]), left, right, on=["name", "year"], entity="firm",
+                          progress=False, exact_shortcut=True)
     assert scores.loc[0, "source"] == "exact" and meter.calls == 0
 
 

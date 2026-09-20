@@ -32,6 +32,33 @@ parent/subsidiary linkage. Richer dated context or independently learned aliases
 tested before simply enlarging candidate pools. NBER's unlisted links remain unknown; these
 figures are not precision/F1 or an estimate of all real matches.
 
+## Product linkage with a shared judge
+
+On the Abt-Buy test partition (755 left records, 762 right records, 766 supplied links),
+all methods use exactly the same stored Jev probability for any shared candidate, the same
+many-to-many rule, threshold 0.5 and disabled exact shortcut. LinkTransformer supplies its
+native retrieval; **its LLM judge is not evaluated here**. The general MiniLM encoder is used.
+
+| Retrieval followed by Jev | Candidates | Candidate recall | Final precision | Final recall | Final F1 |
+|---|---:|---:|---:|---:|---:|
+| Lexical k=10 | 7,533 | 99.09% | 0.9143 | 0.9334 | 0.9238 |
+| Semantic k=10 | 7,550 | 95.56% | 0.9244 | 0.8943 | 0.9091 |
+| Hybrid union | 10,698 | 99.61% | 0.9144 | 0.9347 | 0.9245 |
+| Native LinkTransformer k=10 | 7,550 | 96.87% | 0.9231 | 0.9086 | 0.9158 |
+
+Hybrid recovers four candidate positives missed by lexical retrieval, but only one additional
+final true link. Its 0.0007 F1 gain is small. A lexical k=20 retrieval-only control finds 765 of
+766 listed links (99.87%) with 14,934 pairs; its additional pairs were not judged. These are
+not matched-precision or equal-cost end-to-end superiority results.
+
+The original dev/test union run made 16,886 new calls at reported cost $0.351708546 and reused
+161 cached answers. Three test requests timed out. A fresh replay reused 17,047 cached answers
+and completed those three at $0.000060312, leaving zero unjudged pairs. Final metrics use that
+complete replay. The total new product-experiment cost was $0.351768858; this is the cost of
+judging a shared union, not a separate standalone cost for each method. Including the synthetic
+rule experiment, total recorded new API cost was $0.352386342. Unmetered failed-request charges,
+if any, are not included. The experiment resolves to `typesafe/jev-1.13-20260917`.
+
 ## Rule sensitivity
 
 The frozen synthetic fixture contains 6 development and 12 test pairs. Each pair is judged
@@ -65,6 +92,15 @@ native LLM judge was not run. Model revisions:
 Use the commands in [the protocol](../docs/hybrid-linkage.md). Detailed reports preserve
 input, split, source-code and artifact hashes, per-stage counts and dependency versions.
 Local full artifacts reside in `bench/out/hybrid-20260920-v2`,
-`bench/out/hybrid-20260920-company` and `bench/out/rules-live-20260920`.
+`bench/out/hybrid-20260920-company`, `bench/out/hybrid-20260920-final` and
+`bench/out/rules-live-20260920`.
 Frozen reports and the small synthetic request/response bundle are retained under
-`bench/evidence/hybrid-2026-09-20/`.
+`bench/evidence/hybrid-2026-09-20/`. Split CSVs are gzip-compressed without changing their
+decompressed bytes. `runs.tar.gz` preserves the candidate tables, final scores and links,
+external retrieval exports and metadata for independent inspection. Its manifest records
+the archive checksum and exact measured spend. The first retrieval reports' code hashes refer
+to commit `586c91a`; the final replay adds a cosine-one floating-point boundary repair.
+
+Validation: 510 offline tests pass; source and wheel builds pass; a fresh base-only wheel
+install verifies the safer identity default, optional-dependency behavior and embedding
+cosine boundary; the real hybrid CLI estimate runs successfully on the bundled example.

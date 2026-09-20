@@ -62,6 +62,12 @@ def test_blank_and_zero_vectors_never_retrieve_even_at_negative_cutoff():
     assert enc.calls == [["zero", "good"]]
 
 
+def test_identical_non_axis_vectors_survive_cosine_one_cutoff():
+    frame = pd.DataFrame({"s": ["same"]})
+    retriever = block.embeddings("s", encoder=Encoder({"same": [1, 1]}), min_sim=1)
+    assert retriever.pairs(frame, frame).tolist() == [[0, 0]]
+
+
 def test_mapped_fields_preserve_boundaries_and_context():
     fields = parse_on([("first", "given"), ("last", "surname")])
     a = pd.DataFrame({"first": ["Mary Ann"], "last": ["Smith"]})
