@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bench.firm_rules import ARMS, baselines, evaluate, load_fixture, requests, run
 from fakes import FakeJev
-from jlink.judge import judge
+from jlink.judge import judge, question
 
 
 def saved_rows(fixture):
@@ -137,3 +137,44 @@ def test_offline_default_and_budget_limited_fake_run(tmp_path, monkeypatch):
 def test_spending_requires_live_and_positive_finite_budget(tmp_path, kwargs):
     with pytest.raises(ValueError, match="budget"):
         run(out=tmp_path, **kwargs)
+
+
+def test_rule_style_and_original_evidence_remain_reproducible():
+    definition = "A parent and its subsidiary count."
+    assert question("firm", definition)["instructions"] == (
+        "Record A and record B refer to the same firm. " + definition)
+    assert question("firm", definition, style="rule")["instructions"] == (
+        "Record A and record B satisfy the following match rule. " + definition)
+    assert question("person", " ", style="rule") == question("person")
+    with pytest.raises(ValueError, match="style"):
+        question("firm", style="guess")
+    root = Path(__file__).resolve().parents[1] / "bench/evidence/firm-rules-2026-09-20"
+    fixture = json.loads((root / "fixture.json").read_text())
+    frozen = [json.loads(line) for line in (root / "requests.jsonl").read_text().splitlines()]
+    assert requests(fixture) == frozen
+
+
+def test_prompt_comparison_changes_only_question_and_respects_partition(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test")
+    monkeypatch.delenv("JEV_URL", raising=False)
+    fixture = load_fixture()
+    fixture["arms"] = {"identity": "Legacy", "rule": "Rule first"}
+    fixture["arm_settings"] = {a: {"input_mode": "rich", "question_style": a}
+                               for a in fixture["arms"]}
+    path = tmp_path / "fixture.json"
+    path.write_text(json.dumps(fixture))
+    load_fixture(path)
+    expected = requests(fixture)
+    by_pair_rule = {}
+    for req in expected:
+        by_pair_rule.setdefault((req["pair_id"], req["rule_id"]), []).append(req)
+    for group in by_pair_rule.values():
+        assert group[0]["payload"]["state"] == group[1]["payload"]["state"]
+        assert group[0]["payload"]["model"] == group[1]["payload"]["model"]
+        assert group[0]["payload"]["questions"] != group[1]["payload"]["questions"]
+    fake = FakeJev()
+    result = run(out=tmp_path / "out", fixture_path=path, live=True, budget=1,
+                 partition="dev", transport=fake.transport)
+    assert result["metrics"]["test"]["identity"]["overall"]["responses"] == 0
+    assert result["metrics"]["dev"]["identity"]["overall"]["coverage"] == 1
+    assert len(fake.bodies) == 30

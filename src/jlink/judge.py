@@ -32,7 +32,13 @@ def validate_budget(budget: float | None) -> None:
         raise ValueError("`budget` must be a finite nonnegative number of dollars, or None for unlimited")
 
 
-def question(entity: str, definition: str = "") -> dict:
+def question(entity: str, definition: str = "", *, style: str = "identity") -> dict:
+    """Build the match proposition; rule style lets the definition name the relation."""
+    if style not in {"identity", "rule"}:
+        raise ValueError("question style must be 'identity' or 'rule'")
+    if style == "rule" and definition and definition.strip():
+        return {"type": "noul", "instructions":
+                "Record A and record B satisfy the following match rule. " + definition.strip()}
     text = f"Record A and record B refer to the same {entity.strip()}."
     if definition and definition.strip():
         text += " " + definition.strip()

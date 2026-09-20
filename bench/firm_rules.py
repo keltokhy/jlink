@@ -34,8 +34,19 @@ def load_fixture(path=FIXTURE):
     if (settings.get("threshold") != .5 or settings.get("exact_shortcut") is not False
             or not all(settings.get(k) for k in ("api", "model", "endpoint"))):
         raise ValueError("fixture must pin API, endpoint, model, threshold 0.5 and disabled exact shortcut")
-    if not data.get("provenance") or set(data.get("arms", {})) != set(ARMS):
-        raise ValueError("fixture needs provenance and both comparison arms")
+    if not data.get("provenance") or not data.get("arms"):
+        raise ValueError("fixture needs provenance and comparison arms")
+    settings_by_arm = data.get("arm_settings", {})
+    if settings_by_arm and set(settings_by_arm) != set(data["arms"]):
+        raise ValueError("arm_settings must describe every comparison arm")
+    for arm in data["arms"]:
+        if not settings_by_arm and arm not in ARMS:
+            raise ValueError("custom arms need explicit arm_settings")
+        config = arm_config(data, arm)
+        if (set(config) != {"input_mode", "question_style"}
+                or config["input_mode"] not in {"rich", "names_and_dates"}
+                or config["question_style"] not in {"identity", "rule"}):
+            raise ValueError("arm_settings need a supported input_mode and question_style")
     if any(not isinstance(v, str) or not v.strip() for v in data["rules"].values()):
         raise ValueError("rules must be nonempty definitions")
     ids, groups = set(), {}
@@ -67,14 +78,19 @@ def load_fixture(path=FIXTURE):
     return data
 
 
+def arm_config(fixture, arm):
+    return fixture.get("arm_settings", {}).get(arm, {"input_mode": arm, "question_style": "identity"})
+
+
 def requests(fixture):
     """Preserve the production question and serialization; keep gold/source notes out of payloads."""
     rows = []
     for pair in fixture["pairs"]:
-        for arm in ARMS:
+        for arm in fixture["arms"]:
+            config = arm_config(fixture, arm)
             source = [pair["record_a"], pair["record_b"]]
             columns = (list(dict.fromkeys(k for record in source for k in record))
-                       if arm == "rich" else ["name", "as_of"])
+                       if config["input_mode"] == "rich" else ["name", "as_of"])
             frame = pd.DataFrame(source).reindex(columns=columns)
             records = _records(frame, frame.index, [(c, c) for c in columns]).record.tolist()
             for rule, definition in fixture["rules"].items():
@@ -82,7 +98,8 @@ def requests(fixture):
                     continue
                 payload = {"model": fixture["model_settings"]["model"],
                            "state": dict(zip(("record_a", "record_b"), records)),
-                           "questions": {"match": question("firm", definition)}}
+                           "questions": {"match": question("firm", definition,
+                                                            style=config["question_style"])}}
                 item = {"pair_id": pair["pair_id"], "arm": arm, "rule_id": rule,
                         "fixture_sha256": digest(fixture), "payload": payload}
                 rows.append(dict(item, request_sha256=digest(item)))
@@ -138,7 +155,7 @@ def evaluate(fixture, responses):
     metrics = {}
     for split in ("dev", "test"):
         metrics[split] = {}
-        for arm in ARMS:
+        for arm in fixture["arms"]:
             rows = [r for r in decisions if r["split"] == split and r["arm"] == arm]
             changing = [p for p in fixture["pairs"] if p["split"] == split and
                         len({v for v in p["labels"].values() if v is not None}) > 1]
@@ -191,11 +208,13 @@ def baselines(fixture):
     return result
 
 
-def run(*, out, fixture_path=FIXTURE, live=False, budget=0, transport=None):
+def run(*, out, fixture_path=FIXTURE, live=False, budget=0, transport=None, partition=None):
     validate_budget(budget)
     if (live and (budget is None or budget <= 0)) or (not live and budget != 0):
         raise ValueError("paid collection requires --live and a finite positive budget")
     fixture, out = load_fixture(fixture_path), Path(out)
+    if partition not in {None, "dev", "test"}:
+        raise ValueError("partition must be dev or test")
     if out.exists() and any(out.iterdir()):
         raise ValueError("output directory contains artifacts; choose a new directory")
     frozen = requests(fixture)
@@ -226,6 +245,9 @@ def run(*, out, fixture_path=FIXTURE, live=False, budget=0, transport=None):
             if client.url != fixture["model_settings"]["endpoint"]:
                 raise ValueError("configured endpoint differs from the frozen fixture")
             for req in frozen:
+                pair = next(p for p in fixture["pairs"] if p["pair_id"] == req["pair_id"])
+                if partition is not None and pair["split"] != partition:
+                    continue
                 if client.meter.cost >= budget:
                     break
                 raw.clear()
@@ -252,7 +274,10 @@ def run(*, out, fixture_path=FIXTURE, live=False, budget=0, transport=None):
 
     meter = asyncio.run(collect()) if live else None
     report = evaluate(fixture, rows)
-    report.update(baselines=baselines(fixture), budget_usd=budget, errors=errors,
+    collected_ids = {p["pair_id"] for p in fixture["pairs"] if partition is None or p["split"] == partition}
+    collection_requests = sum(req["pair_id"] in collected_ids for req in frozen)
+    report.update(baselines=baselines(fixture), budget_usd=budget, errors=errors, collected_partition=partition,
+                  collection_requests=collection_requests, collection_complete=len(rows) == collection_requests,
                   new_api_calls=meter.calls if meter and transport is None else 0,
                   new_api_cost_usd=meter.cost if meter and transport is None else 0,
                   resolved_models=meter.resolved_models if meter else [],
@@ -270,6 +295,7 @@ if __name__ == "__main__":
     parser.add_argument("--fixture", type=Path, default=FIXTURE, dest="fixture_path")
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--budget", type=float, default=0)
+    parser.add_argument("--partition", choices=["dev", "test"])
     report = run(**vars(parser.parse_args()))
     print(json.dumps({k: report[k] for k in ("status", "responses", "missing_responses",
                                             "new_api_cost_usd", "metrics")}, indent=2))
