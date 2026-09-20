@@ -1,0 +1,9 @@
+{
+  "frozen_at": "2026-09-20T16:16:30.972303+00:00",
+  "fixture_sha256": "d4e9eb5a45b2020b301cb2ed6f00cbd5bd5a12c6fd46b6b0d66b407a67a65770",
+  "code_sha256": {
+    "/Volumes/K3/GitHub/jlink/bench/firm_rules.py": "5e6d9ba2f8e75230d4d6d238b778e7d1e3df7a2f162932b29e3518eee4ce4fef",
+    "src/jlink/judge.py": "9d0c4aba4fae0c4c07506f6985b217358e169774e4fa069664c8388fbab7ddd7",
+    "src/jlink/core.py": "9808053ff58559e6513508495b96cc0d40c7ffa2f38f19cc0a456a7763ba3321"
+  }
+}

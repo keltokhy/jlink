@@ -1,5 +1,61 @@
 # Firm linkage under different research definitions
 
+## Observed results, 2026-09-20
+
+All 96 live requests completed with `typesafe/jev-1.13-20260917`. The fixed test set contains
+33 supported decisions across 14 pairs in four corporate families. No labels, definitions,
+thresholds or inputs were revised after observing these responses.
+
+| Test rule | Rich records correct | Names and dates correct |
+|---|---:|---:|
+| Legal entity | 8 / 8 | 7 / 8 |
+| Corporate group at the record dates | 12 / 14 | 10 / 14 |
+| Physical site | 2 / 2 | 2 / 2 |
+| Operating business continuity | 8 / 9 | 8 / 9 |
+| **All supported decisions** | **30 / 33 (90.9%)** | **27 / 33 (81.8%)** |
+
+Of the nine test pairs requiring different answers under different rules, rich inputs got
+**all known rules right for 6 / 9**, versus **4 / 9** with names and dates. Development results
+were 15 / 15 and 11 / 15 respectively. The rich arm corrects five test decisions that the
+names-and-dates arm misses but introduces two new errors; its net gain is three decisions.
+The raw counts are small and correlated, so these percentages are descriptive only.
+
+The name TF–IDF control, using the development-selected threshold 0.6, gets 16 / 33 correct.
+A rule-blind method returning one fixed answer per pair can achieve at most 23 / 33 on this
+test's conflicting definitions, even with oracle access to the labels. These are limited
+controls, not evidence that jlink beats a rule-aware competing system.
+
+### Concrete decision changes
+
+Kyndryl Holdings, Inc. before and after its separation is correctly accepted as the same
+legal corporation (p=0.84) and rejected as the same ultimate group at the respective dates
+(p=0.33). With names and dates alone, the group question is incorrectly accepted (p=0.96).
+The source facts about ownership, rather than name similarity, supply the missing distinction.
+
+For IBM and its pre-separation Kyndryl subsidiary, the rich arm correctly rejects legal
+identity (p=0.04) and accepts common corporate group (p=0.82). For the Lordstown factory
+transfer, it rejects legal identity (p=0.03) and common group (p=0.18), while accepting the
+same physical site (p=0.85).
+
+### All three rich-input test errors
+
+| Pair | Rule | Gold | Jev p | Decision at 0.5 |
+|---|---|---|---:|---|
+| HP enterprise business before / HPE after separation | Corporate group | No | 0.50 | Incorrect yes |
+| HP personal systems and printing / enterprise divisions before separation | Corporate group | Yes | 0.45 | Incorrect no |
+| Lordstown / Foxconn factory transfer | Operating business continuity | Yes | 0.46 | Incorrect no |
+
+The Lordstown operating-business error is introduced by richer input; the simpler arm answers
+it correctly at p=0.58. The model separates the factory from its corporate owner successfully
+but misses continuation of the Endurance manufacturing program. These near-threshold errors
+remain errors under the frozen protocol; the threshold was not adjusted to repair them.
+
+The experiment made 96 new calls, no cached decisions, at **$0.001855476 API-reported cost**.
+The full repository suite passed **523 offline tests**. Exact saved responses re-evaluate to
+the reported metrics, and all artifact hashes have been verified. The pre-run fixture and
+protocol are committed at `9f119b5`; [the evidence bundle](../bench/evidence/firm-rules-2026-09-20/)
+contains the fixture, requests, provider responses, decisions CSV and report.
+
 ## Protocol frozen before collecting model responses
 
 This pilot asks whether jlink can use a research definition to change decisions on the

@@ -1,0 +1,1486 @@
+{
+  "status": "live_complete",
+  "fixture_sha256": "d4e9eb5a45b2020b301cb2ed6f00cbd5bd5a12c6fd46b6b0d66b407a67a65770",
+  "requests": 96,
+  "responses": 96,
+  "missing_responses": 0,
+  "threshold": 0.5,
+  "metrics": {
+    "dev": {
+      "rich": {
+        "overall": {
+          "n": 15,
+          "responses": 15,
+          "correct": 15,
+          "accuracy": 1.0,
+          "correct_fraction_of_expected": 1.0,
+          "coverage": 1.0,
+          "tp": 7,
+          "fp": 0,
+          "fn_including_missing": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "by_rule": {
+          "legal_entity": {
+            "n": 3,
+            "responses": 3,
+            "correct": 3,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "physical_site": {
+            "n": 1,
+            "responses": 1,
+            "correct": 1,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "operating_business": {
+            "n": 5,
+            "responses": 5,
+            "correct": 5,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 2,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "corporate_group": {
+            "n": 6,
+            "responses": 6,
+            "correct": 6,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 3,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "by_group": {
+          "ge": {
+            "n": 11,
+            "responses": 11,
+            "correct": 11,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 6,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "tesla": {
+            "n": 4,
+            "responses": 4,
+            "correct": 4,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "rule_changing_pairs": {
+          "n": 3,
+          "all_known_rules_correct": 3
+        }
+      },
+      "names_and_dates": {
+        "overall": {
+          "n": 15,
+          "responses": 15,
+          "correct": 11,
+          "accuracy": 0.7333333333333333,
+          "correct_fraction_of_expected": 0.7333333333333333,
+          "coverage": 1.0,
+          "tp": 5,
+          "fp": 2,
+          "fn_including_missing": 2,
+          "precision": 0.7142857142857143,
+          "recall": 0.7142857142857143
+        },
+        "by_rule": {
+          "legal_entity": {
+            "n": 3,
+            "responses": 3,
+            "correct": 2,
+            "accuracy": 0.6666666666666666,
+            "correct_fraction_of_expected": 0.6666666666666666,
+            "coverage": 1.0,
+            "tp": 0,
+            "fp": 0,
+            "fn_including_missing": 1,
+            "precision": null,
+            "recall": 0.0
+          },
+          "physical_site": {
+            "n": 1,
+            "responses": 1,
+            "correct": 1,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "operating_business": {
+            "n": 5,
+            "responses": 5,
+            "correct": 4,
+            "accuracy": 0.8,
+            "correct_fraction_of_expected": 0.8,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 1,
+            "precision": 1.0,
+            "recall": 0.5
+          },
+          "corporate_group": {
+            "n": 6,
+            "responses": 6,
+            "correct": 4,
+            "accuracy": 0.6666666666666666,
+            "correct_fraction_of_expected": 0.6666666666666666,
+            "coverage": 1.0,
+            "tp": 3,
+            "fp": 2,
+            "fn_including_missing": 0,
+            "precision": 0.6,
+            "recall": 1.0
+          }
+        },
+        "by_group": {
+          "ge": {
+            "n": 11,
+            "responses": 11,
+            "correct": 7,
+            "accuracy": 0.6363636363636364,
+            "correct_fraction_of_expected": 0.6363636363636364,
+            "coverage": 1.0,
+            "tp": 4,
+            "fp": 2,
+            "fn_including_missing": 2,
+            "precision": 0.6666666666666666,
+            "recall": 0.6666666666666666
+          },
+          "tesla": {
+            "n": 4,
+            "responses": 4,
+            "correct": 4,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "rule_changing_pairs": {
+          "n": 3,
+          "all_known_rules_correct": 2
+        }
+      }
+    },
+    "test": {
+      "rich": {
+        "overall": {
+          "n": 33,
+          "responses": 33,
+          "correct": 30,
+          "accuracy": 0.9090909090909091,
+          "correct_fraction_of_expected": 0.9090909090909091,
+          "coverage": 1.0,
+          "tp": 15,
+          "fp": 1,
+          "fn_including_missing": 2,
+          "precision": 0.9375,
+          "recall": 0.8823529411764706
+        },
+        "by_rule": {
+          "legal_entity": {
+            "n": 8,
+            "responses": 8,
+            "correct": 8,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 3,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "physical_site": {
+            "n": 2,
+            "responses": 2,
+            "correct": 2,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "operating_business": {
+            "n": 9,
+            "responses": 9,
+            "correct": 8,
+            "accuracy": 0.8888888888888888,
+            "correct_fraction_of_expected": 0.8888888888888888,
+            "coverage": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn_including_missing": 1,
+            "precision": 1.0,
+            "recall": 0.8
+          },
+          "corporate_group": {
+            "n": 14,
+            "responses": 14,
+            "correct": 12,
+            "accuracy": 0.8571428571428571,
+            "correct_fraction_of_expected": 0.8571428571428571,
+            "coverage": 1.0,
+            "tp": 7,
+            "fp": 1,
+            "fn_including_missing": 1,
+            "precision": 0.875,
+            "recall": 0.875
+          }
+        },
+        "by_group": {
+          "foxconn": {
+            "n": 9,
+            "responses": 9,
+            "correct": 8,
+            "accuracy": 0.8888888888888888,
+            "correct_fraction_of_expected": 0.8888888888888888,
+            "coverage": 1.0,
+            "tp": 3,
+            "fp": 0,
+            "fn_including_missing": 1,
+            "precision": 1.0,
+            "recall": 0.75
+          },
+          "hp": {
+            "n": 11,
+            "responses": 11,
+            "correct": 9,
+            "accuracy": 0.8181818181818182,
+            "correct_fraction_of_expected": 0.8181818181818182,
+            "coverage": 1.0,
+            "tp": 5,
+            "fp": 1,
+            "fn_including_missing": 1,
+            "precision": 0.8333333333333334,
+            "recall": 0.8333333333333334
+          },
+          "ibm": {
+            "n": 8,
+            "responses": 8,
+            "correct": 8,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 3,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "meta": {
+            "n": 5,
+            "responses": 5,
+            "correct": 5,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "rule_changing_pairs": {
+          "n": 9,
+          "all_known_rules_correct": 6
+        }
+      },
+      "names_and_dates": {
+        "overall": {
+          "n": 33,
+          "responses": 33,
+          "correct": 27,
+          "accuracy": 0.8181818181818182,
+          "correct_fraction_of_expected": 0.8181818181818182,
+          "coverage": 1.0,
+          "tp": 15,
+          "fp": 4,
+          "fn_including_missing": 2,
+          "precision": 0.7894736842105263,
+          "recall": 0.8823529411764706
+        },
+        "by_rule": {
+          "legal_entity": {
+            "n": 8,
+            "responses": 8,
+            "correct": 7,
+            "accuracy": 0.875,
+            "correct_fraction_of_expected": 0.875,
+            "coverage": 1.0,
+            "tp": 3,
+            "fp": 1,
+            "fn_including_missing": 0,
+            "precision": 0.75,
+            "recall": 1.0
+          },
+          "physical_site": {
+            "n": 2,
+            "responses": 2,
+            "correct": 2,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 1,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "operating_business": {
+            "n": 9,
+            "responses": 9,
+            "correct": 8,
+            "accuracy": 0.8888888888888888,
+            "correct_fraction_of_expected": 0.8888888888888888,
+            "coverage": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn_including_missing": 1,
+            "precision": 1.0,
+            "recall": 0.8
+          },
+          "corporate_group": {
+            "n": 14,
+            "responses": 14,
+            "correct": 10,
+            "accuracy": 0.7142857142857143,
+            "correct_fraction_of_expected": 0.7142857142857143,
+            "coverage": 1.0,
+            "tp": 7,
+            "fp": 3,
+            "fn_including_missing": 1,
+            "precision": 0.7,
+            "recall": 0.875
+          }
+        },
+        "by_group": {
+          "foxconn": {
+            "n": 9,
+            "responses": 9,
+            "correct": 8,
+            "accuracy": 0.8888888888888888,
+            "correct_fraction_of_expected": 0.8888888888888888,
+            "coverage": 1.0,
+            "tp": 4,
+            "fp": 1,
+            "fn_including_missing": 0,
+            "precision": 0.8,
+            "recall": 1.0
+          },
+          "hp": {
+            "n": 11,
+            "responses": 11,
+            "correct": 9,
+            "accuracy": 0.8181818181818182,
+            "correct_fraction_of_expected": 0.8181818181818182,
+            "coverage": 1.0,
+            "tp": 5,
+            "fp": 1,
+            "fn_including_missing": 1,
+            "precision": 0.8333333333333334,
+            "recall": 0.8333333333333334
+          },
+          "ibm": {
+            "n": 8,
+            "responses": 8,
+            "correct": 5,
+            "accuracy": 0.625,
+            "correct_fraction_of_expected": 0.625,
+            "coverage": 1.0,
+            "tp": 2,
+            "fp": 2,
+            "fn_including_missing": 1,
+            "precision": 0.5,
+            "recall": 0.6666666666666666
+          },
+          "meta": {
+            "n": 5,
+            "responses": 5,
+            "correct": 5,
+            "accuracy": 1.0,
+            "correct_fraction_of_expected": 1.0,
+            "coverage": 1.0,
+            "tp": 4,
+            "fp": 0,
+            "fn_including_missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "rule_changing_pairs": {
+          "n": 9,
+          "all_known_rules_correct": 4
+        }
+      }
+    }
+  },
+  "decisions": [
+    {
+      "pair_id": "ge-trade-name",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.94
+    },
+    {
+      "pair_id": "ge-trade-name",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.93
+    },
+    {
+      "pair_id": "ge-trade-name",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.23
+    },
+    {
+      "pair_id": "ge-trade-name",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.7
+    },
+    {
+      "pair_id": "ge-units-before",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.71
+    },
+    {
+      "pair_id": "ge-units-before",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.03
+    },
+    {
+      "pair_id": "ge-units-before",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.61
+    },
+    {
+      "pair_id": "ge-units-before",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.14
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.06
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.13
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.08
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.24
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.51
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.32
+    },
+    {
+      "pair_id": "ge-energy-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.38
+    },
+    {
+      "pair_id": "ge-energy-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.81
+    },
+    {
+      "pair_id": "ge-energy-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.8
+    },
+    {
+      "pair_id": "ge-energy-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.38
+    },
+    {
+      "pair_id": "ge-aviation-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.88
+    },
+    {
+      "pair_id": "ge-aviation-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.59
+    },
+    {
+      "pair_id": "ge-aviation-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.89
+    },
+    {
+      "pair_id": "ge-aviation-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.66
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.03
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.07
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "physical_site",
+      "gold": true,
+      "p": 0.66
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.13
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.08
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.21
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "physical_site",
+      "gold": true,
+      "p": 0.55
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.31
+    },
+    {
+      "pair_id": "hp-rename",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.94
+    },
+    {
+      "pair_id": "hp-rename",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.82
+    },
+    {
+      "pair_id": "hp-rename",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.57
+    },
+    {
+      "pair_id": "hp-rename",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.56
+    },
+    {
+      "pair_id": "hp-enterprise-transfer",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.5
+    },
+    {
+      "pair_id": "hp-enterprise-transfer",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.75
+    },
+    {
+      "pair_id": "hp-enterprise-transfer",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.85
+    },
+    {
+      "pair_id": "hp-enterprise-transfer",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.54
+    },
+    {
+      "pair_id": "hp-retained-business",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.85
+    },
+    {
+      "pair_id": "hp-retained-business",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.76
+    },
+    {
+      "pair_id": "hp-retained-business",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.78
+    },
+    {
+      "pair_id": "hp-retained-business",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.47
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.05
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.17
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.09
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.3
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.34
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.25
+    },
+    {
+      "pair_id": "hp-divisions-before",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.45
+    },
+    {
+      "pair_id": "hp-divisions-before",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.07
+    },
+    {
+      "pair_id": "hp-divisions-before",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.85
+    },
+    {
+      "pair_id": "hp-divisions-before",
+      "group_id": "hp",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.12
+    },
+    {
+      "pair_id": "ibm-business-transfer",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.33
+    },
+    {
+      "pair_id": "ibm-business-transfer",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.65
+    },
+    {
+      "pair_id": "ibm-business-transfer",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.59
+    },
+    {
+      "pair_id": "ibm-business-transfer",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.77
+    },
+    {
+      "pair_id": "ibm-parent-after",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.05
+    },
+    {
+      "pair_id": "ibm-parent-after",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.1
+    },
+    {
+      "pair_id": "ibm-parent-after",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.12
+    },
+    {
+      "pair_id": "ibm-parent-after",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.23
+    },
+    {
+      "pair_id": "ibm-parent-before",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.04
+    },
+    {
+      "pair_id": "ibm-parent-before",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.82
+    },
+    {
+      "pair_id": "ibm-parent-before",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.15
+    },
+    {
+      "pair_id": "ibm-parent-before",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.3
+    },
+    {
+      "pair_id": "kyndryl-controller-change",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.84
+    },
+    {
+      "pair_id": "kyndryl-controller-change",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.33
+    },
+    {
+      "pair_id": "kyndryl-controller-change",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.95
+    },
+    {
+      "pair_id": "kyndryl-controller-change",
+      "group_id": "ibm",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.96
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.98
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.98
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.95
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": true,
+      "p": 0.94
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.97
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.94
+    },
+    {
+      "pair_id": "meta-segments",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.91
+    },
+    {
+      "pair_id": "meta-segments",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.06
+    },
+    {
+      "pair_id": "meta-segments",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.9
+    },
+    {
+      "pair_id": "meta-segments",
+      "group_id": "meta",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.08
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.03
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.18
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "physical_site",
+      "gold": true,
+      "p": 0.85
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.46
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.15
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": false,
+      "p": 0.41
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "physical_site",
+      "gold": true,
+      "p": 0.79
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": true,
+      "p": 0.58
+    },
+    {
+      "pair_id": "lordstown-parent-subsidiary",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.03
+    },
+    {
+      "pair_id": "lordstown-parent-subsidiary",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.93
+    },
+    {
+      "pair_id": "lordstown-parent-subsidiary",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "legal_entity",
+      "gold": false,
+      "p": 0.53
+    },
+    {
+      "pair_id": "lordstown-parent-subsidiary",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.72
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.96
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "physical_site",
+      "gold": false,
+      "p": 0.02
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "rich",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.06
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "corporate_group",
+      "gold": true,
+      "p": 0.91
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "physical_site",
+      "gold": false,
+      "p": 0.13
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "arm": "names_and_dates",
+      "rule_id": "operating_business",
+      "gold": false,
+      "p": 0.31
+    }
+  ],
+  "unknown_labels_excluded_per_arm": 32,
+  "baselines": {
+    "threshold": 0.6,
+    "development_trials": [
+      {
+        "threshold": 0.0,
+        "correct": 7
+      },
+      {
+        "threshold": 0.05,
+        "correct": 7
+      },
+      {
+        "threshold": 0.1,
+        "correct": 5
+      },
+      {
+        "threshold": 0.15,
+        "correct": 8
+      },
+      {
+        "threshold": 0.2,
+        "correct": 8
+      },
+      {
+        "threshold": 0.25,
+        "correct": 8
+      },
+      {
+        "threshold": 0.3,
+        "correct": 8
+      },
+      {
+        "threshold": 0.35,
+        "correct": 10
+      },
+      {
+        "threshold": 0.4,
+        "correct": 10
+      },
+      {
+        "threshold": 0.45,
+        "correct": 10
+      },
+      {
+        "threshold": 0.5,
+        "correct": 10
+      },
+      {
+        "threshold": 0.55,
+        "correct": 10
+      },
+      {
+        "threshold": 0.6,
+        "correct": 10
+      },
+      {
+        "threshold": 0.65,
+        "correct": 8
+      },
+      {
+        "threshold": 0.7,
+        "correct": 8
+      },
+      {
+        "threshold": 0.75,
+        "correct": 8
+      },
+      {
+        "threshold": 0.8,
+        "correct": 8
+      },
+      {
+        "threshold": 0.85,
+        "correct": 8
+      },
+      {
+        "threshold": 0.9,
+        "correct": 8
+      },
+      {
+        "threshold": 0.95,
+        "correct": 8
+      },
+      {
+        "threshold": 1.0,
+        "correct": 8
+      },
+      {
+        "threshold": null,
+        "correct": 8
+      }
+    ],
+    "partitions": {
+      "dev": {
+        "name_tfidf": {
+          "n": 15,
+          "responses": 15,
+          "correct": 10,
+          "accuracy": 0.6666666666666666,
+          "correct_fraction_of_expected": 0.6666666666666666,
+          "coverage": 1.0,
+          "tp": 2,
+          "fp": 0,
+          "fn_including_missing": 5,
+          "precision": 1.0,
+          "recall": 0.2857142857142857
+        },
+        "rule_blind_oracle_correct": 12,
+        "n": 15,
+        "oracle_note": "Diagnostic upper bound for one fixed binary decision per pair across all rules; uses gold labels, not an executable model."
+      },
+      "test": {
+        "name_tfidf": {
+          "n": 33,
+          "responses": 33,
+          "correct": 16,
+          "accuracy": 0.48484848484848486,
+          "correct_fraction_of_expected": 0.48484848484848486,
+          "coverage": 1.0,
+          "tp": 1,
+          "fp": 1,
+          "fn_including_missing": 16,
+          "precision": 0.5,
+          "recall": 0.058823529411764705
+        },
+        "rule_blind_oracle_correct": 23,
+        "n": 33,
+        "oracle_note": "Diagnostic upper bound for one fixed binary decision per pair across all rules; uses gold labels, not an executable model."
+      }
+    }
+  },
+  "budget_usd": 0.25,
+  "errors": [],
+  "new_api_calls": 96,
+  "new_api_cost_usd": 0.0018554759999999998,
+  "resolved_models": [
+    "typesafe/jev-1.13-20260917"
+  ],
+  "cost_sources": {
+    "reported_by_api": 96
+  },
+  "limitation": "Curated, source-backed judging pilot; not independently adjudicated, not raw data or end-to-end linkage.",
+  "artifacts": {
+    "decisions.csv": "251a8c075d40ff5361de74aca7b5679c2b1b0fb6f1ca3c2d68dd358350341340",
+    "fixture.json": "16fd135619670c67a6393b45e43bcebc15eb0860a2ad4dd02d2bb407aa1443ef",
+    "frozen.json": "adb165edb2b3d4208ba4f0a2f33f33a0b71733a9654375cb2111eb26f6f036b2",
+    "requests.jsonl": "4f1bcdac32de1b1aa0909be4cd55072a3deb08f46c05b1ec4debd2670cb58523",
+    "responses.jsonl": "db5c06847c4eb12f30d549eeea4e8b6f441ae4086a08d0daa74fe405d80a1bca"
+  }
+}
