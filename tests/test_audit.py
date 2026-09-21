@@ -291,6 +291,22 @@ def test_fully_labeled_audits_give_exactly_the_numbers_they_gave_before_reweight
     assert "reweighted" not in result.summary()
 
 
+def test_calibration_rows_describe_the_labeled_pairs_of_a_bin():
+    # mean_p and match_rate are means over the same, labeled pairs. The blank row's p = .9 is known
+    # but not used: set against the labeled match rate it would fake a calibration gap.
+    frame = labeled([.1, .3, .9, .8], [0, 1, "", 1], [1, 2, 1, 5], ["low", "low", "low", "high"])
+    table = evaluate(frame, n_boot=20).calibration.set_index("bin")
+    assert table.loc["low", "n"] == 2
+    assert table.loc["low", "mean_p"] == pytest.approx((.1 * 1 + .3 * 2) / 3)  # not (.1 + .6 + .9) / 4
+    assert table.loc["low", "match_rate"] == pytest.approx(2 / 3)
+    unusable = evaluate(frame.assign(p=[.1, .3, "not scored", .8]), n_boot=20).calibration
+    pd.testing.assert_frame_equal(unusable, table.reset_index())
+    # Without a label a bin has no calibration point, whatever its probabilities.
+    frame["is_match"] = [0, 1, "", ""]
+    assert np.isnan(evaluate(frame, n_boot=20).calibration.set_index("bin").loc["high", "mean_p"])
+    assert "Brier and calibration assess pair scores, over labeled pairs." in evaluate(frame, n_boot=20).summary()
+
+
 def test_undefined_metric_notes_speak_of_labeled_pairs_only():
     # The only predicted and selected link is on a row whose label is blank.
     frame = labeled([.1, .9], [1, ""]).assign(left_id=[1, 2], right_id=[1, 2], selected=[False, True])

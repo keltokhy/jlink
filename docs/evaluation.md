@@ -109,8 +109,9 @@ For labels `y`, predictions `z` and sampling weights `w`, the weighted totals ar
 `TP / sum(w*z)`, recall is `TP / sum(w*y)`, and F1 is `2*TP / (sum(w*z) + sum(w*y))`.
 Zero denominators produce NaN and an explanation that speaks of labeled pairs, since a
 predicted or selected link on a row with a blank label enters no total. Calibration and the
-weighted Brier score always compare **pair probabilities** to human truth across selected
-and unselected pairs alike. They do not measure the calibration of final-link membership.
+weighted Brier score always compare **pair probabilities** to human truth, over labeled
+pairs, across selected and unselected pairs alike. They do not measure the calibration of
+final-link membership.
 
 ## Blank labels
 
@@ -124,8 +125,7 @@ down from the likely matches and leaves most low-probability pairs blank, the tr
 in those bins, which the links miss, are undercounted and recall is overstated.
 
 The factor applies to precision, recall, F1 and the weighted Brier score, in both modes,
-and to every bootstrap replicate. Each bin's calibration row is unchanged, because a common
-factor within a bin cancels. The summary lists the adjusted bins and their factors. **If no
+and to every bootstrap replicate. The summary lists the adjusted bins and their factors. **If no
 label is blank, every factor is exactly 1 and the results are identical to those of earlier
 versions.** If blanks are equally frequent in every bin, the factors are equal and the
 estimates do not move.
@@ -135,6 +135,18 @@ pairs within a bin are blank. The adjustment treats a bin's labeled pairs as rep
 of its blank ones. If the pairs left blank within a bin are the hard ones, where the model
 is more often wrong, the labeled pairs flatter the bin and no reweighting can recover that.
 Label those pairs, or report the blank counts beside the estimates.
+
+Each calibration row describes the bin's **labeled** pairs. `n` counts them, and `mean_p`
+and `match_rate` are both weighted means over those same pairs; the reweighting factor is
+common to a bin and cancels, so a row is the same with or without it. `mean_p` is therefore
+not the mean probability of every pair sampled in the bin, even though the blank rows'
+probabilities are usually known. Calibration is the gap between the two columns, and that
+gap means something only if both describe the same pairs. If blanks within a bin depend on
+`p`, say a labeler skips the lower-scored pairs of a bin, the labeled pairs still show
+whether scores near theirs come true, while the mean `p` of all sampled rows set against
+the match rate of the labeled ones would show a gap that is not there. It also lets a
+blank row carry no usable `p` at all. A bin without labels has no calibration point:
+both columns are NaN.
 
 A bin with sampled rows but no label at all cannot be estimated, and its weight is not
 redistributed to other bins, whose pairs have different probabilities. Population-wide

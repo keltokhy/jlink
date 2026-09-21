@@ -230,7 +230,8 @@ class Evaluation:
             estimate, low, high = getattr(self, name)
             label = "F1" if name == "f1" else name.capitalize()
             parts.append(f"{label} {_format(estimate)} (95% CI {_format(low)} to {_format(high)}).")
-        parts.append(f"Weighted Brier score {_format(self.brier)}; Brier and calibration assess pair scores.")
+        parts.append(f"Weighted Brier score {_format(self.brier)}; Brier and calibration assess pair scores, "
+                     "over labeled pairs.")
         parts.append("Estimates use sampling weights; 95% intervals use a bootstrap within bins.")
         parts.append("Recall is among judged candidate pairs only; it excludes pairs without a probability "
                      "and true matches lost in blocking.")
@@ -264,6 +265,10 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
     Brier and calibration assess pair probabilities in either mode. Recall is limited to
     judged candidate pairs, not all true links; bootstrap intervals condition on that pool.
     F1 is 2 TP / (predicted links + true matches).
+
+    Each calibration row describes a bin's labeled pairs: n counts them, and mean_p and
+    match_rate are weighted means over those same pairs, so the two are comparable even if
+    blanks within the bin depend on p. A blank row's p is never used and may be unusable.
 
     Blank labels: keep those rows, weights included. Within each bin the labeled pairs are
     reweighted to the total weight of all the bin's sampled rows, so a bin with more blanks
