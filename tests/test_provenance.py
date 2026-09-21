@@ -246,3 +246,50 @@ def test_custom_dataclass_with_opaque_state_is_marked_incomplete_without_breakin
     assert config["parameters"] == {"name": "custom"}
     assert config["configuration_complete"] is False
     assert "callback" in config["unserialized_fields"]
+
+
+@pytest.mark.parametrize("task", ["link", "dedupe"])
+def test_invalid_blocker_provenance_is_rejected_before_judging(task):
+    class InvalidConfig(jlink.block.Blocker):
+        name = "invalid_config"
+
+        def pairs(self, left, right):
+            return np.array([[0, 1]], dtype=np.int64)
+
+        def to_config(self):
+            return {"unsupported": np.array([1, 2])}
+
+    frame = pd.DataFrame({"name": ["Alpha", "Beta"]})
+    fake = FakeJev(lambda state, question: 0.9)
+    linker = jlink.Linker("firm", "name", blockers=[InvalidConfig()], cache=False)
+    with pytest.raises(ValueError, match="cannot be saved as JSON: ndarray"):
+        getattr(linker, task)(frame, *([frame] if task == "link" else []),
+                              progress=False, transport=fake.transport)
+    assert not fake.bodies
+
+
+@pytest.mark.parametrize("task", ["link", "dedupe"])
+def test_blocker_provenance_is_captured_before_judging(task):
+    class MutableConfig(jlink.block.Blocker):
+        name = "mutable_config"
+        generation = "before"
+
+        def pairs(self, left, right):
+            return np.array([[0, 1]], dtype=np.int64)
+
+        def to_config(self):
+            return {"generation": self.generation}
+
+    blocker = MutableConfig()
+
+    def answer(state, question):
+        blocker.generation = "after"
+        return 0.9
+
+    frame = pd.DataFrame({"name": ["Alpha", "Beta"]})
+    fake = FakeJev(answer)
+    linker = jlink.Linker("firm", "name", blockers=[blocker], cache=False)
+    result = getattr(linker, task)(frame, *([frame] if task == "link" else []),
+                                  progress=False, transport=fake.transport)
+    assert len(fake.bodies) == 1
+    assert result.settings["blocker_configs"] == [{"generation": "before"}]

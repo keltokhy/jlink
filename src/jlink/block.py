@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from fractions import Fraction
+from math import ceil, floor
 from numbers import Integral, Real
 
 import numpy as np
@@ -429,9 +430,9 @@ def _finite(value: object) -> bool:
             and bool(np.isfinite(value)))
 
 
-def _aware(value: object, iso: bool) -> bool:
+def _aware(value: object) -> bool:
     if isinstance(value, str):
-        return bool(iso and _ISO_OFFSET.search(value.strip()))
+        return bool(_ISO_OFFSET.search(value.strip()))
     return getattr(value, "tzinfo", None) is not None
 
 
@@ -463,11 +464,14 @@ def _window_values(series: pd.Series, unit: str | None, date_format: str | None,
             parsed = series.dt.tz_convert("UTC") if aware else series.dt.tz_localize("UTC")
             flags = np.full(len(series), aware)
         else:
-            iso = date_format is None or "%z" in date_format
-            flags = np.fromiter((_aware(v, iso) for v in text), dtype=bool, count=len(text))
-            # utc=True only puts every value on one clock. Whether a value named an offset is
-            # decided from its own text, and a column that mixes the two is refused below.
-            parsed = pd.to_datetime(text.where(~missing), format=date_format or "ISO8601",
+            values_to_parse = text.where(~missing)
+            if date_format is not None:
+                # Inspect parsed values before UTC normalization. An ISO text detector cannot
+                # recognize arbitrary %z/%Z formats; scalar parsing also permits mixed offsets.
+                values_to_parse = values_to_parse.map(
+                    lambda v: pd.to_datetime(v, format=date_format, errors="coerce"))
+            flags = np.fromiter((_aware(v) for v in values_to_parse), dtype=bool, count=len(text))
+            parsed = pd.to_datetime(values_to_parse, format="ISO8601" if date_format is None else None,
                                     errors="coerce", utc=True)
         usable = parsed.notna().to_numpy(dtype=bool)
         aware = bool(flags[usable].any())
@@ -515,7 +519,8 @@ class _Window(_StreamingBlocker):
         if self.unit is None:
             return self.low, self.high
         # Exact rational arithmetic: a float bound times 10**9 would round for wide windows.
-        low, high = (round(Fraction(v) * _UNITS[self.unit]) for v in (self.low, self.high))
+        low = ceil(Fraction(self.low) * _UNITS[self.unit])
+        high = floor(Fraction(self.high) * _UNITS[self.unit])
         if max(abs(low), abs(high)) > np.iinfo(np.int64).max:
             raise ValueError(f"window bounds of {self.low:g} to {self.high:g} {self.unit} exceed the "
                              "range of nanosecond timestamps (about 292 years)")
@@ -540,13 +545,21 @@ class _Window(_StreamingBlocker):
         (a, a_ok, _), (b, b_ok, _) = self._parsed(left, right)
         low, high = self._bounds()
         ia, ib = np.flatnonzero(a_ok), np.flatnonzero(b_ok)
-        if not len(ia) or not len(ib):
+        if not len(ia) or not len(ib) or low > high:
             return
         order = ib[np.argsort(b[ib], kind="stable")]
         ranked = b[order]
         # low <= left - right <= high is the right range [left - high, left - low].
         start = np.searchsorted(ranked, _shifted(a[ia], high), side="left")
         stop = np.searchsorted(ranked, _shifted(a[ia], low), side="right")
+        if self.unit is not None:
+            # Saturation is safe only for an endpoint outside the range on the inclusive side.
+            # A lower endpoint above max, or an upper endpoint below min, admits no timestamp.
+            limits = np.iinfo(np.int64)
+            if high < 0:
+                start[a[ia] > limits.max + high] = len(ranked)
+            if low > 0:
+                stop[a[ia] < limits.min + low] = 0
         yield from _pack_rows((i, np.sort(order[lo:hi]))
                               for i, lo, hi in zip(ia.tolist(), start.tolist(), stop.tolist()) if hi > lo)
 

@@ -377,12 +377,18 @@ def _outputs(inputs: list[str], tables: list[str | None], report: str | None = N
     directory, first = run
     if directory is not None:
         folder = Path(directory).expanduser()
-        if not directory.strip() or folder.is_file() or not folder.resolve().parent.is_dir():
+        if folder.resolve() in seen:
+            raise ValueError(f"--save {directory!r}: choose a separate folder; it repeats an input or output path")
+        if (not directory.strip() or ((folder.exists() or folder.is_symlink()) and not folder.is_dir())
+                or not folder.resolve().parent.is_dir()):
             raise ValueError(f"--save {directory!r}: name a new or existing folder inside an existing one")
         for name in (first, "scores.csv", "settings.json"):
-            if (folder / name).resolve() in seen:
+            member = folder / name
+            if member.resolve() in seen:
                 raise ValueError(f"--save {directory!r}: its {name} would replace an input or another output; "
                                  "choose a separate folder")
+            if (member.exists() or member.is_symlink()) and not member.is_file():
+                raise ValueError(f"--save {directory!r}: its {name} must be a file, not a directory or special file")
 
 
 def _link(args: argparse.Namespace) -> None:
@@ -430,8 +436,8 @@ def _print_estimate(pairs: pd.DataFrame, sizes: str) -> None:
             print(f"{item['name']}: {counts['left']:,} left and {counts['right']:,} right records have a "
                   f"missing or unreadable value and cannot pair in this pass")
     print(f"{sizes}; {n:,} candidate pairs\n"
-          f"Estimated judging cost: ${n * 330 * 0.042 / 1_000_000:.6f}\n"
-          f"Estimated judging time: {n / 200:.1f} seconds\n"
+          f"Short-record judging cost scenario: ${n * 330 * 0.042 / 1_000_000:.6f}\n"
+          f"Short-record judging time scenario: {n / 200:.1f} seconds\n"
           "Assumes 330 input tokens per pair at $0.042 per million and 200 pairs/second. "
           "Actual cost and time depend on caching, exact matches, record length and the provider. "
           "No API calls.")
@@ -502,7 +508,7 @@ def _cluster(args: argparse.Namespace) -> None:
         raise ValueError("--id names a column of --records; give both, or neither")
     scores = read_table(args.scores)
     check_columns(scores, ["left_id", "right_id"], args.scores)
-    _numeric(scores, ["p"], args.scores)
+    _numeric(scores, ["p"], args.scores, round_trip=True)
     record_ids = None
     if args.records:
         records = read_table(args.records)
@@ -519,12 +525,15 @@ def _cluster(args: argparse.Namespace) -> None:
           f"{args.threshold:g}; no API calls", file=sys.stderr)
 
 
-def _numeric(frame: pd.DataFrame, columns: list[str], path: str, *, every_row: str = "") -> None:
+def _numeric(frame: pd.DataFrame, columns: list[str], path: str, *, every_row: str = "",
+             round_trip: bool = False) -> None:
     """Parse numeric columns. `every_row` says how to recover a column that may have no empty cells."""
     check_columns(frame, columns, path)
     for column in columns:
         try:
-            frame[column] = pd.to_numeric(frame[column], errors="raise")
+            # Saved clustering scores must retain every bit: exact means can lie on a threshold.
+            frame[column] = (frame[column].astype(float) if round_trip
+                             else pd.to_numeric(frame[column], errors="raise"))
         except (ValueError, TypeError):
             allowed = f"a number in every row; {every_row}" if every_row else "numbers or empty cells"
             raise ValueError(f"{path!r}: column {column!r} must contain {allowed}") from None

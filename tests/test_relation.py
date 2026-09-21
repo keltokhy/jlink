@@ -146,14 +146,14 @@ def test_settings_report_and_methods_describe_a_relation(tmp_path):
 
 def test_identity_methods_and_old_saved_runs_are_unchanged(tmp_path):
     result, _ = run(style="identity")
-    assert result.settings["style"] == "identity" and result.settings["entity"] == "event"
+    assert "style" not in result.settings and result.settings["entity"] == "event"
     assert "Question style" not in result.report()
     assert "returns a probability that the following statement is true" in result.methods()
     assert "relation between" not in result.methods()
     # Runs saved before `style` existed carry no such setting and read as identity.
     directory = result.save(tmp_path / "old")
     settings = json.loads((directory / "settings.json").read_text())
-    del settings["style"]
+    settings["style"] = "identity"  # explicitly saved identity styles also remain readable
     (directory / "settings.json").write_text(json.dumps(settings))
     assert jlink.load(directory).methods() == result.methods()
 

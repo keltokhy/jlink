@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import platform
 import time
 from copy import deepcopy
@@ -63,19 +64,28 @@ class Linker:
                                 right_id=right_id, max_pairs=max_pairs)
 
     def estimate(self, left: pd.DataFrame, right: pd.DataFrame | None = None, *, left_id=None,
-                 right_id=None) -> dict:
-        """Run blocking only and say what judging would cost. No API calls.
+                 right_id=None, tokens_per_pair: float | None = None) -> dict:
+        """Run blocking and return a cost/time scenario with its assumptions. No API calls.
 
         With one table the estimate is for `dedupe`, and `left_id` names its ID column.
+        By default both scenarios use short-record measurements, without reading field lengths.
+        `tokens_per_pair` overrides the token assumption; throughput remains a short-record scenario.
         """
+        tokens = TOKENS_PER_PAIR if tokens_per_pair is None else tokens_per_pair
+        if isinstance(tokens, bool) or not isinstance(tokens, (int, float)) or not math.isfinite(tokens) or tokens <= 0:
+            raise ValueError("`tokens_per_pair` must be a finite positive number")
         if right is None:
             pairs = len(block.self_candidates(left, on=self.on, blockers=self.blockers, id=left_id))
             sizes = {"records": len(left)}
         else:
             pairs = len(self.candidates(left, right, left_id=left_id, right_id=right_id))
             sizes = {"left": len(left), "right": len(right)}
-        return sizes | {"pairs": pairs, "dollars": round(pairs * TOKENS_PER_PAIR * PRICE_PER_MTOK / 1e6, 4),
-                        "seconds": round(pairs / PAIRS_PER_SECOND, 1)}
+        return sizes | {"pairs": pairs, "dollars": round(pairs * tokens * PRICE_PER_MTOK / 1e6, 4),
+                        "seconds": round(pairs / PAIRS_PER_SECOND, 1),
+                        "assumptions": {"tokens_per_pair": tokens, "price_per_million_tokens": PRICE_PER_MTOK,
+                                        "pairs_per_second": PAIRS_PER_SECOND,
+                                        "token_basis": "short_records" if tokens_per_pair is None else "caller_supplied",
+                                        "throughput_basis": "short_records"}}
 
     def link(self, left: pd.DataFrame, right: pd.DataFrame, *, left_id: str | None = None,
              right_id: str | None = None, how: str = "one-to-one", threshold: float = 0.5,
@@ -90,6 +100,7 @@ class Linker:
         # Reached only when candidates() accepted the same default, so a paired field exists.
         passes = self.blockers if self.blockers is not None else [
             block.ngrams(*[(lc, rc) for _, lc, rc in self.fields if lc is not None and rc is not None], k=10)]
+        configs = [blocker_config(b) for b in passes]
         inputs = input_fingerprints(left, right, fields=self.fields, left_id=left_id, right_id=right_id)
         scores, meter = judge(cands, left, right, on=self.on, entity=self.entity, definition=self.definition,
                               style=self.style, left_id=left_id, right_id=right_id, api=self.api, model=self.model,
@@ -99,7 +110,7 @@ class Linker:
         settings = self._settings(
             {"left_id": left_id, "right_id": right_id, "how": how, "threshold": threshold,
              "min_margin": min_margin, "n_left": len(left), "n_right": len(right)},
-            passes=passes, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
+            passes=passes, configs=configs, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
             inputs=inputs, budget=budget, max_pairs=max_pairs)
         return Result(links, scores, settings, meter, _left=left, _right=right)
 
@@ -123,6 +134,7 @@ class Linker:
         cands = block.self_candidates(frame, on=self.on, blockers=self.blockers, id=id, max_pairs=max_pairs)
         passes = self.blockers if self.blockers is not None else [
             block.ngrams(*[lc for _, lc, _ in self.fields], k=11)]
+        configs = [blocker_config(b) for b in passes]
         columns = [lc for _, lc, _ in self.fields]
         inputs = {"records": {
             "compared": frame_fingerprint(frame, id_column=id, columns=columns, side="deduplicated"),
@@ -137,11 +149,11 @@ class Linker:
             {"task": "dedupe", "id": id, "left_id": id, "right_id": id, "linkage": linkage,
              "unproposed": unproposed, "threshold": threshold, "pair_order": "earlier_row_is_record_a_v1",
              "n_records": len(frame), "n_left": len(frame), "n_right": len(frame)},
-            passes=passes, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
+            passes=passes, configs=configs, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
             inputs=inputs, budget=budget, max_pairs=max_pairs)
         return DedupeResult(clusters, scores, settings, meter, _frame=frame)
 
-    def _settings(self, specific: dict, *, passes, cands, scores, meter, t0, started_at, inputs, budget,
+    def _settings(self, specific: dict, *, passes, configs, cands, scores, meter, t0, started_at, inputs, budget,
                   max_pairs) -> dict:
         """A saved run's settings. `specific` holds IDs, sizes and how pairs became links or clusters."""
         # Quote the question judge() sent. Rebuilding it here is only a fallback for a replaced judge.
@@ -149,9 +161,9 @@ class Linker:
             self.entity or "", self.definition, style=self.style)["instructions"]
         settings = {
             "jlink": __version__, "date": date.today().isoformat(), "entity": self.entity,
-            "definition": self.definition, "style": self.style, "question": asked,
+            "definition": self.definition, "question": asked,
             "on": [[lc, rc] for _, lc, rc in self.fields], **specific,
-            "blockers": [b.name for b in passes], "blocker_configs": [blocker_config(b) for b in passes],
+            "blockers": [b.name for b in passes], "blocker_configs": configs,
             "budget": None if budget is None else float(budget), "model": meter.model,
             "calls": meter.calls, "cached": meter.cached, "input_tokens": meter.input_tokens,
             "dollars": round(meter.cost, 6), "seconds": round(time.perf_counter() - t0, 1),
@@ -170,6 +182,10 @@ class Linker:
             "runtime": {"python": platform.python_version(), **{p: version(p) for p in (
                 "numpy", "pandas", "scipy", "scikit-learn", "httpx")}},
         }
+        # Missing style already means identity in saved runs. Keep ordinary link settings
+        # compatible with main; rule runs and the new dedupe format name their style explicitly.
+        if self.style != "identity" or specific.get("task") == "dedupe":
+            settings["style"] = self.style
         if "blocking" in cands.attrs:
             settings["blocking"] = deepcopy(cands.attrs["blocking"])
         return settings
@@ -553,7 +569,8 @@ def load(directory: str | Path) -> "Result | DedupeResult":
     if dedupe_run:
         links = pd.read_csv(d / "clusters.csv", keep_default_na=False, na_values={},
                             dtype={"id": _ID_DTYPES.get(kinds.get("id"), str),
-                                   "cluster_id": "int64", "cluster_size": "int64"})
+                                   "cluster_id": "int64", "cluster_size": "int64"},
+                            float_precision="round_trip")
     else:
         links = pd.read_csv(d / "links.csv", dtype=dtype, keep_default_na=False, na_values=na_values,
                             float_precision="round_trip")

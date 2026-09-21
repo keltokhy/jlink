@@ -444,7 +444,10 @@ def test_rule_style_dedupe_collapses_articles_into_events():
                    and "Fulton" in state["record_b"]["text"] else 0.1)
     linker = jlink.Linker(style="rule", definition=rule, on=["text", "published"],
                           blockers=[block.window("published", 3, unit="days")])
-    assert linker.estimate(articles) == {"records": 5, "pairs": 3, "dollars": 0.0, "seconds": 0.0}
+    estimate = linker.estimate(articles)
+    assert {k: estimate[k] for k in ("records", "pairs", "dollars", "seconds")} == {
+        "records": 5, "pairs": 3, "dollars": 0.0, "seconds": 0.0}
+    assert estimate["assumptions"]["token_basis"] == "short_records"
     result = linker.dedupe(articles, progress=False, transport=fake.transport)
     # The vigil is six days later and the brief has no date: the window never proposes them.
     assert result.clusters.cluster_id.tolist() == [0, 0, 1, 2, 3] and len(fake.bodies) == 3
@@ -557,3 +560,119 @@ def test_cli_cluster_errors(tmp_path, capsys):
         with pytest.raises(SystemExit):
             cli(["cluster", str(scores), *args])
         assert message in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("record_ids", [
+    [1, 2, 2**53 + 1], [0.30000000000000004, 1.0, 2.0],
+    [0.3, 0.30000000000000004, 1.0], ["001", "NA", "NULL"]])
+def test_saved_dedupe_preserves_ids_scores_and_reclustering_exactly(tmp_path, record_ids):
+    frame = pd.DataFrame({"rid": record_ids, "name": ["alpha", "beta", "gamma"], "group": [1, 1, 1]})
+    probabilities = {("alpha", "beta"): 0.99, ("alpha", "gamma"): 0.30000000000000004,
+                     ("beta", "gamma"): 0.7}
+    fake = FakeJev(lambda state, asked: probabilities[(state["record_a"]["name"], state["record_b"]["name"])])
+    result = jlink.Linker("firm", "name", blockers=[block.exact("group")], cache=False).dedupe(
+        frame, id="rid", progress=False, transport=fake.transport)
+    assert result.clusters.cluster_size.tolist() == [3, 3, 3]
+    directory = result.save(tmp_path / "run")
+    assert json.loads((directory / "settings.json").read_text())["result_format_version"] == 2
+    back = jlink.load(directory)
+    pd.testing.assert_frame_equal(back.clusters, result.clusters, check_exact=True)
+    columns = ["left_id", "right_id", "p", "sim", "answered_at"]
+    pd.testing.assert_frame_equal(back.scores[columns], result.scores[columns], check_exact=True)
+    pd.testing.assert_frame_equal(back.links[columns], result.links[columns], check_exact=True)
+    pd.testing.assert_frame_equal(back.labeled(frame), result.labeled(), check_exact=True)
+    for linkage, unproposed, threshold in itertools.product(
+            ["average", "components"], ["ignore", "nonmatch"], [0.5, 0.99]):
+        options = dict(linkage=linkage, unproposed=unproposed, threshold=threshold)
+        pd.testing.assert_frame_equal(back.recluster(**options).clusters,
+                                      result.recluster(**options).clusters, check_exact=True)
+    assert len(fake.bodies) == 3  # saving, loading and reclustering never judge again
+
+
+@pytest.mark.parametrize("record_ids", [[1, 2, 2**53 + 1, 4],
+                                       [0.3, 0.30000000000000004, 1.0, 2.0],
+                                       ["001", "NA", "NULL", "alone"]])
+def test_cli_dedupe_save_then_cluster_preserves_exact_scores_and_ids(tmp_path, monkeypatch, record_ids):
+    probabilities = {("alpha", "beta"): 0.99, ("alpha", "gamma"): 0.30000000000000004,
+                     ("beta", "gamma"): 0.7}
+    fake = FakeJev(lambda state, asked: probabilities[(state["record_a"]["name"], state["record_b"]["name"])])
+    linker_module = importlib.import_module("jlink.linker")
+    real = linker_module.judge
+    monkeypatch.setattr(linker_module, "judge",
+                        lambda *args, **kwargs: real(*args, **{**kwargs, "transport": fake.transport}))
+    frame = pd.DataFrame({"rid": record_ids, "name": ["alpha", "beta", "gamma", "alone"],
+                          "group": [1, 1, 1, 2]})
+    records, directory = tmp_path / "records.parquet", tmp_path / "run"
+    frame.to_parquet(records, index=False)
+    captured, original = [], jlink.Linker.dedupe
+
+    def capture(self, *args, **kwargs):
+        result = original(self, *args, **kwargs)
+        captured.append(result)
+        return result
+
+    monkeypatch.setattr(jlink.Linker, "dedupe", capture)
+    cli(["dedupe", str(records), "--id", "rid", "--entity", "firm", "--on", "name", "--block", "exact:group",
+         "--no-cache", "--save", str(directory), "-o", str(tmp_path / "first.parquet")])
+    result, = captured
+    back = jlink.load(directory)
+    assert result.clusters.cluster_size.tolist() == [3, 3, 3, 1]
+    columns = ["left_id", "right_id", "p", "sim", "answered_at"]
+    pd.testing.assert_frame_equal(back.scores[columns], result.scores[columns], check_exact=True)
+    pd.testing.assert_frame_equal(back.clusters, result.clusters, check_exact=True)
+    assert len(fake.bodies) == 3
+    for linkage in ("average", "components"):
+        for policy in ("nonmatch", "ignore"):
+            output, links = tmp_path / "again.parquet", tmp_path / "links.parquet"
+            cli(["cluster", str(directory / "scores.csv"), "--records", str(records), "--id", "rid",
+                 "--linkage", linkage, "--unproposed", policy, "-o", str(output), "--links", str(links)])
+            expected = result.recluster(linkage=linkage, unproposed=policy)
+            pd.testing.assert_frame_equal(pd.read_parquet(output), expected.clusters, check_exact=True)
+            pd.testing.assert_frame_equal(pd.read_parquet(links)[["left_id", "right_id", "p"]],
+                                          expected.links[["left_id", "right_id", "p"]], check_exact=True)
+    assert len(fake.bodies) == 3
+
+
+def test_cli_cluster_preserves_probability_threshold_and_missing_values(tmp_path):
+    scores, output = tmp_path / "scores.csv", tmp_path / "clusters.parquet"
+    pd.DataFrame({"left_id": ["001", "NA"], "right_id": ["NA", "NULL"],
+                  "p": [0.30000000000000004, np.nan]}).to_csv(scores, index=False)
+    cli(["cluster", str(scores), "--threshold", "0.30000000000000004", "-o", str(output)])
+    assert pd.read_parquet(output).cluster_size.tolist() == [2, 2, 1]
+
+
+@pytest.mark.parametrize("value", ["invalid", "inf", "1.01"])
+def test_cli_cluster_rejects_invalid_probability_text(tmp_path, capsys, value):
+    scores = tmp_path / "scores.csv"
+    scores.write_text(f"left_id,right_id,p\na,b,{value}\n")
+    with pytest.raises(SystemExit) as exc:
+        cli(["cluster", str(scores)])
+    assert exc.value.code == 2 and "p" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("task", ["link", "dedupe"])
+@pytest.mark.parametrize("collision", ["output", "scores", "report", "first", "scores.csv", "settings.json"])
+def test_cli_save_path_errors_precede_model_calls(tmp_path, monkeypatch, capsys, task, collision):
+    fake = FakeJev(lambda state, asked: 0.9)
+    linker_module = importlib.import_module("jlink.linker")
+    real = linker_module.judge
+    monkeypatch.setattr(linker_module, "judge",
+                        lambda *args, **kwargs: real(*args, **{**kwargs, "transport": fake.transport}))
+    table = tmp_path / "records.csv"
+    pd.DataFrame({"name": ["Alpha", "Beta"], "group": [1, 1]}).to_csv(table, index=False)
+    directory = tmp_path / "run.csv"
+    args = [task, str(table), *([str(table)] if task == "link" else []), "--entity", "firm",
+            "--on", "name", "--block", "exact:group", "--no-cache", "--save", str(directory)]
+    if collision in ("output", "scores", "report"):
+        flag = {"output": "-o", "scores": "--scores", "report": "--report"}[collision]
+        args += [flag, str(directory)]
+    else:
+        member = ("links.csv" if task == "link" else "clusters.csv") if collision == "first" else collision
+        (directory / member).mkdir(parents=True)
+    with pytest.raises(SystemExit) as exc:
+        cli(args)
+    assert exc.value.code == 2
+    assert len(fake.bodies) == 0
+    assert "--save" in capsys.readouterr().err
+    if collision in ("output", "scores", "report"):
+        assert not directory.exists()
