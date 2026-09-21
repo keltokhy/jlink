@@ -146,7 +146,7 @@ with a `w`, `d`, `h`, `m` or `s` suffix for dates and none for numbers, and
 `within:COLUMNS:RULE` wraps any rule:
 
 ```bash
-jev-link estimate articles.csv incidents.csv --on text= --on =neighborhood \
+jev-link estimate articles.csv incidents.csv --on text= --on "=neighborhood" \
     --block within:boro=BORO:window:published=OCCUR_DATE:0..3d --date-format "=%m/%d/%Y"
 ```
 
