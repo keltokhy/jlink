@@ -162,6 +162,10 @@ categorical bins: choose a sample size large enough to include every populated b
 exporting, and do not delete rows or bins. Once omitted rows or bins have been removed from
 a plain file, the evaluator cannot reconstruct them or verify the sample's coverage.
 
+Reweighting corrects for unequal labeling rates across bins; it cannot recover information
+missing within a bin. Label more low-probability pairs when rare matches leave those bins
+poorly represented, and treat intervals from sparse labels cautiously.
+
 ## Intervals
 
 The 95% intervals use seeded within-bin resampling of labeled rows with their weights,

@@ -105,5 +105,7 @@ same entity, lists which source each one-sided field came from, and quotes the p
   the CLI labels the scenario. Field lengths do not enter the calculation. Pass
   `linker.estimate(left, right, tokens_per_pair=...)` to supply a token assumption; the time
   scenario still uses short-record throughput. Article cost and throughput have not been measured.
+- Rule style asks whether the supplied relationship holds between the records.
+  Identity style remains the default.
 - Nothing here measures Jev on article-to-incident pairs or any other relation. Whether it
   judges yours well is an empirical question: audit a sample before relying on the links.

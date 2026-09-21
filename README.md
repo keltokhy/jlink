@@ -124,8 +124,7 @@ What the table says:
   pass proposed 67% of known links; this is measured blocking recall, not a ceiling for
   name-based methods. Ownership links such as "Homogeneous Metals Inc" to "United Technologies
   Corp" can be difficult to retrieve from names. jlink found 93% of the proposed true links.
-  [Offline blocking comparisons](docs/blocking.md) show the recall and pair-count tradeoffs of
-  reverse search and larger `k`. (A sliver of its error is the benchmark's: 11 Compustat names appear
+  [Candidate search](docs/blocking.md) describes reverse search, larger `k` and their pair-count cost. (A sliver of its error is the benchmark's: 11 Compustat names appear
   under two IDs, which accounts for 14 of jlink's 331 false links.)
 - **Amazon to Google is hard for everyone**, because listings differ in version and edition
   details that the records often omit.

@@ -79,4 +79,3 @@ The first milestone does not establish superiority over LinkTransformer or the h
 entity-linking paper. Remaining experiments include native LinkTransformer LLM adjudication,
 rule-sensitive accuracy on independently labeled cases, calibration on development labels,
 precision/coverage/cost curves, and mention clustering for historical-text comparisons.
-

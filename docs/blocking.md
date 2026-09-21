@@ -151,6 +151,10 @@ four incidents a day proposes about sixteen incidents for each article. Group it
 pairs whose keys disagree or are missing. Union it with other passes like any blocker: a union
 adds pairs and never narrows the window.
 
+Window search avoids comparing every pair, but broad windows and dense groups can still
+produce large candidate sets. Use `max_pairs` to bound output and measure time and memory
+on representative data before choosing a window or grouping rule.
+
 On the command line the rule is `window:COLUMN:TOLERANCE` or `window:LEFT=RIGHT:LOW..HIGH`,
 with a `w`, `d`, `h`, `m` or `s` suffix for dates and none for numbers, and
 `within:COLUMNS:RULE` wraps any rule:
@@ -286,3 +290,9 @@ The diagnostics deliberately omit timings so repeated candidate results are stab
 DataFrame attributes are in-memory metadata, not CSV columns; save the object as JSON
 if needed. For nested wrappers, diagnostics summarize the top-level grouped pass.
 
+## Choosing candidate passes
+
+Adding reverse search or increasing `k` can recover candidates missed by a forward pass,
+while also increasing the number of pairs to judge. Grouping can reduce work but excludes
+true matches whose keys disagree. Compare candidate recall and pair counts on labeled
+data from your application before choosing settings.

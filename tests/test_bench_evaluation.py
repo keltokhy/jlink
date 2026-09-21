@@ -207,14 +207,6 @@ def test_positive_only_harness_disables_f1_tuning_and_unmatched_fabrication(tmp_
                      config={"unmatched_fraction": .1})
 
 
-
-
-
-
-
-
-
-
 def test_resolver_fallback_warnings_are_preserved_in_metrics():
     candidates = pairs([(f"L{i:04}", "R") for i in range(2001)]).assign(sim=.5)
     metrics, links = ev.evaluate_stages(candidates, candidates.assign(p=.9), pairs([("L0000", "R")]),
@@ -246,7 +238,3 @@ def test_configured_candidates_missing_from_cache_remain_unjudged(tmp_path):
     assert stages["judge_conditional_on_candidates"]["unjudged_pairs"] > 0
     assert (stages["judge_conditional_on_candidates"]["scored_pairs"]
             == report["split"]["counts"]["test"]["truth"])
-
-
-
-

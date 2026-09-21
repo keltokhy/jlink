@@ -90,6 +90,10 @@ were all compared merges exactly as before. The price is the third row of the ta
 joins a cluster only on evidence against enough of its members, at the default threshold at
 least half of them. If blocking reaches only some members of a true group, the group is split.
 
+Isolated wrong pairs can join otherwise separate groups when only judged pairs count.
+Counting unproposed pairs as non-matches resists that failure but can split true groups
+when blocking covers too few of their members. Check both failure modes on your own data.
+
 The default was chosen because chaining is the failure that is hard to see afterwards: a false
 merge hides inside a large cluster, while a false split leaves evidence behind. Every judged
 pair at or above the threshold whose records ended in different clusters is listed by

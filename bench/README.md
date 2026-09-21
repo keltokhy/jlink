@@ -1,5 +1,8 @@
 # Benchmarks
 
+For entity-disjoint development/test comparisons, use `bench/heldout.py`.
+The commands below retain the original in-sample oracle comparison.
+
 Prepare public sources, run offline comparisons, and regenerate the measured report:
 
 ```sh
