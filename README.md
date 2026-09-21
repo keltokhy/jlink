@@ -232,8 +232,12 @@ easy ends, and the estimates are weighted back to all judged pairs. Selected mod
 sample's saved membership in the final links; the default `mode="threshold"` instead assesses
 `p >= threshold`, before assignment and margin filtering. Recall covers judged candidates
 only, excluding unjudged pairs and true matches lost in blocking. Brier and calibration always
-assess pair scores. See [evaluation modes and limitations](docs/evaluation.md) for incomplete
-labels, bootstrap assumptions and the exported table contract.
+assess pair scores. You may leave labels blank, but keep those rows in the file: the labeled
+pairs of each probability bin are reweighted to stand for the whole bin, so skipping most of
+the unlikely pairs does not inflate recall. Blanks that fall on the hard pairs within a bin
+can still bias the result, and a bin with no label at all leaves the estimates undefined. See
+[evaluation modes and limitations](docs/evaluation.md) for blank labels, bootstrap assumptions
+and the exported table contract.
 
 For a local side-by-side review page with accept/reject/unsure decisions, durable history,
 and offline recomputation, see [Local human review](docs/review.md). Start with
