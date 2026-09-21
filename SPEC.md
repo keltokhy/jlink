@@ -118,8 +118,9 @@ def candidates(left, right, *, on, blockers: list[Blocker] | None = None, left_i
 def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
 ```
 
-- `exact`: pairs whose listed columns are all equal after `normalize`. Rows with an empty key
-  never pair. Default name `exact:<columns>`.
+- `exact`: pairs whose listed columns are all equal after `normalize`. Whole numbers agree
+  however they are stored: integer 1985, float 1985.0 and the texts "1985" and "1985.0" are one
+  key. Rows with an empty key never pair. Default name `exact:<columns>`.
 - `ngrams`: for each left row, the `k` right rows with the highest character n-gram TF-IDF
   cosine similarity on the listed columns (joined as in `record_text`), keeping only
   similarity >= `min_sim`. Must scale: 100,000 by 100,000 rows in a few minutes and under

@@ -19,7 +19,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from .core import Cache, Jev, JevBudgetExceeded, JevError, JevFatal, Meter, resolve_backend
-from .fields import check_columns, ids, normalize, parse_on
+from .fields import check_columns, clean, ids, normalize, parse_on
 
 SCORE_COLUMNS = ["p", "source", "error"]
 EXACT_POLICY = "all_fields_nonempty_and_equal_v1"
@@ -159,25 +159,9 @@ def _records(frame: pd.DataFrame, index: pd.Index, fields: list[tuple[str, str]]
     """Per ID: the judge's record and a fieldwise key, absent if any field normalizes to empty."""
     columns = [c for _, c in fields]
     rows = frame[columns].to_dict("records")
-    record = [{label: v for (label, c) in fields if (v := _clean(row[c])) is not None} for row in rows]
-    keys = [tuple(normalize(_clean(row[c])) for c in columns) for row in rows]
+    record = [{label: v for (label, c) in fields if (v := clean(row[c])) is not None} for row in rows]
+    keys = [tuple(normalize(clean(row[c])) for c in columns) for row in rows]
     return pd.DataFrame({"record": record, "exact_key": [key if all(key) else None for key in keys]}, index=index)
-
-
-def _clean(value):
-    """A JSON-ready value, or None if missing. Whole floats become ints: a year read as 1985.0 is 1985."""
-    if isinstance(value, (np.generic,)):
-        value = value.item()
-    if value is None or value is pd.NA or value is pd.NaT:
-        return None
-    if isinstance(value, float):
-        if math.isnan(value):
-            return None
-        return int(value) if value.is_integer() and abs(value) < 1e15 else value
-    if isinstance(value, (bool, int)):
-        return value
-    text = str(value).strip()
-    return text or None
 
 
 def _run(coro):

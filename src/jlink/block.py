@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from numbers import Integral, Real
@@ -11,7 +12,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from .fields import check_columns, ids, normalize, parse_on, record_text
+from .fields import check_columns, ids, key_text, normalize, parse_on, record_text
 
 # Bound even a fully populated sparse product to about 64 MiB (float64 + int32).
 _CHUNK_ROWS = 256
@@ -85,7 +86,8 @@ def _pack_rows(rows) -> Iterator[np.ndarray]:
 def _keys(frame: pd.DataFrame, columns: list[str]):
     # Object conversion makes categorical nulls and datetime NaT follow the same
     # missing-key policy as None, rather than surviving map() as nonempty keys.
-    return zip(*(frame[c].astype(object).where(frame[c].notna(), None).map(normalize)
+    # key_text lets an integer year meet the same year stored as a float or as "1985.0".
+    return zip(*(frame[c].astype(object).where(frame[c].notna(), None).map(key_text)
                  for c in columns))
 
 
@@ -124,6 +126,21 @@ def _columns(left: pd.DataFrame, right: pd.DataFrame, fields: list) -> tuple[lis
 
 def _empty_pairs() -> np.ndarray:
     return np.empty((0, 2), dtype=np.int64)
+
+
+def _no_shared_key(blocker: Blocker, left: pd.DataFrame, right: pd.DataFrame) -> str | None:
+    """Why a keyed pass proposed nothing, if its two sides have no key in common."""
+    a, b = _columns(left, right, blocker.fields)
+    policy = getattr(blocker, "missing", "drop")
+    ours, theirs = _groups(left, a, policy), _groups(right, b, policy)
+    if ours.keys() & theirs.keys():
+        return None
+    examples = "; ".join(f"{side} example: {' | '.join(next(iter(groups)))!r}" if groups
+                         else f"{side}: no complete key"
+                         for side, groups in (("left", ours), ("right", theirs)))
+    return (f"blocking pass {blocker.name!r} proposed no pairs: its key columns have no value in common "
+            f"between the {len(left):,} left and {len(right):,} right records ({examples}). "
+            "Check that both sides spell and code these columns the same way.")
 
 
 def exact(*columns: str | tuple[str, str], name: str | None = None) -> Blocker:
@@ -418,6 +435,10 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
                         f"max_pairs={max_pairs:,} during {blocker.name!r}; use a smaller `k`, "
                         "wrap a pass with `within(...)`, or remove/better constrain broad passes; "
                         "adding an `exact` pass unions more pairs and does not restrict other passes")
+        if not proposed and len(left) and len(right) and isinstance(blocker, (_Exact, _Within)):
+            # Disagreeing keys lose every pair of this pass without any other sign.
+            if (message := _no_shared_key(blocker, left, right)) is not None:
+                warnings.warn(message, stacklevel=2)
         added = len(union) - before
         diagnostics.append({"pass": pass_number, "name": blocker.name, "config": blocker.to_config(),
                             "proposed_pairs": proposed, "unique_pairs": unique, "added_pairs": added,

@@ -25,6 +25,14 @@ tables. Group keys use the same normalization as `exact`: case, punctuation, acc
 and whitespace are normalized. Every component must agree; mapped column names use
 `("left_column", "right_column")`. A group with no counterpart produces no candidates.
 
+Whole numbers agree however they are stored. pandas turns an integer column into floats as
+soon as one value is missing, and a CSV written from that column says `1985.0`, so integer
+`1985`, float `1985.0` and the texts `"1985"` and `"1985.0"` are the same key. Other
+spellings are not reconciled: `"02139"` and `2139`, or `"FY85"` and `1985`, remain
+different keys. If an `exact` or `within` pass proposes no pairs because its key columns
+have no value in common between the two tables, `candidates` warns and shows one key from
+each side; the pass's `proposed_pairs` diagnostic is 0.
+
 N-gram TF-IDF is fitted on the left and right records **within each group**. Neither
 vector fitting nor nearest-neighbor matrix multiplication compares different groups.
 This searches for the best available neighbors inside a group, rather than filtering

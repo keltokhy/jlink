@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import math
 import re
 import unicodedata
 
+import numpy as np
 import pandas as pd
 
 On = list  # items are "column" or ("left_column", "right_column")
 _PUNCT = re.compile(r"[^\w\s]|_")
 _SPACE = re.compile(r"\s+")
+_WHOLE_DECIMAL = re.compile(r"[+-]?\d+\.0+")
 
 
 def parse_on(on) -> list[tuple[str, str, str]]:
@@ -42,6 +45,37 @@ def normalize(text: object) -> str:
     s = unicodedata.normalize("NFKD", str(text))
     s = "".join(ch for ch in s if not unicodedata.combining(ch)).casefold().replace("&", " and ")
     return _SPACE.sub(" ", _PUNCT.sub(" ", s)).strip()
+
+
+def clean(value):
+    """A JSON-ready value, or None if missing. Whole floats become ints: a year read as 1985.0 is 1985."""
+    if isinstance(value, (np.generic,)):
+        value = value.item()
+    if value is None or value is pd.NA or value is pd.NaT:
+        return None
+    if isinstance(value, float):
+        if math.isnan(value):
+            return None
+        return int(value) if value.is_integer() and abs(value) < 1e15 else value
+    if isinstance(value, (bool, int)):
+        return value
+    text = str(value).strip()
+    return text or None
+
+
+def key_text(value: object) -> str:
+    """Normalized text of one exact or group key component; empty if missing.
+
+    Whole numbers agree however they are stored. A numeric column with one missing value is
+    float in pandas, and a table written from it says "1985.0", so the integer 1985, the float
+    1985.0 and the texts "1985" and "1985.0" all give "1985".
+    """
+    value = clean(value)
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)  # clean() leaves whole floats from 1e15 up as floats; sixteen-digit keys exist
+    elif isinstance(value, str) and _WHOLE_DECIMAL.fullmatch(value):
+        value = value[:value.index(".")]
+    return normalize(value)
 
 
 def record_text(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
