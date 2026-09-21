@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -74,20 +75,25 @@ def _create(args) -> None:
     left, right = read_table(args.left), read_table(args.right)
     result = load(directory)
     # The saved-result loader preserves both literal IDs and exact floating-point scores.
-    # Restore integer IDs in the original tables before aligning to the loaded result.
+    # Restore numeric IDs in the original tables before aligning to the loaded result.
     for side, frame in (("left", left), ("right", right)):
         column = settings.get(f"{side}_id")
         kind = settings.get("id_kinds", {}).get(f"{side}_id")
-        if kind == "int" and column is not None:
+        if kind in ("int", "float") and column is not None:
             values = ids(frame, column, side)
             try:
-                converted = [int(v) for v in values]
-                if any(str(v) != str(i) for v, i in zip(values, converted)):
-                    raise ValueError
+                if kind == "int":
+                    converted = [int(v) for v in values]
+                    if any(str(v) != str(i) for v, i in zip(values, converted)):
+                        raise ValueError
+                else:
+                    converted = [float(v) for v in values]
+                    if not all(math.isfinite(v) for v in converted):
+                        raise ValueError
                 frame[column] = converted
             except (ValueError, TypeError, OverflowError):
-                raise ValueError(
-                    f"original {side} ID column {column!r} disagrees with saved integer IDs") from None
+                raise ValueError(f"original {side} ID column {column!r} disagrees with saved "
+                                 f"{'integer' if kind == 'int' else 'floating-point'} IDs") from None
         for table in (result.scores, result.links):
             _align_ids(table, frame, column, side)
     review = create_review(result, left=left, right=right,

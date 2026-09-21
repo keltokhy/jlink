@@ -1,5 +1,7 @@
 """End to end against a fake Jev: block, judge, resolve, report, save and load."""
 
+import json
+
 import pandas as pd
 import pytest
 
@@ -80,6 +82,37 @@ def test_save_and_load_round_trip(tmp_path):
     with pytest.raises(ValueError, match="loaded from disk"):
         back.merged()
     assert len(back.merged(LEFT, RIGHT)) == 3
+
+
+def test_float_ids_survive_save_load_merge_and_review(tmp_path):
+    # Stata often stores numeric IDs as doubles, including values no integer column would hold.
+    left = LEFT.assign(gvkey=[1001.0, 1002.0, 1003.5, 2.0 ** 60])
+    result = linker().link(left, RIGHT, left_id="gvkey", right_id="id", progress=False,
+                           transport=FakeJev(oracle).transport)
+    directory = result.save(tmp_path / "out")
+    assert json.loads((directory / "settings.json").read_text())["id_kinds"] == {
+        "left_id": "float", "right_id": "int"}
+    back = jlink.load(directory)
+    assert back.scores["left_id"].dtype == back.links["left_id"].dtype == "float64"
+    pd.testing.assert_frame_equal(back.scores[["left_id", "right_id"]], result.scores[["left_id", "right_id"]])
+    pd.testing.assert_frame_equal(back.links[["left_id", "right_id", "p", "margin"]],
+                                  result.links[["left_id", "right_id", "p", "margin"]])
+    pd.testing.assert_frame_equal(back.merged(left, RIGHT), result.merged())
+    assert len(back.merged(left, RIGHT)) == 3
+    applied = jlink.create_review(back, left=left, right=RIGHT).apply()
+    assert list(zip(applied.links.left_id, applied.links.right_id)) == list(
+        zip(result.links.left_id, result.links.right_id))
+    assert {type(v) for v in applied.links.left_id} == {float}
+
+
+def test_float_ids_saved_as_text_by_earlier_versions_still_load_as_text(tmp_path):
+    left = LEFT.assign(gvkey=[1001.0, 1002.0, 1003.5, 1004.0])
+    directory = linker().link(left, RIGHT, left_id="gvkey", right_id="id", progress=False,
+                              transport=FakeJev(oracle).transport).save(tmp_path / "out")
+    settings = json.loads((directory / "settings.json").read_text())
+    settings["id_kinds"]["left_id"] = "str"
+    (directory / "settings.json").write_text(json.dumps(settings))
+    assert set(jlink.load(directory).links["left_id"]) == {"1001.0", "1002.0", "1003.5"}
 
 
 def test_audit_sample_shows_both_records():
