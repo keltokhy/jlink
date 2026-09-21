@@ -107,9 +107,10 @@ missing `p` is rejected by evaluation, rather than counted as a negative predict
 For labels `y`, predictions `z` and sampling weights `w`, the weighted totals are
 `TP = sum(w*y*z)`, predicted matches `sum(w*z)` and true matches `sum(w*y)`. Precision is
 `TP / sum(w*z)`, recall is `TP / sum(w*y)`, and F1 is `2*TP / (sum(w*z) + sum(w*y))`.
-Zero denominators produce NaN and an explanation. Calibration and the weighted Brier
-score always compare **pair probabilities** to human truth across selected and unselected
-pairs alike. They do not measure the calibration of final-link membership.
+Zero denominators produce NaN and an explanation that speaks of labeled pairs, since a
+predicted or selected link on a row with a blank label enters no total. Calibration and the
+weighted Brier score always compare **pair probabilities** to human truth across selected
+and unselected pairs alike. They do not measure the calibration of final-link membership.
 
 ## Blank labels
 

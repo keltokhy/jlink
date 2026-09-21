@@ -291,6 +291,18 @@ def test_fully_labeled_audits_give_exactly_the_numbers_they_gave_before_reweight
     assert "reweighted" not in result.summary()
 
 
+def test_undefined_metric_notes_speak_of_labeled_pairs_only():
+    # The only predicted and selected link is on a row whose label is blank.
+    frame = labeled([.1, .9], [1, ""]).assign(left_id=[1, 2], right_id=[1, 2], selected=[False, True])
+    by_score, by_link = evaluate(frame, n_boot=20).summary(), evaluate(frame, mode="selected", n_boot=20).summary()
+    assert "No predicted links among labeled pairs at this threshold: precision and its interval are NaN." in by_score
+    assert "No selected links among labeled pairs: precision and its interval are NaN." in by_link
+    frame["is_match"] = [0, ""]
+    assert "No predicted links or true matches among labeled pairs: F1" in evaluate(frame, n_boot=20).summary()
+    assert "No selected links or true matches among labeled pairs: F1" in evaluate(
+        frame, mode="selected", n_boot=20).summary()
+
+
 def test_summary_wording_with_no_blanks_with_reweighted_blanks_and_with_an_unlabeled_bin():
     bins = ["high", "high", "low", "low"]
     complete = evaluate(labeled([.9, .8, .2, .1], [1, 0, 1, 0], bins=bins), n_boot=20).summary()
