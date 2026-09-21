@@ -111,6 +111,58 @@ def test_missing_and_unreadable_values_are_dropped_and_counted_never_guessed():
         assert len(block.candidates(quiet, quiet, on="n", blockers=[numbers])) == 1
 
 
+def test_values_are_compared_as_numbers_whatever_their_storage():
+    # A numeric column with one missing value is float64; its neighbor without one is int64.
+    # Compared as text, 1985 and 1985.0 would never meet.
+    whole = pd.DataFrame({"year": pd.Series([1985, 1990, 2001], dtype="int64")})
+    gappy = pd.DataFrame({"year": pd.Series([1985.0, np.nan, 2001.0, 1991.0], dtype="float64")})
+    assert_array_equal(block.window("year", 0).pairs(whole, gappy), [[0, 0], [2, 2]])
+    assert_array_equal(block.window("year", 1).pairs(whole, gappy), [[0, 0], [1, 3], [2, 2]])
+    assert block.window("year", 0).dropped(whole, gappy)["right"] == {
+        "column": "year", "missing": 1, "unparseable": 0, "time_zone": None}
+    for stored, expected in [
+            (pd.Series(["1985", "1985.0", " 2001 ", None]), [[0, 0], [0, 1], [2, 2]]),          # text
+            (pd.Series([1985, None, 2001.0, "x"], dtype=object), [[0, 0], [2, 2]]),             # mixed objects
+            (pd.Series([1985, pd.NA, 2001, 7], dtype="Int64"), [[0, 0], [2, 2]])]:              # nullable integers
+        assert_array_equal(block.window("year", 0).pairs(whole, pd.DataFrame({"year": stored})), expected)
+
+
+def test_one_column_with_mixed_date_formats_keeps_only_what_the_stated_format_reads():
+    mixed = pd.DataFrame({"when": ["2024-03-01", "03/01/2024", "1 March 2024", "2024-03-01T08:00", None]})
+    iso = pd.DataFrame({"when": ["2024-03-01"]})
+    default = block.window("when", 1, unit="days")
+    assert_array_equal(default.pairs(mixed, iso), [[0, 0], [3, 0]])
+    assert default.dropped(mixed, iso)["left"] == {
+        "column": "when", "missing": 1, "unparseable": 2, "time_zone": "none"}
+    american = block.window("when", 1, unit="days", date_format=("%m/%d/%Y", None))
+    assert_array_equal(american.pairs(mixed, iso), [[1, 0]])  # 03/01 is March 1st because the format says so
+    assert american.dropped(mixed, iso)["left"]["unparseable"] == 3
+    with pytest.warns(UserWarning, match="could not read 3 left values in 'when' as dates"):
+        block.candidates(mixed, iso, on="when", blockers=[american])
+
+
+def numeric_groups(right_dtype):
+    left = pd.DataFrame({"precinct": pd.Series([75, 75, 40, 40], dtype="int64"), "day": [1, 5, 1, 9]})
+    right = pd.DataFrame({"precinct": pd.Series([75, 40, 40, None] if right_dtype == "float64" else [75, 40, 40, 1],
+                                                dtype=right_dtype), "day": [2.0, 1.0, np.nan, 1.0]})
+    return left, right
+
+
+def test_window_inside_within_on_a_numeric_group_key():
+    left, right = numeric_groups("int64")
+    grouped = block.within(block.window("day", 1), "precinct")
+    assert_array_equal(grouped.pairs(left, right), [[0, 0], [2, 1]])
+    assert grouped.dropped(left, right)["right"]["missing"] == 1
+
+
+@pytest.mark.xfail(strict=False, reason="within's group keys compare 75 with 75.0 as text; the fix to "
+                   "block._keys is being made on the base branch (PR #1). Remove this marker after rebasing.")
+def test_window_inside_within_when_one_numeric_group_key_is_float_because_of_a_missing_value():
+    left, right = numeric_groups("float64")
+    assert right.precinct.dtype == "float64" and left.precinct.dtype == "int64"
+    assert_array_equal(block.within(block.window("day", 1), "precinct").pairs(left, right), [[0, 0], [2, 1]])
+
+
 def test_a_wrong_date_format_is_reported_and_an_explicit_one_is_honored():
     register = pd.DataFrame({"OCCUR_DATE": ["08/27/2006", "03/01/2024", "13/45/2024"]})
     articles = pd.DataFrame({"published": ["2024-03-02", "2006-08-27"]})
