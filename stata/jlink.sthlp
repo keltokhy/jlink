@@ -7,7 +7,7 @@
 [{cmd:define(}{it:text}{cmd:)} {cmd:style(}{it:identity|rule}{cmd:)} {cmd:leftid(}{it:varname}{cmd:)}
 {cmd:rightid(}{it:column}{cmd:)} {cmd:how(}{it:mode}{cmd:)}
 {cmd:threshold(}{it:number}{cmd:)} {cmd:budget(}{it:dollars}{cmd:)}
-{cmd:saving(}{it:links.dta}{cmd:)} {cmd:replace} {cmd:merge}]
+{cmd:saving(}{it:links.dta}{cmd:)} {cmd:replace} {cmd:merge} {cmd:rundir(}{it:folder}{cmd:)}]
 
 {title:Setup}
 {pstd}Requires Stata 14 or later on macOS or Unix, and the Python jlink package.
@@ -41,6 +41,11 @@ not replace the underlying numeric IDs.{p_end}
 {cmd:right_id}, {cmd:p}, and any score columns. Add {cmd:replace} to overwrite it.
 Links are read with text IDs, preserving leading zeros.
 Without {cmd:saving()} or {cmd:merge}, the wrapper only reports the number of links.{p_end}
+{pstd}{cmd:rundir()} saves the whole run in a folder: links.csv, scores.csv with every
+candidate pair's probability, and settings.json with the question, blocking and
+provenance. Keep it with your replication files. In a terminal,
+{cmd:jev-link review create} {it:folder} {cmd:--left} {it:left.dta} {cmd:--right} {it:right.dta} {cmd:-o review.html}
+then builds the local review page from it.{p_end}
 {pstd}Your data in memory remain unchanged unless you request {cmd:merge}.
 {cmd:merge} requires {cmd:leftid()} and {cmd:how(one-to-one)} or
 {cmd:how(many-to-one)}. It attaches link columns to the left data and retains

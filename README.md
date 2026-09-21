@@ -310,11 +310,16 @@ jlink estimate compustat.dta patents.csv --on conm=assignee --on state
 jlink link compustat.dta patents.csv --on conm=assignee --on state --entity firm \
       --define "A parent company and its subsidiary are different firms." \
       --left-id gvkey --right-id assignee_id --block ngrams:conm=assignee:10 --block initials:conm=assignee \
-      -o links.csv --scores scores.csv --report report.md
+      -o links.csv --scores scores.csv --report report.md --save linkage/
 jlink audit scores.csv --links links.csv --left compustat.dta --right patents.csv --on conm=assignee \
       --left-id gvkey --right-id assignee_id -n 200 -o audit.csv
 jlink evaluate audit.csv --mode selected --markdown
 ```
+
+`--save linkage/` writes what `result.save("linkage/")` writes: the links, every candidate score,
+and `settings.json` with the question, blocking and provenance. `jlink review create linkage/ ...`,
+`jlink.load` and a replication package all read that folder, so the review page is reachable
+from the command line alone. Stata's `rundir()` and R's `run_dir =` forward it.
 
 `jlink dedupe firms.dta --on name --entity firm --id gvkey -o clusters.csv --scores scores.csv`
 groups the records of one file, and `jlink cluster scores.csv --threshold 0.8 -o strict.csv`

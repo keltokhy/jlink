@@ -141,6 +141,10 @@ def _add_judging(parser: argparse.ArgumentParser) -> None:
                              "(default: 5; 0: cached/exact only)")
     parser.add_argument("--scores", metavar="FILE", help="save all candidate scores for a later audit")
     parser.add_argument("--report", metavar="FILE", help="save the report as Markdown")
+    parser.add_argument("--save", metavar="DIR",
+                        help="save the whole run in a folder, as Result.save() does: the links or clusters, "
+                             "scores.csv and settings.json with full provenance. `review create`, "
+                             "jlink.load and a replication package read this folder")
     parser.add_argument("--api", choices=("typesafe", "openrouter"),
                         help="API provider (default: configured provider)")
     parser.add_argument("--model", metavar="ID", help="model identifier (default: provider's Jev model)")
@@ -348,7 +352,12 @@ def _date_formats(value: str | None) -> tuple[str | None, str | None] | None:
     return (left.strip() or None, right.strip() or None)
 
 
-def _outputs(inputs: list[str], tables: list[str | None], report: str | None = None) -> None:
+def _outputs(inputs: list[str], tables: list[str | None], report: str | None = None,
+             run: tuple[str | None, str] = (None, "")) -> None:
+    """Refuse outputs that are malformed or would replace an input or another output, before any work.
+
+    `run` is (--save directory, the name of its links or clusters file).
+    """
     seen = {Path(path).expanduser().resolve() for path in inputs}
     for value in [*tables, report]:
         if value is None:
@@ -365,10 +374,19 @@ def _outputs(inputs: list[str], tables: list[str | None], report: str | None = N
 
             _require_arrow(path)
         seen.add(path.resolve())
+    directory, first = run
+    if directory is not None:
+        folder = Path(directory).expanduser()
+        if not directory.strip() or folder.is_file() or not folder.resolve().parent.is_dir():
+            raise ValueError(f"--save {directory!r}: name a new or existing folder inside an existing one")
+        for name in (first, "scores.csv", "settings.json"):
+            if (folder / name).resolve() in seen:
+                raise ValueError(f"--save {directory!r}: its {name} would replace an input or another output; "
+                                 "choose a separate folder")
 
 
 def _link(args: argparse.Namespace) -> None:
-    _outputs([args.left, args.right], [args.output, args.scores], args.report)
+    _outputs([args.left, args.right], [args.output, args.scores], args.report, (args.save, "links.csv"))
     _question(args)
     left, right, on, blockers = _inputs(args)
     from .linker import Linker
@@ -387,6 +405,8 @@ def _link(args: argparse.Namespace) -> None:
         write_table(result.scores, args.scores)
     if args.report:
         Path(args.report).expanduser().write_text(result.report(), encoding="utf-8")
+    if args.save:
+        result.save(Path(args.save).expanduser())
     print(f"jlink: {len(left):,} left records, {len(right):,} right records; "
           f"{len(result.candidates):,} candidate pairs; {len(result.links):,} links; "
           f"{result.meter.calls:,} calls; ${result.meter.cost:.4f}", file=sys.stderr)
@@ -426,7 +446,8 @@ def _question(args: argparse.Namespace) -> None:
 
 def _dedupe(args: argparse.Namespace) -> None:
     tables = [] if args.estimate else [args.output, args.scores, args.links]
-    _outputs([args.table], tables, None if args.estimate else args.report)
+    _outputs([args.table], tables, None if args.estimate else args.report,
+             (None if args.estimate else args.save, "clusters.csv"))
     if not args.estimate:
         _question(args)
     specs = [_block_spec(rule) for rule in args.block or []]
@@ -453,6 +474,8 @@ def _dedupe(args: argparse.Namespace) -> None:
         write_table(result.scores, args.scores)
     if args.report:
         Path(args.report).expanduser().write_text(result.report(), encoding="utf-8")
+    if args.save:
+        result.save(Path(args.save).expanduser())
     print(f"jlink: {len(frame):,} records; {len(result.candidates):,} candidate pairs; "
           f"{_grouped(result.clusters)}; {result.meter.calls:,} calls; ${result.meter.cost:.4f}",
           file=sys.stderr)

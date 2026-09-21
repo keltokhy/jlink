@@ -132,7 +132,7 @@ about matches that blocking never proposed.
 ```bash
 jev-link dedupe firms.dta --on name --on city --entity firm --id firm_id --estimate
 jev-link dedupe firms.dta --on name --on city --entity firm --id firm_id \
-    -o clusters.csv --scores scores.csv --links links.csv --report report.md
+    -o clusters.csv --scores scores.csv --links links.csv --report report.md --save dedupe/
 jev-link cluster scores.csv --records firms.dta --id firm_id --threshold 0.8 -o strict.csv
 jev-link cluster scores.csv --records firms.dta --id firm_id --unproposed ignore -o whole.csv
 jev-link audit scores.csv --links links.csv --left firms.dta --right firms.dta --on name \
@@ -141,7 +141,8 @@ jev-link evaluate audit.csv --mode selected --markdown
 ```
 
 `dedupe` accepts the blocking, question, budget and cache options of `link`, plus `--threshold`,
-`--linkage` and `--unproposed`. `--estimate` runs blocking only. `--links` saves the judged pairs
+`--linkage` and `--unproposed`. `--estimate` runs blocking only. `--save DIR` writes the folder that `result.save(DIR)` writes, for
+`jlink.load` and replication. `--links` saves the judged pairs
 that share a cluster, which is what `audit --links` expects. `cluster` regroups saved scores
 without API calls; without `--records` it can only list records that some pair mentions.
 

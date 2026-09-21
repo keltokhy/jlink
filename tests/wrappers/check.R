@@ -25,6 +25,10 @@ for (bad in list(list(style = "rule"), list(style = "relation", entity = "firm")
                         error = function(e) conditionMessage(e))
     stopifnot(startsWith(problem, "jlink: "))
 }
+saved <- file.path(getwd(), "run folder's files")
+kept <- jlink(left, right, on = c("name", "city=town"), entity = "firm", left_id = "firm_id",
+              right_id = "record_id", run_dir = saved)
+stopifnot(identical(kept$left_id, "00123"), file.exists(file.path(saved, "settings.json")))
 empty <- run(right, "EMPTY")
 stopifnot(nrow(empty) == 0L, identical(names(empty), names(links)), identical(left, original))
 cat("R_WRAPPER_OK\n")

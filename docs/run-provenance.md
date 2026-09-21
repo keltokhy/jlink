@@ -1,6 +1,8 @@
 # Correctness, budgets, and saved-run provenance
 
-`Result.save(directory)` writes `scores.csv`, `links.csv`, and `settings.json`.
+`Result.save(directory)` writes `scores.csv`, `links.csv`, and `settings.json`. On the command
+line, `link --save DIR` and `dedupe --save DIR` write the same directory; Stata's `rundir()` and
+R's `run_dir =` forward it.
 `jlink.load(directory)` can relink these scores without an API call; pass the original input
 frames to `merged(left, right)`. Saving does not embed those input frames or API credentials.
 

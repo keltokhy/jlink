@@ -33,3 +33,6 @@
   scores in `docs/dedupe.md`.
 - Add `block.self_candidates`, `pairs_completeness(..., unordered=True)` and one-table
   `Linker.estimate(table)`.
+- Add `--save DIR` to `link` and `dedupe`: the run directory that `Result.save()` writes, which
+  `review create` and `jlink.load` read. The review workflow was unreachable from the command
+  line alone before. Stata's `rundir()` and R's `run_dir =` forward it.

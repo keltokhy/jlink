@@ -32,6 +32,42 @@ def test_review_cli_preserves_probability_at_acceptance_boundary(tmp_path):
     assert review.apply().links.empty  # Merely reopening a saved run must not select a new link.
 
 
+def test_command_line_alone_reaches_the_review_workflow(tmp_path, monkeypatch, capsys):
+    """link --save writes what Result.save() writes, so review create needs no Python session."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    for key in ("TYPESAFE_API_KEY", "JEV_API", "JEV_MODEL", "JEV_URL"):
+        monkeypatch.delenv(key, raising=False)
+    fake = FakeJev(lambda state, question: 0.9 if state["record_a"]["name"][:4] == state["record_b"]["name"][:4]
+                   else 0.1)
+    linker = importlib.import_module("jlink.linker")
+    real = linker.judge
+    monkeypatch.setattr(linker, "judge", lambda *a, **kw: real(*a, **{**kw, "transport": fake.transport}))
+    pd.DataFrame({"id": ["001", "NA"], "name": ["Acme Inc", "Zeta LLC"]}).to_csv(tmp_path / "left.csv", index=False)
+    pd.DataFrame({"id": ["7", "8"], "name": ["Acme Incorporated", "Zeta Holdings"]}).to_csv(
+        tmp_path / "right.csv", index=False)
+    run = tmp_path / "linkage"
+    cli(["link", str(tmp_path / "left.csv"), str(tmp_path / "right.csv"), "--on", "name", "--entity", "firm",
+         "--left-id", "id", "--right-id", "id", "--block", "ngrams:name:2", "--no-cache",
+         "-o", str(tmp_path / "links.csv"), "--save", str(run)])
+    assert sorted(p.name for p in run.iterdir()) == ["links.csv", "scores.csv", "settings.json"]
+    saved = jlink.load(run)
+    assert set(zip(saved.links.left_id, saved.links.right_id)) == {("001", "7"), ("NA", "8")}
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / "links.csv", dtype=str, keep_default_na=False)[
+        ["left_id", "right_id"]], saved.links[["left_id", "right_id"]])
+    assert saved.settings["question"] == fake.bodies[0]["questions"]["match"]["instructions"]
+    assert saved.settings["inputs"]["left"]["compared"]["columns"] == ["name"]
+    calls = len(fake.bodies)
+    cli(["review", "create", str(run), "--left", str(tmp_path / "left.csv"), "--right", str(tmp_path / "right.csv"),
+         "-o", str(tmp_path / "review.html"), "--artifact", str(tmp_path / "review.json")])
+    review = jlink.read_review(tmp_path / "review.json")
+    review.decide("NA", "8", "reject", reviewer="cli-only")
+    review.save(tmp_path / "decided.json")
+    cli(["review", "apply", str(tmp_path / "decided.json"), "-o", str(tmp_path / "reviewed.json")])
+    assert "1 reviewed links" in capsys.readouterr().err and len(fake.bodies) == calls
+
+
 def test_grouped_cached_run_survives_review_and_selected_evaluation(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))

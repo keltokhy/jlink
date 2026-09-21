@@ -41,6 +41,11 @@ capture noisily jlink using `"`right'"', on(name city=town) entity(firm) style(r
 assert _rc == 198
 quietly datasignature
 assert `"`r(datasignature)'"' == `"`original'"'
+local saved `"`c(pwd)'/run folder's files"'
+jlink using `"`right'"', on(name city=town) entity(firm) leftid(firm_id) rightid(record_id) ///
+    rundir(`"`saved'"')
+assert r(N_links) == 1
+confirm file `"`saved'/settings.json"'
 capture noisily jlink using `"`right'"', on(name city=town) entity(firm) define("FAIL") ///
     leftid(firm_id) rightid(record_id)
 assert _rc != 0
