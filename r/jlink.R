@@ -1,14 +1,18 @@
 # Thin jlink wrapper. Run on real R 4.5.1 on macOS with an offline fake jev-link:
 # CSV round trips, spaces/quotes in arguments, executable fallback, cleanup and errors.
-# Also run once end to end against the real command and the live Jev API on examples/ (2026-09-18).
+# Also run once end to end against the real command and the live Jev API on examples/ (2026-09-18);
+# style = "rule" has only been run against the fake.
 # Not tested on Windows or other R versions.
 # Rerun: uv run python tests/wrappers/run.py --r
 # Install jlink into an environment on PATH. Prefer jev-link; macOS's jlink is Java.
 # Example: jlink(firms, "registry.dta", on=c("name", "city=town"), entity="firm",
 #                define="The same firm, despite abbreviations.", left_id="gvkey", right_id="id")
 
-jlink <- function(left, right, on, entity, define = "", left_id = NULL, right_id = NULL,
-                  how = "one-to-one", threshold = 0.5, budget = 5) {
+# style = "rule" asks whether a pair satisfies `define` (any relation); `entity` is then optional.
+# A field only one table has is written "text=" (left only) or "=place" (right only) in `on`.
+
+jlink <- function(left, right, on, entity = NULL, define = "", left_id = NULL, right_id = NULL,
+                  how = "one-to-one", threshold = 0.5, budget = 5, style = "identity") {
     fail <- function(text) stop(paste0("jlink: ", text), call. = FALSE)
     scalar <- function(value, label, empty = FALSE) {
         if (!is.character(value) || length(value) != 1L || is.na(value) ||
@@ -21,8 +25,13 @@ jlink <- function(left, right, on, entity, define = "", left_id = NULL, right_id
     if (!is.character(on) || !length(on) || anyNA(on) || any(!nzchar(trimws(on)))) {
         fail("on must name at least one field, for example c('name', 'city=town')")
     }
-    scalar(entity, "entity")
+    scalar(style, "style")
+    if (!(style %in% c("identity", "rule"))) fail("style must be identity or rule")
+    if (!is.null(entity) || style == "identity") scalar(entity, "entity")
     scalar(define, "define", empty = TRUE)
+    if (style == "rule" && !nzchar(trimws(define))) {
+        fail("style = 'rule' asks whether a pair satisfies define, so define cannot be empty")
+    }
     if (!is.null(left_id)) scalar(left_id, "left_id")
     if (!is.null(right_id)) scalar(right_id, "right_id")
     scalar(how, "how")
@@ -55,9 +64,10 @@ jlink <- function(left, right, on, entity, define = "", left_id = NULL, right_id
     } else {
         right_path <- normalizePath(path.expand(right), mustWork = TRUE)
     }
-    args <- c(prefix, "link", left_path, right_path, "--entity", entity, "--define", define,
+    args <- c(prefix, "link", left_path, right_path, "--define", define, "--style", style,
               "--how", how, "--threshold", as.character(threshold), "--budget", as.character(budget),
               "-o", output)
+    if (!is.null(entity)) args <- c(args, "--entity", entity)
     for (field in on) args <- c(args, "--on", field)
     if (!is.null(left_id)) args <- c(args, "--left-id", left_id)
     if (!is.null(right_id)) args <- c(args, "--right-id", right_id)

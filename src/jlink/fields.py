@@ -15,21 +15,49 @@ _SPACE = re.compile(r"\s+")
 _WHOLE_DECIMAL = re.compile(r"[+-]?\d+\.0+")
 
 
-def parse_on(on) -> list[tuple[str, str, str]]:
-    """[(label, left_column, right_column), ...]. The label is the left column name."""
+def parse_on(on, *, unpaired: bool = False) -> list[tuple[str, str | None, str | None]]:
+    """[(label, left_column, right_column), ...]. The label is the left column name.
+
+    With ``unpaired=True`` an item may also be ``(left, None)`` or ``(None, right)``: a field that
+    only one side has. It is shown to the judge under its own column name; the absent side is None.
+    Steps that compare a left column with a right column keep the default and reject such items.
+    """
     if isinstance(on, str):
         on = [on]
     if not on:
         raise ValueError("`on` must name at least one field to compare")
     out = []
     for item in on:
+        pair = tuple(item) if isinstance(item, (tuple, list)) and len(item) == 2 else ()
         if isinstance(item, str):
             out.append((item, item, item))
-        elif isinstance(item, (tuple, list)) and len(item) == 2 and all(isinstance(c, str) for c in item):
-            out.append((item[0], item[0], item[1]))
+        elif pair and all(isinstance(c, str) for c in pair):
+            out.append((pair[0], pair[0], pair[1]))
+        elif pair and sum(c is None for c in pair) == 1 and any(isinstance(c, str) for c in pair):
+            if not unpaired:
+                raise ValueError(f"the field {pair!r} exists on one side only, but this step compares a left "
+                                 "column with a right column; one-sided fields are only shown to the judge")
+            out.append((pair[0] or pair[1], pair[0], pair[1]))
         else:
-            raise ValueError(f"each `on` item is a column name or a (left, right) pair of names; got {item!r}")
+            raise ValueError("each `on` item is a column name, a (left, right) pair of names, or a one-sided "
+                             f"(left, None) or (None, right); got {item!r}")
+    if any(lc is None or rc is None for _, lc, rc in out):
+        for side, labels in (("left", [f[0] for f in out if f[1] is not None]),
+                             ("right", [f[0] for f in out if f[2] is not None])):
+            if not labels:
+                raise ValueError(f"`on` gives the {side} records no field; "
+                                 "the judge needs at least one per side")
+            repeated = [label for label in labels if labels.count(label) > 1]
+            if repeated:
+                raise ValueError(f"`on` would show the {side} record two fields labeled {repeated[0]!r}; "
+                                 "paired fields are labeled by their left column, so rename a column")
     return out
+
+
+def side_fields(fields: list, side: str) -> list[tuple[str, str]]:
+    """[(label, column), ...] for the fields that the left or the right records have."""
+    index = 1 if side == "left" else 2
+    return [(f[0], f[index]) for f in fields if f[index] is not None]
 
 
 def check_columns(frame: pd.DataFrame, columns: list[str], side: str) -> None:

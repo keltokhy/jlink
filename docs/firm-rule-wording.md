@@ -19,6 +19,12 @@ count. It remains a benchmark experiment; no new public `judge()`, `Linker`, `li
 option is introduced, and production wording stays unchanged. A tie in this small sample
 does not establish equivalence on other data.
 
+> **Later note.** `style="rule"` has since been exposed as an opt-in, for a reason this
+> experiment did not test: linking by a relation that is not identity, such as a news article
+> to the incident it reports, where "refer to the same firm" is the wrong proposition whatever
+> its accuracy. See [relation linking](relation-linking.md). The result above stands as
+> recorded: no measured improvement, and identity wording remains the default.
+
 Both errors concern `linkedin-acquired`: LinkedIn before and after the Microsoft acquisition
 is the same legal entity and operating business, but has different ultimate controllers at
 the two record dates. Both styles correctly identify the first two relations yet incorrectly

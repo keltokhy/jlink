@@ -16,7 +16,7 @@ import pandas as pd
 from . import __version__, audit, block
 from .core import PRICE_PER_MTOK as CLIENT_PRICE_PER_MTOK, Meter
 from .fields import ids, parse_on
-from .judge import EXACT_POLICY, judge, question, validate_budget
+from .judge import EXACT_POLICY, judge, question, validate_budget, validate_question
 from .provenance import blocker_config, input_fingerprints
 from .resolve import resolve
 
@@ -32,17 +32,26 @@ class Linker:
         linker = jlink.Linker(entity="firm", on=["name", "state"],
                               definition="A parent company and its subsidiary are different firms.")
         result = linker.link(compustat, patents, left_id="gvkey", right_id="assignee_id")
+
+    ``style="identity"`` (the default) asks whether two records are the same ``entity`` and appends
+    the definition. ``style="rule"`` asks whether the pair satisfies the definition, which may state
+    any relation ("the article reports this incident"); ``entity`` is then optional and not part of
+    the question. An ``on`` item may be one-sided, ``("text", None)`` or ``(None, "precinct")``: it
+    is shown to the judge on that side only and never used to pair columns.
     """
 
-    def __init__(self, entity: str, on, definition: str = "", blockers: list | None = None, *,
-                 api: str | None = None, model: str | None = None, concurrency: int = 32,
-                 cache=True, exact_shortcut: bool = False):
-        if not entity or not entity.strip():
-            raise ValueError('`entity` says what a record is, for example "firm" or "person"; it cannot be empty')
-        self.entity, self.definition, self.on = entity.strip(), (definition or "").strip(), on
-        self.fields = parse_on(on)
+    def __init__(self, entity: str | None = None, on=None, definition: str = "",
+                 blockers: list | None = None, *, style: str = "identity", api: str | None = None,
+                 model: str | None = None, concurrency: int = 32, cache=True, exact_shortcut: bool = False):
+        self.entity, self.definition, self.on = (entity or "").strip() or None, (definition or "").strip(), on
+        validate_question(self.entity, self.definition, style)
+        self.style = style
+        self.fields = parse_on(on, unpaired=True)
         if not isinstance(exact_shortcut, bool):
             raise ValueError("`exact_shortcut` must be a boolean; equal names alone do not establish identity")
+        if exact_shortcut and any(lc is None or rc is None for _, lc, rc in self.fields):
+            raise ValueError("`exact_shortcut` accepts pairs whose fields are all equal, so every `on` field "
+                             "must exist on both sides; remove the one-sided fields or the shortcut")
         self.blockers = blockers
         self.api, self.model, self.concurrency = api, model, concurrency
         self.cache, self.exact_shortcut = cache, exact_shortcut
@@ -68,19 +77,21 @@ class Linker:
         ids(left, left_id, "left"), ids(right, right_id, "right")
         t0 = time.perf_counter()
         started_at = datetime.now(timezone.utc).isoformat()
-        passes = self.blockers if self.blockers is not None else [
-            block.ngrams(*[(lc, rc) for _, lc, rc in self.fields], k=10)]
         cands = self.candidates(left, right, left_id=left_id, right_id=right_id, max_pairs=max_pairs)
+        # Reached only when candidates() accepted the same default, so a paired field exists.
+        passes = self.blockers if self.blockers is not None else [
+            block.ngrams(*[(lc, rc) for _, lc, rc in self.fields if lc is not None and rc is not None], k=10)]
         configs = [blocker_config(b) for b in passes]
         inputs = input_fingerprints(left, right, fields=self.fields, left_id=left_id, right_id=right_id)
         scores, meter = judge(cands, left, right, on=self.on, entity=self.entity, definition=self.definition,
-                              left_id=left_id, right_id=right_id, api=self.api, model=self.model,
+                              style=self.style, left_id=left_id, right_id=right_id, api=self.api, model=self.model,
                               concurrency=self.concurrency, budget=budget, cache=self.cache,
                               exact_shortcut=self.exact_shortcut, progress=progress, transport=transport)
         links = resolve(scores, how=how, threshold=threshold, min_margin=min_margin)
         settings = {
             "jlink": __version__, "date": date.today().isoformat(), "entity": self.entity,
-            "definition": self.definition, "question": question(self.entity, self.definition)["instructions"],
+            "definition": self.definition, "style": self.style,
+            "question": question(self.entity or "", self.definition, style=self.style)["instructions"],
             "on": [[lc, rc] for _, lc, rc in self.fields], "left_id": left_id, "right_id": right_id,
             "blockers": [b.name for b in passes], "blocker_configs": configs,
             "how": how, "threshold": threshold, "min_margin": min_margin,
@@ -108,10 +119,11 @@ class Linker:
         return Result(links, scores, settings, meter, _left=left, _right=right)
 
 
-def link(left: pd.DataFrame, right: pd.DataFrame, *, entity: str, on, definition: str = "", blockers=None,
-         exact_shortcut: bool = False, **kwargs) -> "Result":
+def link(left: pd.DataFrame, right: pd.DataFrame, *, entity: str | None = None, on, definition: str = "",
+         blockers=None, style: str = "identity", exact_shortcut: bool = False, **kwargs) -> "Result":
     """One call for the common case. Keyword arguments are those of `Linker.link`."""
-    return Linker(entity, on, definition, blockers, exact_shortcut=exact_shortcut).link(left, right, **kwargs)
+    return Linker(entity, on, definition, blockers, style=style,
+                  exact_shortcut=exact_shortcut).link(left, right, **kwargs)
 
 
 @dataclass
@@ -169,7 +181,9 @@ class Result:
         lines = [
             f"jlink {s['jlink']}, {s['date']}",
             f"Rule: {s['question']}",
-            f"Compared on: {', '.join(lc if lc == rc else f'{lc} = {rc}' for lc, rc in s['on'])}",
+            *(["Question style: rule (the definition states the relation; no entity is named)"]
+              if s.get("style") == "rule" else []),
+            f"Compared on: {_field_list(s['on'], ' = ', '{} (left only)', '{} (right only)')}",
             f"Records: {s['n_left']:,} left, {s['n_right']:,} right",
             f"Candidate pairs: {len(sc):,} ({'; '.join(f'{k}: {v:,}' for k, v in by_block.items())})",
             "Judged: " + ", ".join(f"{by_source.get(k, 0):,} {label}" for k, label in (
@@ -191,7 +205,17 @@ class Result:
     def methods(self) -> str:
         """A paragraph for a data appendix. Edit it; it states only what this run did."""
         s, sc = self.settings, self.scores
-        fields_ = ", ".join(lc if lc == rc else f"{lc} ({rc} in the second source)" for lc, rc in s["on"])
+        fields_ = _field_list(s["on"], None, "{} (first source only)", "{} (second source only)")
+        one_sided = any(lc is None or rc is None for lc, rc in s["on"])
+        shown = (f"the listed fields of each record ({fields_})" if one_sided
+                 else f"the compared fields ({fields_}) of both records")
+        if s.get("style") == "rule":
+            # The proposition is the user's relation, so the paragraph must not claim identity.
+            relation = ("A link here is a relation between two records that a written match rule defines, "
+                        "not a claim that both records describe the same entity. ")
+            asked = "returns a probability that the pair satisfies the rule, put to the model as"
+        else:
+            relation, asked = "", "returns a probability that the following statement is true"
         judged, exact = int((sc["source"] == "jev").sum()), int((sc["source"] == "exact").sum())
         rules = {"one-to-one": "We then chose the set of links with the highest total probability such that no "
                                "record is linked twice",
@@ -209,12 +233,12 @@ class Result:
                               "its fieldwise and missing-value policy was not recorded. ")
         text = (
             f"We linked {s['n_left']:,} records to {s['n_right']:,} records using jlink {s['jlink']}. "
-            f"Candidate pairs were generated by blocking ({'; '.join(s['blockers'])}), which produced "
+            + relation
+            + f"Candidate pairs were generated by blocking ({'; '.join(s['blockers'])}), which produced "
             f"{len(sc):,} pairs. "
             + exact_text
             + f"The {judged:,} model-scored pairs used Jev ({_model_description(s)}) "
-            f"(TypeSafe), which sees the compared fields ({fields_}) of both records and returns a probability "
-            f"that the following statement is true: \"{s['question']}\" "
+            f"(TypeSafe), which sees {shown} and {asked}: \"{s['question']}\" "
             f"{rules[s['how']]}, among pairs with probability of at least {s['threshold']:g}"
             + (f", and dropped links whose probability exceeded that of the best competing pair by less than "
                f"{s['min_margin']:g}" if s["min_margin"] is not None else "")
@@ -288,6 +312,19 @@ def _id_kind(ids_: pd.Series) -> str:
     if pd.api.types.is_integer_dtype(ids_):
         return "int"
     return "float" if pd.api.types.is_float_dtype(ids_) else "str"
+
+
+def _field_list(on: list, joiner: str | None, left_only: str, right_only: str) -> str:
+    """Name the fields in saved `on` pairs; a null column marks a field that one side lacks."""
+    names = []
+    for lc, rc in on:
+        if lc is None or rc is None:
+            names.append((left_only if rc is None else right_only).format(lc or rc))
+        elif lc == rc:
+            names.append(lc)
+        else:
+            names.append(f"{lc}{joiner}{rc}" if joiner else f"{lc} ({rc} in the second source)")
+    return ", ".join(names)
 
 
 def _model_description(settings: dict) -> str:

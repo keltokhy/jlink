@@ -4,7 +4,7 @@
 
 {p 8 12 2}
 {cmd:jlink using} {it:right.dta}{cmd:, on(}{it:name city}{cmd:) entity(}{it:firm}{cmd:)}
-[{cmd:define(}{it:text}{cmd:)} {cmd:leftid(}{it:varname}{cmd:)}
+[{cmd:define(}{it:text}{cmd:)} {cmd:style(}{it:identity|rule}{cmd:)} {cmd:leftid(}{it:varname}{cmd:)}
 {cmd:rightid(}{it:column}{cmd:)} {cmd:how(}{it:mode}{cmd:)}
 {cmd:threshold(}{it:number}{cmd:)} {cmd:budget(}{it:dollars}{cmd:)}
 {cmd:saving(}{it:links.dta}{cmd:)} {cmd:replace} {cmd:merge}]
@@ -20,7 +20,13 @@ Configure the chosen API provider before running real links.{p_end}
 {pstd}The data in memory are the left dataset. {cmd:using} accepts a CSV, TSV,
 Stata (.dta), or Parquet file; Parquet requires Python's pyarrow package.
 {cmd:on()} lists fields separated by spaces. Use {cmd:city=town} when names differ.
+A field that only one dataset has is written {cmd:text=} (data in memory only) or
+{cmd:=place} (using dataset only); it is shown to the model and never compared.
 {cmd:entity()} describes the kind of record. {cmd:define()} adds your match rule.
+{cmd:style(rule)} asks whether a pair satisfies {cmd:define()}, which may state any
+relation between the two records; {cmd:entity()} is then optional and {cmd:define()}
+is required. The default, {cmd:style(identity)}, asks whether both records are the
+same {cmd:entity()}.
 Quote paths with spaces; use Stata compound double quotes around definitions
 that contain quotation marks.{p_end}
 {pstd}{cmd:leftid()} and {cmd:rightid()} name unique IDs. Without them the CLI uses

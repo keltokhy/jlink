@@ -219,9 +219,11 @@ class Review:
         _settings(source["settings"])
         fields = source["settings"].get("on", [])
         if not isinstance(fields, list) or any(
-                not isinstance(pair, list) or len(pair) != 2 or not all(isinstance(c, str) for c in pair)
+                not isinstance(pair, list) or len(pair) != 2
+                or not all(c is None or isinstance(c, str) for c in pair) or pair == [None, None]
                 for pair in fields):
-            raise ValueError("review on fields must be a list of [left column, right column] pairs")
+            raise ValueError("review on fields must be a list of [left column, right column] pairs; "
+                             "a one-sided field has null for the side that lacks it")
         close = source["close_margin"]
         if isinstance(close, bool) or not isinstance(close, numbers.Real) or not 0 <= close <= 1:
             raise ValueError("close_margin must be between 0 and 1")
