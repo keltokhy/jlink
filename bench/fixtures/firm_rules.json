@@ -1,0 +1,682 @@
+{
+  "schema_version": 1,
+  "title": "Source-backed firm linkage under four research definitions",
+  "provenance": "A small curated pilot built from primary corporate disclosures. Records are short factual paraphrases, not raw registry extracts. Labels were authored from these disclosures before model responses; they are independent of the evaluated model but have not had independent human adjudication. Null labels mark unsupported or inapplicable relations. Cases within a corporate family are correlated.",
+  "split_policy": "Development: GE and Tesla/NUMMI. Test: HP, IBM/Kyndryl, Meta, and Lordstown/Foxconn. No prompt or threshold tuning after model responses.",
+  "model_settings": {
+    "api": "openrouter",
+    "model": "typesafe/jev-1.13-20260917",
+    "endpoint": "https://openrouter.ai/api/alpha/decisions",
+    "exact_shortcut": false,
+    "threshold": 0.5
+  },
+  "arms": {
+    "rich": "All supplied record facts.",
+    "names_and_dates": "Only name and as_of; model background knowledge is still available."
+  },
+  "rules": {
+    "legal_entity": "Match the same legal corporation, including a documented name change or trade name. Distinct incorporated parents, subsidiaries, buyers and sellers do not match. A transferred business or a shared factory does not establish legal identity. Use the entity described by each record, not a former owner.",
+    "corporate_group": "Match records belonging to the same ultimate corporate group at their respective as_of dates. A corporation and its controlled subsidiary count. Renaming the continuing parent does not change the group. After a spin-off or sale, use the new controller; a former parent or a non-controlling minority stake does not establish common control. Business units inherit their parent group.",
+    "physical_site": "Match the same identifiable physical factory or facility across records, even when its owner, operator, name or product changes. Different physical locations do not match even when they share a company. This rule concerns the site, not legal entity or corporate ownership.",
+    "operating_business": "Match the same specifically described operating business or production program continuing over time, including its transfer to a new corporation or contractor. A rename alone preserves the operation. Different divisions or production programs do not match just because they share a parent, broad industry or reused building. A whole diversified company and one of its businesses are not automatically identical."
+  },
+  "sources": {
+    "ge_plan": {
+      "url": "https://www.ge.com/news/press-releases/ge-board-of-directors-approves-spin-off-of-ge-vernova-ge-vernova-and-ge-aerospace-to",
+      "publication_date": "2024-02-29",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "GE identifies its aviation and energy operations and the retained corporation using the GE Aerospace trade name."
+    },
+    "ge_close": {
+      "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054524000088/ge-20240402.htm",
+      "publication_date": "2024-04-08",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Introductory Note: the April 2 distribution separates GE Vernova; General Electric Company operates as GE Aerospace."
+    },
+    "tesla_factory": {
+      "url": "https://ir.tesla.com/press-release/tesla-motors-opens-tesla-factory-home-model-s",
+      "publication_date": "2010-10-27",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "NUMMI closed in April; Tesla acquired the Fremont factory and repurposed it for Tesla electric vehicles."
+    },
+    "tesla_10k": {
+      "url": "https://ir.tesla.com/_flysystem/s3/sec/000119312512081990/d279413d10k.html",
+      "publication_date": null,
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "The factory seller NUMMI was a joint venture of Toyota and Motors Liquidation Company; the buyer was Tesla.",
+      "date_note": "Exact filing publication date not verified in this pilot."
+    },
+    "hp_results": {
+      "url": "https://investor.hp.com/news-events/news/news-details/2015/HP-Inc-Reports-Hewlett-Packard-Company-Fiscal-2015-Full-Year-and-Fourth-Quarter-Results/default.aspx",
+      "publication_date": "2015-11-24",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Opening paragraphs distinguish the October 31 HP Inc. name change from the November 1 enterprise-business separation."
+    },
+    "hp_form10": {
+      "url": "https://investors.hpe.com/~/media/Files/H/HP-Enterprise-IR/documents/hewlett-packard-enterprise-information-statement-final-form-10.pdf",
+      "publication_date": null,
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Information statement describes the separate enterprise corporation and retained personal systems and printing businesses.",
+      "date_note": "Exact filing publication date not verified in this pilot."
+    },
+    "ibm_close": {
+      "url": "https://newsroom.ibm.com/2021-11-03-IBM-Completes-the-Separation-of-Kyndryl",
+      "publication_date": "2021-11-03",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Managed infrastructure services became independent Kyndryl; IBM retained a 19.9 percent minority stake."
+    },
+    "kyndryl_10k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1867072/000155837022003291/kd-20211231x10k.htm",
+      "publication_date": null,
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Kyndryl was formed as an IBM wholly owned subsidiary in September 2021 to hold the managed infrastructure services operations.",
+      "date_note": "Exact filing publication date not verified in this pilot."
+    },
+    "meta_8k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1326801/000132680121000071/fb-20211028.htm",
+      "publication_date": "2021-10-28",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Items 5.03 and 8.01 distinguish the corporate name change from two separately described reporting segments."
+    },
+    "meta_announcement": {
+      "url": "https://about.fb.com/news/2021/10/facebook-company-is-now-meta/",
+      "publication_date": "2021-10-28",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "The announcement says the company structure is unchanged while the reporting segments change."
+    },
+    "lordstown_8k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1759546/000110465922058868/tm2215185d1_8k.htm",
+      "publication_date": "2022-05-11",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Item 1.01: plant sale, continued Endurance program, subsidiary status and contract manufacturing arrangements."
+    },
+    "foxconn_wisconsin": {
+      "url": "https://tima.foxconn.com/en-us/press-center/events/foxconn-events/1006",
+      "publication_date": "2023-03-10",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Foxconn describes its Mount Pleasant, Wisconsin, campus producing servers and motherboards."
+    }
+  },
+  "pairs": [
+    {
+      "pair_id": "ge-trade-name",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "General Electric Company",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation",
+        "facts": "Registrant is General Electric Company; its continuing business operates under the GE Aerospace trade name."
+      },
+      "record_b": {
+        "name": "GE Aerospace",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation trade name",
+        "facts": "General Electric Company uses GE Aerospace as its trade name after distributing all GE Vernova shares."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "An assumed name of the retained corporation; no specific facility identified.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-units-before",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Aerospace operating unit",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "GE aviation operation: jet engines and aviation systems, within General Electric Company."
+      },
+      "record_b": {
+        "name": "GE Vernova energy businesses",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "Power, Wind and Electrification businesses within General Electric Company; separation is scheduled for April 2."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "ge_plan"
+      ],
+      "rationale": "Different operating divisions with a common parent before the separation; unit records do not identify individual legal subsidiaries.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Aerospace",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation trade name",
+        "facts": "General Electric Company uses GE Aerospace as its trade name after distributing all GE Vernova shares."
+      },
+      "record_b": {
+        "name": "GE Vernova Inc.",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation and energy business",
+        "facts": "Power, Wind and Electrification operations; independent after General Electric distributed all its shares on April 2."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "Retained aviation corporation and separated energy corporation are distinct after distribution.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-energy-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Vernova energy businesses",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "Power, Wind and Electrification businesses within General Electric Company; separation is scheduled for April 2."
+      },
+      "record_b": {
+        "name": "GE Vernova Inc.",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation and energy business",
+        "facts": "Power, Wind and Electrification operations; independent after General Electric distributed all its shares on April 2."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "The energy operations continue, while the ultimate group changes after the spin-off.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-aviation-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Aerospace operating unit",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "GE aviation operation: jet engines and aviation systems, within General Electric Company."
+      },
+      "record_b": {
+        "name": "GE Aerospace",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation trade name",
+        "facts": "General Electric Company uses GE Aerospace as its trade name after distributing all GE Vernova shares."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "Aviation stays with the continuing General Electric corporation.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "record_a": {
+        "name": "NUMMI automobile factory",
+        "as_of": "2010-04-01",
+        "record_scope": "factory and operator",
+        "facts": "NUMMI was a Toyota and Motors Liquidation Company joint venture. Its production operation closed in April 2010.",
+        "site": "Fremont, California; former NUMMI assembly plant"
+      },
+      "record_b": {
+        "name": "Tesla Factory",
+        "as_of": "2010-10-27",
+        "record_scope": "factory and operator",
+        "facts": "Tesla acquired the former NUMMI site and prepared it for its Model S electric-vehicle program.",
+        "site": "Fremont, California; former NUMMI assembly plant"
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": true,
+        "operating_business": false
+      },
+      "source_ids": [
+        "tesla_factory",
+        "tesla_10k"
+      ],
+      "rationale": "The building persists under a different corporation and production program; acquisition of a site is not continuation of the former NUMMI business.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "hp-rename",
+      "group_id": "hp",
+      "split": "test",
+      "record_a": {
+        "name": "Hewlett-Packard Company",
+        "as_of": "2015-10-30",
+        "record_scope": "corporation",
+        "facts": "The corporation retains personal systems and printing; enterprise operations will separate into Hewlett Packard Enterprise. Corporate name changes to HP Inc. on October 31."
+      },
+      "record_b": {
+        "name": "HP Inc.",
+        "as_of": "2015-11-02",
+        "record_scope": "corporation",
+        "facts": "Hewlett-Packard Company renamed October 31. Retains personal systems and printing following the November 1 enterprise spin-off."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "hp_results"
+      ],
+      "rationale": "A corporate name change preserves legal identity, but the conglomerate business perimeter changes.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "hp-enterprise-transfer",
+      "group_id": "hp",
+      "split": "test",
+      "record_a": {
+        "name": "HP enterprise technology businesses",
+        "as_of": "2015-10-30",
+        "record_scope": "operating business",
+        "facts": "Enterprise infrastructure, software, services and financing inside Hewlett-Packard; these businesses separate on November 1."
+      },
+      "record_b": {
+        "name": "Hewlett Packard Enterprise Company",
+        "as_of": "2015-11-02",
+        "record_scope": "corporation and enterprise business",
+        "facts": "Separate independent corporation holding former HP enterprise technology infrastructure, software, services and financing operations."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "hp_results",
+        "hp_form10"
+      ],
+      "rationale": "Enterprise operations continue in a separate corporate group; no unit-level legal entity supplied.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "hp-retained-business",
+      "group_id": "hp",
+      "split": "test",
+      "record_a": {
+        "name": "HP personal systems and printing",
+        "as_of": "2015-10-30",
+        "record_scope": "operating business",
+        "facts": "Personal systems and printing businesses retained by Hewlett-Packard, which changes its name to HP Inc."
+      },
+      "record_b": {
+        "name": "HP Inc.",
+        "as_of": "2015-11-02",
+        "record_scope": "corporation",
+        "facts": "Hewlett-Packard Company renamed October 31. Retains personal systems and printing following the November 1 enterprise spin-off."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "hp_results",
+        "hp_form10"
+      ],
+      "rationale": "Personal systems and printing remain with the continuing corporation.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "hp-companies-after",
+      "group_id": "hp",
+      "split": "test",
+      "record_a": {
+        "name": "HP Inc.",
+        "as_of": "2015-11-02",
+        "record_scope": "corporation",
+        "facts": "Hewlett-Packard Company renamed October 31. Retains personal systems and printing following the November 1 enterprise spin-off."
+      },
+      "record_b": {
+        "name": "Hewlett Packard Enterprise Company",
+        "as_of": "2015-11-02",
+        "record_scope": "corporation and enterprise business",
+        "facts": "Separate independent corporation holding former HP enterprise technology infrastructure, software, services and financing operations."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "hp_results",
+        "hp_form10"
+      ],
+      "rationale": "The two post-separation corporations have different retained business scopes.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "hp-divisions-before",
+      "group_id": "hp",
+      "split": "test",
+      "record_a": {
+        "name": "HP personal systems and printing",
+        "as_of": "2015-10-30",
+        "record_scope": "operating business",
+        "facts": "Personal systems and printing businesses retained by Hewlett-Packard, which changes its name to HP Inc."
+      },
+      "record_b": {
+        "name": "HP enterprise technology businesses",
+        "as_of": "2015-10-30",
+        "record_scope": "operating business",
+        "facts": "Enterprise infrastructure, software, services and financing inside Hewlett-Packard; these businesses separate on November 1."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "hp_form10",
+        "hp_results"
+      ],
+      "rationale": "Different business divisions inside the same pre-separation group.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ibm-business-transfer",
+      "group_id": "ibm",
+      "split": "test",
+      "record_a": {
+        "name": "IBM managed infrastructure services",
+        "as_of": "2021-10-31",
+        "record_scope": "operating business",
+        "facts": "Managed infrastructure services unit of IBM Global Technology Services, transferred to Kyndryl in the November 3 separation."
+      },
+      "record_b": {
+        "name": "Kyndryl Holdings, Inc.",
+        "as_of": "2021-11-04",
+        "record_scope": "corporation and operating business",
+        "facts": "Managed infrastructure services company independent after November 3; IBM retains a non-controlling 19.9 percent stake."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "ibm_close",
+        "kyndryl_10k"
+      ],
+      "rationale": "The transferred services business continues under a different ultimate group.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ibm-parent-after",
+      "group_id": "ibm",
+      "split": "test",
+      "record_a": {
+        "name": "International Business Machines Corporation",
+        "as_of": "2021-11-04",
+        "record_scope": "corporation",
+        "facts": "IBM completed the Kyndryl separation on November 3; retained 19.9 percent as a minority stake, with Kyndryl independent."
+      },
+      "record_b": {
+        "name": "Kyndryl Holdings, Inc.",
+        "as_of": "2021-11-04",
+        "record_scope": "corporation and operating business",
+        "facts": "Managed infrastructure services company independent after November 3; IBM retains a non-controlling 19.9 percent stake."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "ibm_close",
+        "kyndryl_10k"
+      ],
+      "rationale": "Separate corporations after the spin-off; minority investment is not common control. IBM whole-company scope is not directly comparable to the transferred business.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ibm-parent-before",
+      "group_id": "ibm",
+      "split": "test",
+      "record_a": {
+        "name": "IBM",
+        "as_of": "2021-10-31",
+        "record_scope": "corporation",
+        "facts": "International Business Machines Corporation; owns Kyndryl Holdings, Inc. before the announced separation."
+      },
+      "record_b": {
+        "name": "Kyndryl Holdings, Inc.",
+        "as_of": "2021-10-31",
+        "record_scope": "corporation",
+        "facts": "Formed in September 2021 as an IBM wholly owned subsidiary to hold managed infrastructure services; separation occurs November 3."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "kyndryl_10k"
+      ],
+      "rationale": "Distinct incorporated parent and wholly owned subsidiary before separation.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "kyndryl-controller-change",
+      "group_id": "ibm",
+      "split": "test",
+      "record_a": {
+        "name": "Kyndryl Holdings, Inc.",
+        "as_of": "2021-10-31",
+        "record_scope": "corporation",
+        "facts": "Formed in September 2021 as an IBM wholly owned subsidiary to hold managed infrastructure services; separation occurs November 3."
+      },
+      "record_b": {
+        "name": "Kyndryl Holdings, Inc.",
+        "as_of": "2021-11-04",
+        "record_scope": "corporation and operating business",
+        "facts": "Managed infrastructure services company independent after November 3; IBM retains a non-controlling 19.9 percent stake."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "kyndryl_10k",
+        "ibm_close"
+      ],
+      "rationale": "Kyndryl legal identity continues, but the group at each snapshot changes from IBM to independent Kyndryl. Operating assets immediately before separation are not fully enumerated here.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "facebook-meta-rename",
+      "group_id": "meta",
+      "split": "test",
+      "record_a": {
+        "name": "Facebook, Inc.",
+        "as_of": "2021-10-27",
+        "record_scope": "corporation",
+        "facts": "Delaware corporation before the October 28 amendment changing its corporate name to Meta Platforms, Inc."
+      },
+      "record_b": {
+        "name": "Meta Platforms, Inc.",
+        "as_of": "2021-10-29",
+        "record_scope": "corporation",
+        "facts": "New corporate name adopted by Facebook, Inc. on October 28; the company stated its corporate structure was unchanged."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "meta_8k",
+        "meta_announcement"
+      ],
+      "rationale": "A documented name change with continuing corporate structure and operations.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "meta-segments",
+      "group_id": "meta",
+      "split": "test",
+      "record_a": {
+        "name": "Meta Family of Apps",
+        "as_of": "2021-10-28",
+        "record_scope": "reporting segment",
+        "facts": "Meta segment containing Facebook, Instagram, Messenger and WhatsApp."
+      },
+      "record_b": {
+        "name": "Meta Reality Labs",
+        "as_of": "2021-10-28",
+        "record_scope": "reporting segment",
+        "facts": "Meta segment containing augmented and virtual reality hardware, software and content."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "meta_8k"
+      ],
+      "rationale": "Different operating segments under the same Meta group; segments do not identify separate legal corporations.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "lordstown-plant-transfer",
+      "group_id": "foxconn",
+      "split": "test",
+      "record_a": {
+        "name": "Lordstown Motors Corp. manufacturing facility",
+        "as_of": "2022-05-10",
+        "record_scope": "factory and corporate owner",
+        "facts": "Endurance pickup production facility before sale to Foxconn. Lordstown Motors remains a separate corporation.",
+        "site": "Lordstown, Ohio; manufacturing facility sold May 11, 2022"
+      },
+      "record_b": {
+        "name": "Foxconn EV Technology, Inc. Lordstown facility",
+        "as_of": "2022-05-12",
+        "record_scope": "factory and corporate owner",
+        "facts": "Hon Hai affiliate acquired the facility May 11. Endurance manufacturing is outsourced to Foxconn with approximately 400 former employees; Lordstown retains certain lines and contracts for production.",
+        "site": "Lordstown, Ohio; manufacturing facility acquired May 11, 2022"
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": true,
+        "operating_business": true
+      },
+      "source_ids": [
+        "lordstown_8k"
+      ],
+      "rationale": "Different corporate owners; the physical factory and Endurance manufacturing program continue. Contracting and minority investment do not establish common control.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "lordstown-parent-subsidiary",
+      "group_id": "foxconn",
+      "split": "test",
+      "record_a": {
+        "name": "Lordstown Motors Corp.",
+        "as_of": "2022-05-11",
+        "record_scope": "corporation",
+        "facts": "Delaware registrant; parent company of Lordstown EV Corporation."
+      },
+      "record_b": {
+        "name": "Lordstown EV Corporation",
+        "as_of": "2022-05-11",
+        "record_scope": "corporation",
+        "facts": "Delaware corporation wholly owned by Lordstown Motors Corp.; party to the Endurance manufacturing agreement."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "lordstown_8k"
+      ],
+      "rationale": "Distinct incorporated entities within one group. No particular factory or business scope is asserted for both records.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "foxconn-different-sites",
+      "group_id": "foxconn",
+      "split": "test",
+      "record_a": {
+        "name": "Foxconn Lordstown facility",
+        "as_of": "2022-05-12",
+        "record_scope": "factory",
+        "facts": "Hon Hai group factory acquired for the Endurance vehicle manufacturing program.",
+        "site": "Lordstown, Ohio"
+      },
+      "record_b": {
+        "name": "Foxconn Wisconsin campus",
+        "as_of": "2023-03-10",
+        "record_scope": "factory",
+        "facts": "Hon Hai group manufacturing operation producing data servers and motherboards.",
+        "site": "Mount Pleasant, Wisconsin"
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": false,
+        "operating_business": false
+      },
+      "source_ids": [
+        "lordstown_8k",
+        "foxconn_wisconsin"
+      ],
+      "rationale": "Same corporate group at the snapshots; different locations and production programs. Exact operating subsidiary of the Wisconsin record is unspecified.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    }
+  ]
+}

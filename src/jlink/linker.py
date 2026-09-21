@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import json
+import platform
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
+from importlib.metadata import version
 from pathlib import Path
 
 import pandas as pd
 
 from . import __version__, audit, block
-from .core import Meter
+from .core import PRICE_PER_MTOK as CLIENT_PRICE_PER_MTOK, Meter
 from .fields import ids, parse_on
-from .judge import judge, question
+from .judge import EXACT_POLICY, judge, question, validate_budget
+from .provenance import blocker_config, input_fingerprints
 from .resolve import resolve
 
 _KEEP = object()  # relink: "leave this setting as it is", distinct from None, which turns the margin off
@@ -32,11 +36,13 @@ class Linker:
 
     def __init__(self, entity: str, on, definition: str = "", blockers: list | None = None, *,
                  api: str | None = None, model: str | None = None, concurrency: int = 32,
-                 cache=True, exact_shortcut: bool = True):
+                 cache=True, exact_shortcut: bool = False):
         if not entity or not entity.strip():
             raise ValueError('`entity` says what a record is, for example "firm" or "person"; it cannot be empty')
         self.entity, self.definition, self.on = entity.strip(), (definition or "").strip(), on
         self.fields = parse_on(on)
+        if not isinstance(exact_shortcut, bool):
+            raise ValueError("`exact_shortcut` must be a boolean; equal names alone do not establish identity")
         self.blockers = blockers
         self.api, self.model, self.concurrency = api, model, concurrency
         self.cache, self.exact_shortcut = cache, exact_shortcut
@@ -58,9 +64,15 @@ class Linker:
              min_margin: float | None = None, budget: float | None = 5.0, max_pairs: int | None = 5_000_000,
              progress: bool = True, transport=None) -> "Result":
         _check_how(how, threshold)
+        validate_budget(budget)
         ids(left, left_id, "left"), ids(right, right_id, "right")
         t0 = time.perf_counter()
+        started_at = datetime.now(timezone.utc).isoformat()
+        passes = self.blockers if self.blockers is not None else [
+            block.ngrams(*[(lc, rc) for _, lc, rc in self.fields], k=10)]
         cands = self.candidates(left, right, left_id=left_id, right_id=right_id, max_pairs=max_pairs)
+        configs = [blocker_config(b) for b in passes]
+        inputs = input_fingerprints(left, right, fields=self.fields, left_id=left_id, right_id=right_id)
         scores, meter = judge(cands, left, right, on=self.on, entity=self.entity, definition=self.definition,
                               left_id=left_id, right_id=right_id, api=self.api, model=self.model,
                               concurrency=self.concurrency, budget=budget, cache=self.cache,
@@ -70,19 +82,36 @@ class Linker:
             "jlink": __version__, "date": date.today().isoformat(), "entity": self.entity,
             "definition": self.definition, "question": question(self.entity, self.definition)["instructions"],
             "on": [[lc, rc] for _, lc, rc in self.fields], "left_id": left_id, "right_id": right_id,
-            "blockers": [b.name for b in self.blockers] if self.blockers else ["ngrams (default, k=10)"],
-            "how": how, "threshold": threshold, "min_margin": min_margin, "budget": budget,
-            "n_left": len(left), "n_right": len(right), "model": meter.model or self.model or "",
+            "blockers": [b.name for b in passes], "blocker_configs": configs,
+            "how": how, "threshold": threshold, "min_margin": min_margin,
+            "budget": None if budget is None else float(budget),
+            "n_left": len(left), "n_right": len(right), "model": meter.model,
             "calls": meter.calls, "cached": meter.cached, "input_tokens": meter.input_tokens,
             "dollars": round(meter.cost, 6), "seconds": round(time.perf_counter() - t0, 1),
+            "provenance_version": 1, "started_at": started_at,
+            "finished_at": datetime.now(timezone.utc).isoformat(), "inputs": inputs,
+            "requested_api": self.api, "requested_model": self.model,
+            "provider": meter.provider, "request_model": meter.requested_model,
+            "resolved_models": meter.resolved_models, "unknown_model_answers": meter.unknown_model_answers,
+            "answer_provenance": meter.answer_provenance,
+            "exact_shortcut": self.exact_shortcut, "exact_policy": EXACT_POLICY,
+            "normalization": "jlink.fields.normalize_v1", "concurrency": int(self.concurrency),
+            "cache_enabled": bool(self.cache), "max_pairs": None if max_pairs is None else int(max_pairs),
+            "budget_policy": "stop_new_requests_at_observed_cost_v1",
+            "cost_sources": meter.cost_sources, "estimated_price_per_million_tokens": CLIENT_PRICE_PER_MTOK,
+            "retries": meter.retries, "cost": meter.cost,
+            "runtime": {"python": platform.python_version(), **{p: version(p) for p in (
+                "numpy", "pandas", "scipy", "scikit-learn", "httpx")}},
         }
+        if "blocking" in cands.attrs:
+            settings["blocking"] = deepcopy(cands.attrs["blocking"])
         return Result(links, scores, settings, meter, _left=left, _right=right)
 
 
 def link(left: pd.DataFrame, right: pd.DataFrame, *, entity: str, on, definition: str = "", blockers=None,
-         **kwargs) -> "Result":
+         exact_shortcut: bool = False, **kwargs) -> "Result":
     """One call for the common case. Keyword arguments are those of `Linker.link`."""
-    return Linker(entity, on, definition, blockers).link(left, right, **kwargs)
+    return Linker(entity, on, definition, blockers, exact_shortcut=exact_shortcut).link(left, right, **kwargs)
 
 
 @dataclass
@@ -123,14 +152,15 @@ class Result:
         return out
 
     def audit_sample(self, n: int = 200, *, seed: int = 0, left=None, right=None, **kwargs) -> pd.DataFrame:
-        """A stratified sample of judged pairs to label by hand. Pass the labeled file to `jlink.evaluate`."""
+        """Sample judged pairs, with actual link membership for evaluate(..., mode="selected")."""
         try:
             left, right = self._frames(left, right)
         except ValueError:
             left = right = None
         on = [(lc, rc) for lc, rc in self.settings["on"]]
         return audit.audit_sample(self.scores, n=n, seed=seed, left=left, right=right, on=on if left is not None else None,
-                                  left_id=self.settings["left_id"], right_id=self.settings["right_id"], **kwargs)
+                                  left_id=self.settings["left_id"], right_id=self.settings["right_id"],
+                                  links=self.links, **kwargs)
 
     def report(self) -> str:
         s, sc = self.settings, self.scores
@@ -154,7 +184,7 @@ class Result:
                          f"{int((p < 0.8).sum()):,} below 0.8")
             lines.append(f"Left records linked: {self.links['left_id'].nunique():,} of {s['n_left']:,} "
                          f"({self.links['left_id'].nunique() / max(s['n_left'], 1):.1%})")
-        lines.append(f"Model: {s['model'] or 'unknown'}; {s['calls']:,} calls, {s['cached']:,} from cache, "
+        lines.append(f"Model: {_model_description(s)}; {s['calls']:,} calls, {s['cached']:,} from cache, "
                      f"{s['input_tokens']:,} tokens, ${s['dollars']:.4f}, {s['seconds']:g}s")
         return "\n".join(lines)
 
@@ -168,13 +198,21 @@ class Result:
                  "many-to-one": "We then kept, for each record in the first source, its most probable match",
                  "one-to-many": "We then kept, for each record in the second source, its most probable match",
                  "many-to-many": "We then kept every pair"}
+        exact_text = ""
+        if exact:
+            if s.get("exact_policy") == EXACT_POLICY:
+                exact_text = (f"{exact:,} pairs whose compared fields ({fields_}) were all nonempty and "
+                              "individually identical after normalizing case, accents and punctuation "
+                              "were accepted directly. ")
+            else:
+                exact_text = (f"{exact:,} pairs were accepted directly by the saved run's exact shortcut; "
+                              "its fieldwise and missing-value policy was not recorded. ")
         text = (
             f"We linked {s['n_left']:,} records to {s['n_right']:,} records using jlink {s['jlink']}. "
             f"Candidate pairs were generated by blocking ({'; '.join(s['blockers'])}), which produced "
             f"{len(sc):,} pairs. "
-            + (f"{exact:,} pairs whose compared fields ({fields_}) were identical after normalizing case, accents "
-               f"and punctuation were accepted directly. " if exact else "")
-            + f"Each of the remaining {judged:,} pairs was shown to the {s['model'] or 'Jev'} decision model "
+            + exact_text
+            + f"The {judged:,} model-scored pairs used Jev ({_model_description(s)}) "
             f"(TypeSafe), which sees the compared fields ({fields_}) of both records and returns a probability "
             f"that the following statement is true: \"{s['question']}\" "
             f"{rules[s['how']]}, among pairs with probability of at least {s['threshold']:g}"
@@ -188,7 +226,7 @@ class Result:
         )
         unjudged = int((sc["source"] == "unjudged").sum())
         if unjudged:
-            text += f" {unjudged:,} low-similarity candidate pairs were not judged."
+            text += f" {unjudged:,} candidate pairs were not judged; new calls were prioritized by similarity."
         return text
 
     def save(self, directory: str | Path) -> Path:
@@ -197,8 +235,9 @@ class Result:
         d.mkdir(parents=True, exist_ok=True)
         self.links.to_csv(d / "links.csv", index=False)
         self.scores.to_csv(d / "scores.csv", index=False)
-        kinds = {c: "int" if pd.api.types.is_integer_dtype(self.scores[c]) else "str" for c in ("left_id", "right_id")}
-        (d / "settings.json").write_text(json.dumps(self.settings | {"id_kinds": kinds}, indent=2))
+        kinds = {c: _id_kind(self.scores[c]) for c in ("left_id", "right_id")}
+        (d / "settings.json").write_text(json.dumps(
+            self.settings | {"result_format_version": 2, "id_kinds": kinds}, indent=2), encoding="utf-8")
         return d
 
     def _frames(self, left, right):
@@ -210,14 +249,58 @@ class Result:
 
 
 def load(directory: str | Path) -> Result:
-    """Read a result written by `Result.save`. IDs come back as they were: integers or strings."""
+    """Read a result written by `Result.save`. IDs come back as they were: integers, floats or strings."""
     d = Path(directory)
-    settings = json.loads((d / "settings.json").read_text())
+    settings = json.loads((d / "settings.json").read_text(encoding="utf-8"))
+    settings.pop("result_format_version", None)
     kinds = settings.pop("id_kinds", {})
-    dtype = {c: "int64" if kinds.get(c) == "int" else str for c in ("left_id", "right_id")}
-    scores = pd.read_csv(d / "scores.csv", dtype=dtype, keep_default_na=True)
-    links = pd.read_csv(d / "links.csv", dtype=dtype, keep_default_na=True)
-    return Result(links, scores, settings)
+    # Runs saved before float IDs were recorded call them "str", and still load as text.
+    dtype = {c: _ID_DTYPES.get(kinds.get(c), str) for c in ("left_id", "right_id")}
+    # Missing numeric scores/errors are separate from literal IDs such as NA, NULL and 001.
+    numeric = ("sim", "p", "margin", "answered_at")
+    optional_text = ("error", "model", "provider", "score_origin")
+    dtype.update({c: float for c in numeric})
+    dtype.update({c: object for c in optional_text})
+    na_values = {c: [""] for c in numeric + optional_text}
+    scores = pd.read_csv(d / "scores.csv", dtype=dtype, keep_default_na=False, na_values=na_values,
+                         float_precision="round_trip")
+    links = pd.read_csv(d / "links.csv", dtype=dtype, keep_default_na=False, na_values=na_values,
+                        float_precision="round_trip")
+    if "blocking" in settings:
+        scores.attrs["blocking"] = deepcopy(settings["blocking"])
+    if "provenance_version" not in settings:
+        settings.setdefault("model_identity_status", "legacy_unverified")
+    meter = Meter(calls=settings.get("calls", 0), cached=settings.get("cached", 0),
+                  retries=settings.get("retries", 0), input_tokens=settings.get("input_tokens", 0),
+                  cost=settings.get("cost", settings.get("dollars", 0.0)),
+                  model=settings.get("model", "") if "provenance_version" in settings else "",
+                  provider=settings.get("provider", ""), requested_model=settings.get("request_model", ""),
+                  answer_provenance=settings.get("answer_provenance", []),
+                  cost_sources=settings.get("cost_sources", {}))
+    return Result(links, scores, settings, meter)
+
+
+_ID_DTYPES = {"int": "int64", "float": "float64"}
+
+
+def _id_kind(ids_: pd.Series) -> str:
+    """Stata often stores numeric IDs as doubles; as text they would no longer merge with the source."""
+    if pd.api.types.is_integer_dtype(ids_):
+        return "int"
+    return "float" if pd.api.types.is_float_dtype(ids_) else "str"
+
+
+def _model_description(settings: dict) -> str:
+    if settings.get("model_identity_status") == "legacy_unverified":
+        return f"{settings.get('model') or 'unknown'} (legacy model identity unverified)"
+    models = settings.get("resolved_models", [])
+    unknown = settings.get("unknown_model_answers", 0)
+    if not models and not unknown and settings.get("provenance_version"):
+        return "not used (no model-scored pairs)"
+    description = ", ".join(models) or "unknown"
+    if unknown:
+        description += f"; {unknown:,} answers with unknown model identity"
+    return description
 
 
 def _check_how(how: str, threshold: float) -> None:
@@ -229,5 +312,6 @@ def _check_how(how: str, threshold: float) -> None:
 
 def _with_id(frame: pd.DataFrame, id_column: str | None, name: str) -> pd.DataFrame:
     out = frame.copy()
-    out.insert(0, name, frame.index if id_column is None else frame[id_column].to_numpy())
+    if id_column != name:
+        out.insert(0, name, frame.index if id_column is None else frame[id_column].to_numpy())
     return out.reset_index(drop=True)

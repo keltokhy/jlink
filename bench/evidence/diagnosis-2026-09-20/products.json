@@ -1,0 +1,1137 @@
+{
+  "dataset": "abt-buy",
+  "new_api_calls": 0,
+  "new_api_cost_usd": 0,
+  "label_policy": "supplied benchmark truth treated as complete",
+  "prior_exposure": "exploratory; test results previously inspected",
+  "threshold_policy": "maximize development F1 on 0.05 to 0.95 by 0.05; frozen on test",
+  "methods": {
+    "lexical": {
+      "selected_threshold": 0.35,
+      "development_trials": [
+        {
+          "threshold": null,
+          "f1": 0.0,
+          "links": 0,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.95,
+          "f1": 0.4386792452830189,
+          "links": 93,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.9,
+          "f1": 0.7318007662835249,
+          "links": 191,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.85,
+          "f1": 0.8356643356643356,
+          "links": 241,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.8,
+          "f1": 0.8881578947368421,
+          "links": 277,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.75,
+          "f1": 0.9008130081300812,
+          "links": 284,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.7,
+          "f1": 0.9169329073482428,
+          "links": 295,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.65,
+          "f1": 0.9289099526066351,
+          "links": 302,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.6,
+          "f1": 0.940809968847352,
+          "links": 311,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.55,
+          "f1": 0.9409937888198758,
+          "links": 313,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.5,
+          "f1": 0.943683409436834,
+          "links": 326,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.45,
+          "f1": 0.9457831325301205,
+          "links": 333,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.4,
+          "f1": 0.9431137724550899,
+          "links": 337,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.35,
+          "f1": 0.9462686567164179,
+          "links": 339,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.3,
+          "f1": 0.9453471196454948,
+          "links": 346,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.25,
+          "f1": 0.9455081001472754,
+          "links": 348,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.2,
+          "f1": 0.9428989751098097,
+          "links": 352,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.15,
+          "f1": 0.9408369408369408,
+          "links": 362,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.1,
+          "f1": 0.9211267605633803,
+          "links": 379,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.05,
+          "f1": 0.8367346938775511,
+          "links": 453,
+          "resolver_warnings": []
+        }
+      ],
+      "partitions": {
+        "dev": {
+          "at_0.5": {
+            "listed_tp": 310,
+            "listed_fn": 21,
+            "predicted_pairs": 326,
+            "listed_positive_recall": 0.9365558912386707,
+            "precision": 0.950920245398773,
+            "recall": 0.9365558912386707,
+            "f1": 0.943683409436834,
+            "tp": 310,
+            "fp": 16,
+            "fn": 21
+          },
+          "at_development_threshold": {
+            "listed_tp": 317,
+            "listed_fn": 14,
+            "predicted_pairs": 339,
+            "listed_positive_recall": 0.9577039274924471,
+            "precision": 0.9351032448377581,
+            "recall": 0.9577039274924471,
+            "f1": 0.9462686567164179,
+            "tp": 317,
+            "fp": 22,
+            "fn": 14
+          },
+          "diagnosis_at_0.5": {
+            "gold_links": 331,
+            "candidate_pairs": 3232,
+            "retrieval_misses": 0,
+            "unjudged_gold_candidates": 0,
+            "judged_false_negatives": 21,
+            "false_positives": 16,
+            "final_missed_links": 21,
+            "identical_judge_inputs_with_mixed_labels": 9,
+            "pairs_in_mixed_groups": 29,
+            "mixed_groups": [
+              [
+                {
+                  "left_id": "32228",
+                  "right_id": "205985718",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "32228",
+                  "right_id": "205985719",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "32280",
+                  "right_id": "205985718",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "32280",
+                  "right_id": "205985719",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "34945",
+                  "right_id": "208114672",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34945",
+                  "right_id": "208114673",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34945",
+                  "right_id": "208114674",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34945",
+                  "right_id": "208114675",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34946",
+                  "right_id": "208114672",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34946",
+                  "right_id": "208114673",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34946",
+                  "right_id": "208114674",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34946",
+                  "right_id": "208114675",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34947",
+                  "right_id": "208114672",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34947",
+                  "right_id": "208114673",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34947",
+                  "right_id": "208114674",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34947",
+                  "right_id": "208114675",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34948",
+                  "right_id": "208114672",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34948",
+                  "right_id": "208114673",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34948",
+                  "right_id": "208114674",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34948",
+                  "right_id": "208114675",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "35031",
+                  "right_id": "208156877",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35031",
+                  "right_id": "208156878",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35031",
+                  "right_id": "208156879",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35033",
+                  "right_id": "208156877",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35033",
+                  "right_id": "208156878",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35033",
+                  "right_id": "208156879",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35035",
+                  "right_id": "208156877",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35035",
+                  "right_id": "208156878",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35035",
+                  "right_id": "208156879",
+                  "gold_match": true
+                }
+              ]
+            ]
+          }
+        },
+        "test": {
+          "at_0.5": {
+            "listed_tp": 715,
+            "listed_fn": 51,
+            "predicted_pairs": 782,
+            "listed_positive_recall": 0.933420365535248,
+            "precision": 0.9143222506393862,
+            "recall": 0.933420365535248,
+            "f1": 0.9237726098191215,
+            "tp": 715,
+            "fp": 67,
+            "fn": 51
+          },
+          "at_development_threshold": {
+            "listed_tp": 732,
+            "listed_fn": 34,
+            "predicted_pairs": 822,
+            "listed_positive_recall": 0.9556135770234987,
+            "precision": 0.8905109489051095,
+            "recall": 0.9556135770234987,
+            "f1": 0.9219143576826196,
+            "tp": 732,
+            "fp": 90,
+            "fn": 34
+          },
+          "diagnosis_at_0.5": {
+            "gold_links": 766,
+            "candidate_pairs": 7533,
+            "retrieval_misses": 7,
+            "unjudged_gold_candidates": 0,
+            "judged_false_negatives": 44,
+            "false_positives": 67,
+            "final_missed_links": 51,
+            "identical_judge_inputs_with_mixed_labels": 8,
+            "pairs_in_mixed_groups": 34,
+            "mixed_groups": [
+              [
+                {
+                  "left_id": "34848",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117930",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34926",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117932",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34927",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117933",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "34928",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117931",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34934",
+                  "right_id": "208117929",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35010",
+                  "right_id": "208117936",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35010",
+                  "right_id": "208117937",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35010",
+                  "right_id": "208117938",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "35011",
+                  "right_id": "208117936",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35011",
+                  "right_id": "208117937",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35011",
+                  "right_id": "208117938",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35014",
+                  "right_id": "208117936",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35014",
+                  "right_id": "208117937",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35014",
+                  "right_id": "208117938",
+                  "gold_match": false
+                }
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "hybrid": {
+      "selected_threshold": 0.35,
+      "development_trials": [
+        {
+          "threshold": null,
+          "f1": 0.0,
+          "links": 0,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.95,
+          "f1": 0.4386792452830189,
+          "links": 93,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.9,
+          "f1": 0.7318007662835249,
+          "links": 191,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.85,
+          "f1": 0.8356643356643356,
+          "links": 241,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.8,
+          "f1": 0.8881578947368421,
+          "links": 277,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.75,
+          "f1": 0.9008130081300812,
+          "links": 284,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.7,
+          "f1": 0.9169329073482428,
+          "links": 295,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.65,
+          "f1": 0.9289099526066351,
+          "links": 302,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.6,
+          "f1": 0.940809968847352,
+          "links": 311,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.55,
+          "f1": 0.9409937888198758,
+          "links": 313,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.5,
+          "f1": 0.943683409436834,
+          "links": 326,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.45,
+          "f1": 0.9457831325301205,
+          "links": 333,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.4,
+          "f1": 0.9431137724550899,
+          "links": 337,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.35,
+          "f1": 0.9462686567164179,
+          "links": 339,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.3,
+          "f1": 0.9453471196454948,
+          "links": 346,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.25,
+          "f1": 0.9455081001472754,
+          "links": 348,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.2,
+          "f1": 0.9428989751098097,
+          "links": 352,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.15,
+          "f1": 0.9408369408369408,
+          "links": 362,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.1,
+          "f1": 0.9211267605633803,
+          "links": 379,
+          "resolver_warnings": []
+        },
+        {
+          "threshold": 0.05,
+          "f1": 0.8367346938775511,
+          "links": 453,
+          "resolver_warnings": []
+        }
+      ],
+      "partitions": {
+        "dev": {
+          "at_0.5": {
+            "listed_tp": 310,
+            "listed_fn": 21,
+            "predicted_pairs": 326,
+            "listed_positive_recall": 0.9365558912386707,
+            "precision": 0.950920245398773,
+            "recall": 0.9365558912386707,
+            "f1": 0.943683409436834,
+            "tp": 310,
+            "fp": 16,
+            "fn": 21
+          },
+          "at_development_threshold": {
+            "listed_tp": 317,
+            "listed_fn": 14,
+            "predicted_pairs": 339,
+            "listed_positive_recall": 0.9577039274924471,
+            "precision": 0.9351032448377581,
+            "recall": 0.9577039274924471,
+            "f1": 0.9462686567164179,
+            "tp": 317,
+            "fp": 22,
+            "fn": 14
+          },
+          "diagnosis_at_0.5": {
+            "gold_links": 331,
+            "candidate_pairs": 4591,
+            "retrieval_misses": 0,
+            "unjudged_gold_candidates": 0,
+            "judged_false_negatives": 21,
+            "false_positives": 16,
+            "final_missed_links": 21,
+            "identical_judge_inputs_with_mixed_labels": 9,
+            "pairs_in_mixed_groups": 29,
+            "mixed_groups": [
+              [
+                {
+                  "left_id": "32228",
+                  "right_id": "205985718",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "32228",
+                  "right_id": "205985719",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "32280",
+                  "right_id": "205985718",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "32280",
+                  "right_id": "205985719",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "34945",
+                  "right_id": "208114672",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34945",
+                  "right_id": "208114673",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34945",
+                  "right_id": "208114674",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34945",
+                  "right_id": "208114675",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34946",
+                  "right_id": "208114672",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34946",
+                  "right_id": "208114673",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34946",
+                  "right_id": "208114674",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34946",
+                  "right_id": "208114675",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34947",
+                  "right_id": "208114672",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34947",
+                  "right_id": "208114673",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34947",
+                  "right_id": "208114674",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34947",
+                  "right_id": "208114675",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34948",
+                  "right_id": "208114672",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34948",
+                  "right_id": "208114673",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34948",
+                  "right_id": "208114674",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34948",
+                  "right_id": "208114675",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "35031",
+                  "right_id": "208156877",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35031",
+                  "right_id": "208156878",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35031",
+                  "right_id": "208156879",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35033",
+                  "right_id": "208156877",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35033",
+                  "right_id": "208156878",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35033",
+                  "right_id": "208156879",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35035",
+                  "right_id": "208156877",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35035",
+                  "right_id": "208156878",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35035",
+                  "right_id": "208156879",
+                  "gold_match": true
+                }
+              ]
+            ]
+          }
+        },
+        "test": {
+          "at_0.5": {
+            "listed_tp": 716,
+            "listed_fn": 50,
+            "predicted_pairs": 783,
+            "listed_positive_recall": 0.9347258485639687,
+            "precision": 0.9144316730523627,
+            "recall": 0.9347258485639687,
+            "f1": 0.9244673983214977,
+            "tp": 716,
+            "fp": 67,
+            "fn": 50
+          },
+          "at_development_threshold": {
+            "listed_tp": 733,
+            "listed_fn": 33,
+            "predicted_pairs": 824,
+            "listed_positive_recall": 0.9569190600522193,
+            "precision": 0.8895631067961165,
+            "recall": 0.9569190600522193,
+            "f1": 0.9220125786163522,
+            "tp": 733,
+            "fp": 91,
+            "fn": 33
+          },
+          "diagnosis_at_0.5": {
+            "gold_links": 766,
+            "candidate_pairs": 10698,
+            "retrieval_misses": 3,
+            "unjudged_gold_candidates": 0,
+            "judged_false_negatives": 47,
+            "false_positives": 67,
+            "final_missed_links": 50,
+            "identical_judge_inputs_with_mixed_labels": 8,
+            "pairs_in_mixed_groups": 34,
+            "mixed_groups": [
+              [
+                {
+                  "left_id": "34848",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117930",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34848",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34926",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117932",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34926",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34927",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34927",
+                  "right_id": "208117933",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "34928",
+                  "right_id": "208117929",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117931",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34928",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "34934",
+                  "right_id": "208117929",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117930",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117931",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117932",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "34934",
+                  "right_id": "208117933",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35010",
+                  "right_id": "208117936",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35010",
+                  "right_id": "208117937",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35010",
+                  "right_id": "208117938",
+                  "gold_match": true
+                }
+              ],
+              [
+                {
+                  "left_id": "35011",
+                  "right_id": "208117936",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35011",
+                  "right_id": "208117937",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35011",
+                  "right_id": "208117938",
+                  "gold_match": false
+                }
+              ],
+              [
+                {
+                  "left_id": "35014",
+                  "right_id": "208117936",
+                  "gold_match": false
+                },
+                {
+                  "left_id": "35014",
+                  "right_id": "208117937",
+                  "gold_match": true
+                },
+                {
+                  "left_id": "35014",
+                  "right_id": "208117938",
+                  "gold_match": false
+                }
+              ]
+            ]
+          }
+        }
+      }
+    }
+  },
+  "input_sha256": {
+    "bench/out/hybrid-20260920-final/abt-buy/split.csv": "87ba1a0243ebd50528d0c6b5b08b4cf1d08a8e9058e42d8c2c8453653df235e9",
+    "bench/out/hybrid-20260920-final/abt-buy/dev-union-scores.csv": "f296fbfe9963f57b122a0088b63b3126e71aff74fae653577074a63c1cdc06e0",
+    "bench/out/hybrid-20260920-final/abt-buy/test-union-scores.csv": "75b8edb895236b9cb5505aac59f738f4a1e9e2bb7834673fac4bfcb59cb35f21",
+    "bench/out/hybrid-20260920-final/abt-buy/dev-lexical-candidates.csv": "f5ffbb399f8e7f664d51f2911c0a12b917196f7d57d90d7d97dd003967af7213",
+    "bench/out/hybrid-20260920-final/abt-buy/test-lexical-candidates.csv": "2fde76e1cb2b2b06a8ed5dd679f20530a8d1ce8ece150ebdcfb3216ee939d7ba",
+    "bench/out/hybrid-20260920-final/abt-buy/dev-hybrid-candidates.csv": "5725f868f94c671750e0e9fd8be26562aaf13f47d170889d46e4f21887b99bcf",
+    "bench/out/hybrid-20260920-final/abt-buy/test-hybrid-candidates.csv": "88bc8e8a18c5228748e2ad1950d9a9cca3f0f45bd3d3a87e59fa38b6ac1ac652"
+  },
+  "data_sha256": {
+    "left.parquet": "69356f42e521a7ef4574f2526699e2893e941e2655be4b2feddd1f96bbb47282",
+    "right.parquet": "3fcb4f96591465e7d6c74add2696f7546b7d6b3b4794bad735163134ca07450e",
+    "truth.parquet": "715e8f20763e5f9ff2a6bfd28aeceaa8ffb14a1f05fe3a61e222452efb44712b",
+    "meta.json": "524e63cafb3eb828e8765619462d26ccdcf5d5539c38c3bea628858a0dbaf083"
+  },
+  "code_sha256": {
+    "/Volumes/K3/GitHub/jlink/bench/diagnose.py": "54b7a1d70c4ab35029077de0f4383b623b62a62d4078ee3bc8f6f8a166f61b4a",
+    "/Volumes/K3/GitHub/jlink/bench/evaluation.py": "c0b8d493caf76bf6b4acb00ba66e0d01c50bcdab93accc040e1d125f333c2bce"
+  }
+}

@@ -1,0 +1,854 @@
+{
+  "schema_version": 1,
+  "title": "Fresh-company confirmation of explicit rule wording",
+  "provenance": "New source-backed curated test cases, authored and frozen before requesting model responses for these records. Labels have not been independently adjudicated by human annotators. Development records are reused from the earlier pilot; new test groups are disjoint from all previously evaluated company groups. Cases within families are correlated and the same event types recur.",
+  "split_policy": "Reuse original GE and Tesla development records. New test groups: Kellogg, Kraft/Mondelez, Microsoft/LinkedIn, Hambach/Rastatt, Google/Alphabet. Freeze two question styles at threshold 0.5; no further prompt selection on test.",
+  "model_settings": {
+    "api": "openrouter",
+    "model": "typesafe/jev-1.13-20260917",
+    "endpoint": "https://openrouter.ai/api/alpha/decisions",
+    "exact_shortcut": false,
+    "threshold": 0.5
+  },
+  "arms": {
+    "identity": "Original identity prefix with rich records.",
+    "rule": "Explicit supplied rule with identical rich records."
+  },
+  "rules": {
+    "legal_entity": "Match the same legal corporation, including a documented name change or trade name. Distinct incorporated parents, subsidiaries, buyers and sellers do not match. A transferred business or a shared factory does not establish legal identity. Use the entity described by each record, not a former owner.",
+    "corporate_group": "Match records belonging to the same ultimate corporate group at their respective as_of dates. A corporation and its controlled subsidiary count. Renaming the continuing parent does not change the group. After a spin-off or sale, use the new controller; a former parent or a non-controlling minority stake does not establish common control. Business units inherit their parent group.",
+    "physical_site": "Match the same identifiable physical factory or facility across records, even when its owner, operator, name or product changes. Different physical locations do not match even when they share a company. This rule concerns the site, not legal entity or corporate ownership.",
+    "operating_business": "Match the same specifically described operating business or production program continuing over time, including its transfer to a new corporation or contractor. A rename alone preserves the operation. Different divisions or production programs do not match just because they share a parent, broad industry or reused building. A whole diversified company and one of its businesses are not automatically identical."
+  },
+  "sources": {
+    "ge_plan": {
+      "url": "https://www.ge.com/news/press-releases/ge-board-of-directors-approves-spin-off-of-ge-vernova-ge-vernova-and-ge-aerospace-to",
+      "publication_date": "2024-02-29",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "GE identifies its aviation and energy operations and the retained corporation using the GE Aerospace trade name."
+    },
+    "ge_close": {
+      "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054524000088/ge-20240402.htm",
+      "publication_date": "2024-04-08",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Introductory Note: the April 2 distribution separates GE Vernova; General Electric Company operates as GE Aerospace."
+    },
+    "tesla_factory": {
+      "url": "https://ir.tesla.com/press-release/tesla-motors-opens-tesla-factory-home-model-s",
+      "publication_date": "2010-10-27",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "NUMMI closed in April; Tesla acquired the Fremont factory and repurposed it for Tesla electric vehicles."
+    },
+    "tesla_10k": {
+      "url": "https://ir.tesla.com/_flysystem/s3/sec/000119312512081990/d279413d10k.html",
+      "publication_date": null,
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "The factory seller NUMMI was a joint venture of Toyota and Motors Liquidation Company; the buyer was Tesla.",
+      "date_note": "Exact filing publication date not verified in this pilot."
+    },
+    "hp_results": {
+      "url": "https://investor.hp.com/news-events/news/news-details/2015/HP-Inc-Reports-Hewlett-Packard-Company-Fiscal-2015-Full-Year-and-Fourth-Quarter-Results/default.aspx",
+      "publication_date": "2015-11-24",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Opening paragraphs distinguish the October 31 HP Inc. name change from the November 1 enterprise-business separation."
+    },
+    "hp_form10": {
+      "url": "https://investors.hpe.com/~/media/Files/H/HP-Enterprise-IR/documents/hewlett-packard-enterprise-information-statement-final-form-10.pdf",
+      "publication_date": null,
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Information statement describes the separate enterprise corporation and retained personal systems and printing businesses.",
+      "date_note": "Exact filing publication date not verified in this pilot."
+    },
+    "ibm_close": {
+      "url": "https://newsroom.ibm.com/2021-11-03-IBM-Completes-the-Separation-of-Kyndryl",
+      "publication_date": "2021-11-03",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Managed infrastructure services became independent Kyndryl; IBM retained a 19.9 percent minority stake."
+    },
+    "kyndryl_10k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1867072/000155837022003291/kd-20211231x10k.htm",
+      "publication_date": null,
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Kyndryl was formed as an IBM wholly owned subsidiary in September 2021 to hold the managed infrastructure services operations.",
+      "date_note": "Exact filing publication date not verified in this pilot."
+    },
+    "meta_8k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1326801/000132680121000071/fb-20211028.htm",
+      "publication_date": "2021-10-28",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Items 5.03 and 8.01 distinguish the corporate name change from two separately described reporting segments."
+    },
+    "meta_announcement": {
+      "url": "https://about.fb.com/news/2021/10/facebook-company-is-now-meta/",
+      "publication_date": "2021-10-28",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "The announcement says the company structure is unchanged while the reporting segments change."
+    },
+    "lordstown_8k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1759546/000110465922058868/tm2215185d1_8k.htm",
+      "publication_date": "2022-05-11",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Item 1.01: plant sale, continued Endurance program, subsidiary status and contract manufacturing arrangements."
+    },
+    "foxconn_wisconsin": {
+      "url": "https://tima.foxconn.com/en-us/press-center/events/foxconn-events/1006",
+      "publication_date": "2023-03-10",
+      "accessed_at": "2026-09-20",
+      "evidence_summary": "Foxconn describes its Mount Pleasant, Wisconsin, campus producing servers and motherboards."
+    },
+    "kellogg_10k": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1959348/000162828025012386/KLG-ARS2025_toFile.pdf",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "Separation from Kellanova: October 2, 2023 distribution of all WK Kellogg shares and separation of the North American cereal business; former parent named Kellogg Company."
+    },
+    "kellogg_political": {
+      "url": "https://filecache.mediaroom.com/mr5mr_betterdayspromise/177910/2023%20Kellanova%20Corporate%20Political%20Expenditures.pdf",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "Company report note confirms Kellogg Company changed its name to Kellanova on October 2, 2023 with the North American cereal spin-off."
+    },
+    "kellogg_plan": {
+      "url": "https://investor.kellanova.com/news-events/news/news-details/2023/KELLOGG-COMPANY-BOARD-OF-DIRECTORS-APPROVES-SEPARATION-INTO-TWO-COMPANIES-KELLANOVA-AND-WK-KELLOGG-CO/default.aspx",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "Pre-separation announcement describes retained global snacks and international cereal, and the separate North American cereal business; retrieved via indexed primary-source text."
+    },
+    "kraft_spin": {
+      "url": "https://www.mondelezinternational.com/investors/stock/spin-off-information/",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "October 1, 2012: Kraft Foods Inc. distributes all Kraft Foods Group stock, separating North American grocery; retained corporation changes name to Mondelez International."
+    },
+    "kraft_close": {
+      "url": "https://ir.mondelezinternational.com/news-releases/news-release-details/mondelez-international-completes-spin-its-north-american-grocery",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "Completion release distinguishes retained global snacks from the North American grocery operation spun off in October 2012."
+    },
+    "linkedin_close": {
+      "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312516788575/d259484d8k.htm",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "Item 2.01: December 8, 2016 merger leaves LinkedIn Corporation surviving as a wholly owned Microsoft subsidiary."
+    },
+    "linkedin_business": {
+      "url": "https://blogs.microsoft.com/blog/2016/12/08/microsoft-and-linkedin-begin-journey-to-empower-professionals-around-the-world-to-achieve-more/",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "The completed acquisition preserves LinkedIn professional-network operations and their stated mission."
+    },
+    "hambach_sale": {
+      "url": "https://ineosgrenadier.com/en/se/news/ineos-automotive-confirms-acquisition-of-hambach-production-site-from-mercedes-benz",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "December 2020 acquisition announcement: INEOS takes over Hambach and continues smart EQ fortwo production under contract; also plans Grenadier production."
+    },
+    "hambach_lines": {
+      "url": "https://media.ineosgrenadier.com/en/vehicles/current-range/grenadier-station-wagon.html",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "INEOS describes January 2021 site acquisition, Grenadier series production from October 2022 and its production operation as independent of the smart assembly line."
+    },
+    "rastatt": {
+      "url": "https://group.mercedes-benz.com/documents/sustainability/product/mercedes-benz-environmental-check-mb-b-class.pdf",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "B-Class product environmental report identifies manufacturing at the Mercedes-Benz Rastatt main plant."
+    },
+    "alphabet_merger": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1288776/000119312515336550/d56649d8k.htm",
+      "accessed_at": "2026-09-20",
+      "publication_date": null,
+      "evidence_summary": "October 2, 2015 reorganization: Google survives the merger and becomes a direct wholly owned subsidiary of the separate holding corporation Alphabet."
+    }
+  },
+  "pairs": [
+    {
+      "pair_id": "ge-trade-name",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "General Electric Company",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation",
+        "facts": "Registrant is General Electric Company; its continuing business operates under the GE Aerospace trade name."
+      },
+      "record_b": {
+        "name": "GE Aerospace",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation trade name",
+        "facts": "General Electric Company uses GE Aerospace as its trade name after distributing all GE Vernova shares."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "An assumed name of the retained corporation; no specific facility identified.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-units-before",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Aerospace operating unit",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "GE aviation operation: jet engines and aviation systems, within General Electric Company."
+      },
+      "record_b": {
+        "name": "GE Vernova energy businesses",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "Power, Wind and Electrification businesses within General Electric Company; separation is scheduled for April 2."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "ge_plan"
+      ],
+      "rationale": "Different operating divisions with a common parent before the separation; unit records do not identify individual legal subsidiaries.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-companies-after",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Aerospace",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation trade name",
+        "facts": "General Electric Company uses GE Aerospace as its trade name after distributing all GE Vernova shares."
+      },
+      "record_b": {
+        "name": "GE Vernova Inc.",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation and energy business",
+        "facts": "Power, Wind and Electrification operations; independent after General Electric distributed all its shares on April 2."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "Retained aviation corporation and separated energy corporation are distinct after distribution.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-energy-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Vernova energy businesses",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "Power, Wind and Electrification businesses within General Electric Company; separation is scheduled for April 2."
+      },
+      "record_b": {
+        "name": "GE Vernova Inc.",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation and energy business",
+        "facts": "Power, Wind and Electrification operations; independent after General Electric distributed all its shares on April 2."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "The energy operations continue, while the ultimate group changes after the spin-off.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "ge-aviation-continuity",
+      "group_id": "ge",
+      "split": "dev",
+      "record_a": {
+        "name": "GE Aerospace operating unit",
+        "as_of": "2024-02-29",
+        "record_scope": "operating business",
+        "facts": "GE aviation operation: jet engines and aviation systems, within General Electric Company."
+      },
+      "record_b": {
+        "name": "GE Aerospace",
+        "as_of": "2024-04-02",
+        "record_scope": "corporation trade name",
+        "facts": "General Electric Company uses GE Aerospace as its trade name after distributing all GE Vernova shares."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "ge_plan",
+        "ge_close"
+      ],
+      "rationale": "Aviation stays with the continuing General Electric corporation.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "nummi-tesla-site",
+      "group_id": "tesla",
+      "split": "dev",
+      "record_a": {
+        "name": "NUMMI automobile factory",
+        "as_of": "2010-04-01",
+        "record_scope": "factory and operator",
+        "facts": "NUMMI was a Toyota and Motors Liquidation Company joint venture. Its production operation closed in April 2010.",
+        "site": "Fremont, California; former NUMMI assembly plant"
+      },
+      "record_b": {
+        "name": "Tesla Factory",
+        "as_of": "2010-10-27",
+        "record_scope": "factory and operator",
+        "facts": "Tesla acquired the former NUMMI site and prepared it for its Model S electric-vehicle program.",
+        "site": "Fremont, California; former NUMMI assembly plant"
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": true,
+        "operating_business": false
+      },
+      "source_ids": [
+        "tesla_factory",
+        "tesla_10k"
+      ],
+      "rationale": "The building persists under a different corporation and production program; acquisition of a site is not continuation of the former NUMMI business.",
+      "unknown_label_policy": "Null means the cited facts do not identify this relation; excluded from binary scoring."
+    },
+    {
+      "pair_id": "kellogg-rename",
+      "group_id": "kellogg",
+      "split": "test",
+      "record_a": {
+        "name": "Kellogg Company",
+        "as_of": "2023-09-30",
+        "record_scope": "corporation",
+        "facts": "Parent of North American cereal and global snacks and international cereal operations before the 2023-10-02 distribution; the continuing corporation changes its name to Kellanova."
+      },
+      "record_b": {
+        "name": "Kellanova",
+        "as_of": "2023-10-03",
+        "record_scope": "corporation",
+        "facts": "Renamed Kellogg Company; retains global snacks and international cereal following distribution of all WK Kellogg Co shares on 2023-10-02."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "kellogg_10k",
+        "kellogg_political",
+        "kellogg_plan"
+      ],
+      "rationale": "Corporate name changes; same retained legal corporation and ultimate group. Whole-company business perimeter changes, so continuity is unscored.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kellogg-companies-after",
+      "group_id": "kellogg",
+      "split": "test",
+      "record_a": {
+        "name": "Kellanova",
+        "as_of": "2023-10-03",
+        "record_scope": "corporation",
+        "facts": "Renamed Kellogg Company; retains global snacks and international cereal following distribution of all WK Kellogg Co shares on 2023-10-02."
+      },
+      "record_b": {
+        "name": "WK Kellogg Co",
+        "as_of": "2023-10-03",
+        "record_scope": "corporation and operating business",
+        "facts": "Independent corporation holding the former North American cereal business after all its shares were distributed by Kellogg Company."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "kellogg_10k",
+        "kellogg_political",
+        "kellogg_plan"
+      ],
+      "rationale": "Independent corporations with distinct business scopes after the distribution.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kellogg-business-transfer",
+      "group_id": "kellogg",
+      "split": "test",
+      "record_a": {
+        "name": "Kellogg Company - North American cereal",
+        "as_of": "2023-09-30",
+        "record_scope": "operating business",
+        "facts": "North American cereal operations inside the Kellogg Company group before separation into WK Kellogg Co."
+      },
+      "record_b": {
+        "name": "WK Kellogg Co",
+        "as_of": "2023-10-03",
+        "record_scope": "corporation and operating business",
+        "facts": "Independent corporation holding the former North American cereal business after all its shares were distributed by Kellogg Company."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "kellogg_10k",
+        "kellogg_political",
+        "kellogg_plan"
+      ],
+      "rationale": "Specific operations continue after transfer to an independent group; underlying operating subsidiaries before transfer are not specified.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kellogg-retained-business",
+      "group_id": "kellogg",
+      "split": "test",
+      "record_a": {
+        "name": "Kellogg Company - global snacks and international cereal",
+        "as_of": "2023-09-30",
+        "record_scope": "operating business",
+        "facts": "global snacks and international cereal operations retained by the continuing Kellogg Company corporation, subsequently named Kellanova."
+      },
+      "record_b": {
+        "name": "Kellanova",
+        "as_of": "2023-10-03",
+        "record_scope": "corporation",
+        "facts": "Renamed Kellogg Company; retains global snacks and international cereal following distribution of all WK Kellogg Co shares on 2023-10-02."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "kellogg_10k",
+        "kellogg_political",
+        "kellogg_plan"
+      ],
+      "rationale": "The specified retained operations continue within the same renamed parent group.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kellogg-divisions-before",
+      "group_id": "kellogg",
+      "split": "test",
+      "record_a": {
+        "name": "Kellogg Company - North American cereal",
+        "as_of": "2023-09-30",
+        "record_scope": "operating business",
+        "facts": "North American cereal operations inside the Kellogg Company group before separation into WK Kellogg Co."
+      },
+      "record_b": {
+        "name": "Kellogg Company - global snacks and international cereal",
+        "as_of": "2023-09-30",
+        "record_scope": "operating business",
+        "facts": "global snacks and international cereal operations retained by the continuing Kellogg Company corporation, subsequently named Kellanova."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "kellogg_10k",
+        "kellogg_political",
+        "kellogg_plan"
+      ],
+      "rationale": "Different divisions in the same pre-separation group; unit labels do not establish separate legal identities.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kraft-rename",
+      "group_id": "kraft",
+      "split": "test",
+      "record_a": {
+        "name": "Kraft Foods Inc.",
+        "as_of": "2012-09-30",
+        "record_scope": "corporation",
+        "facts": "Parent of North American grocery and global snacks operations before the 2012-10-01 distribution; the continuing corporation changes its name to Mondelez International, Inc.."
+      },
+      "record_b": {
+        "name": "Mondelez International, Inc.",
+        "as_of": "2012-10-02",
+        "record_scope": "corporation",
+        "facts": "Renamed Kraft Foods Inc.; retains global snacks following distribution of all Kraft Foods Group, Inc. shares on 2012-10-01."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "kraft_spin",
+        "kraft_close"
+      ],
+      "rationale": "Corporate name changes; same retained legal corporation and ultimate group. Whole-company business perimeter changes, so continuity is unscored.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kraft-companies-after",
+      "group_id": "kraft",
+      "split": "test",
+      "record_a": {
+        "name": "Mondelez International, Inc.",
+        "as_of": "2012-10-02",
+        "record_scope": "corporation",
+        "facts": "Renamed Kraft Foods Inc.; retains global snacks following distribution of all Kraft Foods Group, Inc. shares on 2012-10-01."
+      },
+      "record_b": {
+        "name": "Kraft Foods Group, Inc.",
+        "as_of": "2012-10-02",
+        "record_scope": "corporation and operating business",
+        "facts": "Independent corporation holding the former North American grocery business after all its shares were distributed by Kraft Foods Inc.."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "kraft_spin",
+        "kraft_close"
+      ],
+      "rationale": "Independent corporations with distinct business scopes after the distribution.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kraft-business-transfer",
+      "group_id": "kraft",
+      "split": "test",
+      "record_a": {
+        "name": "Kraft Foods Inc. - North American grocery",
+        "as_of": "2012-09-30",
+        "record_scope": "operating business",
+        "facts": "North American grocery operations inside the Kraft Foods Inc. group before separation into Kraft Foods Group, Inc.."
+      },
+      "record_b": {
+        "name": "Kraft Foods Group, Inc.",
+        "as_of": "2012-10-02",
+        "record_scope": "corporation and operating business",
+        "facts": "Independent corporation holding the former North American grocery business after all its shares were distributed by Kraft Foods Inc.."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "kraft_spin",
+        "kraft_close"
+      ],
+      "rationale": "Specific operations continue after transfer to an independent group; underlying operating subsidiaries before transfer are not specified.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kraft-retained-business",
+      "group_id": "kraft",
+      "split": "test",
+      "record_a": {
+        "name": "Kraft Foods Inc. - global snacks",
+        "as_of": "2012-09-30",
+        "record_scope": "operating business",
+        "facts": "global snacks operations retained by the continuing Kraft Foods Inc. corporation, subsequently named Mondelez International, Inc.."
+      },
+      "record_b": {
+        "name": "Mondelez International, Inc.",
+        "as_of": "2012-10-02",
+        "record_scope": "corporation",
+        "facts": "Renamed Kraft Foods Inc.; retains global snacks following distribution of all Kraft Foods Group, Inc. shares on 2012-10-01."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "kraft_spin",
+        "kraft_close"
+      ],
+      "rationale": "The specified retained operations continue within the same renamed parent group.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "kraft-divisions-before",
+      "group_id": "kraft",
+      "split": "test",
+      "record_a": {
+        "name": "Kraft Foods Inc. - North American grocery",
+        "as_of": "2012-09-30",
+        "record_scope": "operating business",
+        "facts": "North American grocery operations inside the Kraft Foods Inc. group before separation into Kraft Foods Group, Inc.."
+      },
+      "record_b": {
+        "name": "Kraft Foods Inc. - global snacks",
+        "as_of": "2012-09-30",
+        "record_scope": "operating business",
+        "facts": "global snacks operations retained by the continuing Kraft Foods Inc. corporation, subsequently named Mondelez International, Inc.."
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": false
+      },
+      "source_ids": [
+        "kraft_spin",
+        "kraft_close"
+      ],
+      "rationale": "Different divisions in the same pre-separation group; unit labels do not establish separate legal identities.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "linkedin-parent-before",
+      "group_id": "microsoft",
+      "split": "test",
+      "record_a": {
+        "name": "Microsoft Corporation",
+        "as_of": "2016-12-07",
+        "record_scope": "corporation",
+        "facts": "LinkedIn acquisition has been announced but has not closed; completion occurs December 8, 2016."
+      },
+      "record_b": {
+        "name": "LinkedIn Corporation",
+        "as_of": "2016-12-07",
+        "record_scope": "corporation and operating business",
+        "facts": "Independent professional-network company before the Microsoft acquisition closes."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "linkedin_close"
+      ],
+      "rationale": "Distinct independent corporations before the completed acquisition. Broad Microsoft company scope is not directly comparable to one network business.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "linkedin-parent-after",
+      "group_id": "microsoft",
+      "split": "test",
+      "record_a": {
+        "name": "Microsoft Corporation",
+        "as_of": "2016-12-09",
+        "record_scope": "corporation",
+        "facts": "Parent company after acquiring all LinkedIn stock; LinkedIn survives as its wholly owned subsidiary."
+      },
+      "record_b": {
+        "name": "LinkedIn Corporation",
+        "as_of": "2016-12-09",
+        "record_scope": "corporation and operating business",
+        "facts": "The same corporation survives the December 8 merger as a wholly owned Microsoft subsidiary and continues its professional network."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "linkedin_close"
+      ],
+      "rationale": "Separate legal parent and subsidiary within the same group after the acquisition.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "linkedin-acquired",
+      "group_id": "microsoft",
+      "split": "test",
+      "record_a": {
+        "name": "LinkedIn Corporation",
+        "as_of": "2016-12-07",
+        "record_scope": "corporation and operating business",
+        "facts": "Independent professional-network company before the Microsoft acquisition closes."
+      },
+      "record_b": {
+        "name": "LinkedIn Corporation",
+        "as_of": "2016-12-09",
+        "record_scope": "corporation and operating business",
+        "facts": "The same corporation survives the December 8 merger as a wholly owned Microsoft subsidiary and continues its professional network."
+      },
+      "labels": {
+        "legal_entity": true,
+        "corporate_group": false,
+        "physical_site": null,
+        "operating_business": true
+      },
+      "source_ids": [
+        "linkedin_close",
+        "linkedin_business"
+      ],
+      "rationale": "LinkedIn corporation and professional-network operation continue while its ultimate group changes.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "hambach-transfer",
+      "group_id": "hambach",
+      "split": "test",
+      "record_a": {
+        "name": "Mercedes-Benz Hambach smart production",
+        "as_of": "2020-11-01",
+        "record_scope": "factory operation",
+        "facts": "Mercedes-Benz-owned Hambach factory making smart EQ fortwo vehicles before the sale to INEOS.",
+        "site": "Hambach, France"
+      },
+      "record_b": {
+        "name": "INEOS Hambach smart contract production",
+        "as_of": "2021-02-01",
+        "record_scope": "factory operation",
+        "facts": "Following the site acquisition, INEOS continues manufacturing smart EQ fortwo under contract to Mercedes-Benz.",
+        "site": "Hambach, France"
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": false,
+        "physical_site": true,
+        "operating_business": true
+      },
+      "source_ids": [
+        "hambach_sale",
+        "hambach_lines"
+      ],
+      "rationale": "Factory ownership group changes; physical plant and specific smart production program continue. Exact operating legal corporations are not identified.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "hambach-two-programs",
+      "group_id": "hambach",
+      "split": "test",
+      "record_a": {
+        "name": "INEOS smart EQ fortwo assembly",
+        "as_of": "2022-10-31",
+        "record_scope": "production program",
+        "facts": "Smart vehicle assembly line within the INEOS-owned Hambach plant; contract manufacture for Mercedes-Benz.",
+        "site": "Hambach, France"
+      },
+      "record_b": {
+        "name": "INEOS Grenadier assembly",
+        "as_of": "2022-10-31",
+        "record_scope": "production program",
+        "facts": "Grenadier off-road vehicle series production began in October 2022 at Hambach, with production planning independent of the smart assembly line.",
+        "site": "Hambach, France"
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": true,
+        "operating_business": false
+      },
+      "source_ids": [
+        "hambach_sale",
+        "hambach_lines"
+      ],
+      "rationale": "One INEOS-owned factory hosts distinct smart and Grenadier programs; the same factory does not imply the same operating program.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "mercedes-two-sites",
+      "group_id": "hambach",
+      "split": "test",
+      "record_a": {
+        "name": "Mercedes-Benz Hambach smart production",
+        "as_of": "2020-11-01",
+        "record_scope": "factory operation",
+        "facts": "Mercedes-Benz-owned Hambach factory making smart EQ fortwo vehicles before the sale to INEOS.",
+        "site": "Hambach, France"
+      },
+      "record_b": {
+        "name": "Mercedes-Benz B-Class production",
+        "as_of": "2019",
+        "record_scope": "factory operation",
+        "facts": "Mercedes-Benz B-Class manufacturing at its Rastatt main plant; part of the Mercedes-Benz/Daimler group.",
+        "site": "Rastatt, Germany"
+      },
+      "labels": {
+        "legal_entity": null,
+        "corporate_group": true,
+        "physical_site": false,
+        "operating_business": false
+      },
+      "source_ids": [
+        "hambach_sale",
+        "rastatt"
+      ],
+      "rationale": "Common Mercedes-Benz group before Hambach sale, with different factories and vehicle programs.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    },
+    {
+      "pair_id": "google-alphabet-parent",
+      "group_id": "alphabet",
+      "split": "test",
+      "record_a": {
+        "name": "Google Inc.",
+        "as_of": "2015-10-03",
+        "record_scope": "corporation",
+        "facts": "Google survived the October 2 holding-company merger and is now wholly owned by Alphabet."
+      },
+      "record_b": {
+        "name": "Alphabet Inc.",
+        "as_of": "2015-10-03",
+        "record_scope": "corporation",
+        "facts": "Separate holding corporation now owning all outstanding Google capital stock."
+      },
+      "labels": {
+        "legal_entity": false,
+        "corporate_group": true,
+        "physical_site": null,
+        "operating_business": null
+      },
+      "source_ids": [
+        "alphabet_merger"
+      ],
+      "rationale": "Distinct incorporated parent and subsidiary in one group. Operating scope and facility identity are not specified.",
+      "unknown_label_policy": "Null labels are not scored; no legal entity inferred for unidentified operating divisions or factory operators."
+    }
+  ],
+  "arm_settings": {
+    "identity": {
+      "input_mode": "rich",
+      "question_style": "identity"
+    },
+    "rule": {
+      "input_mode": "rich",
+      "question_style": "rule"
+    }
+  }
+}

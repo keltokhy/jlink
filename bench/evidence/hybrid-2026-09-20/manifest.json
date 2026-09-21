@@ -1,0 +1,20 @@
+{
+  "scope": "exploratory hybrid retrieval, shared Jev judging and synthetic rule sensitivity",
+  "linktransformer_commit": "584562c9755d987f47e4a4a04d0100e4bcf7c044",
+  "new_api_calls": 16925,
+  "new_api_cost_usd": 0.3523863420000011,
+  "files": {
+    "abt-buy-split.csv.gz": "e65094f39140f2ad949526f1391cb577907f512443c32e56e4a6cee2d56efec6",
+    "firms-company.json": "2e8b997e32531bdc578523b9737669c52a12fba55841fab3bc8d790dcbbbdbd6",
+    "firms-minilm.json": "5f232173bc31c6240701c642729e42d8fa169c0adae949220ee82bfe73cc634d",
+    "lexical-k20.json": "4ad135e83c68ea1ba980f69ce57674b0cded5520e6ae74d32a1e89c3e7873775",
+    "nber-firms-split.csv.gz": "08fdf1fb3013050bc61f89f1f07c451551055f46921e45b6a34ec72a057e4fce",
+    "products-final.json": "320cbfe03eb661fa33f35db7193bd7134552bff1baf6c7f402a4f5ddfc2843f5",
+    "products-initial.json": "2b10334850a4022d9b931586850551ceb8ec4875abca3b6329e5b810425758d1",
+    "rules/fixture.json": "76f5e6ecbf07e60dcd783b83fd332765cda4d319f1c6c3dfe04fdfae9efae8f6",
+    "rules/report.json": "8b2932fd98059779fdf6620261822a73450f7e19bdcbd3f310aaa4633d64a41a",
+    "rules/requests.jsonl": "7e72cdc8a7500da8a0fe52dab883538a450527c32aa3b07fcef0f38967b5861d",
+    "rules/responses.jsonl": "fb43526a740dddeba555b07dc2e9110c8366e737e0cfee4a5a07b235c253e381",
+    "runs.tar.gz": "8e5a04330e7abfb51367398c006e11f290cef6c533550cbf763ee2b92aa7da81"
+  }
+}

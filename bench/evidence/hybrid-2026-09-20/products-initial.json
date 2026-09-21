@@ -1,0 +1,1041 @@
+{
+  "schema_version": 1,
+  "dataset": "abt-buy",
+  "seed": 1729,
+  "k": 10,
+  "split": "30% development / 70% test; disjoint observed entities",
+  "prior_exposure": "existing public benchmark; not an untouched external test",
+  "label_policy": "supplied benchmark truth treated as complete",
+  "definition": {
+    "entity": "product",
+    "how": "many-to-many",
+    "definition": "Two listings match when they offer the same product model. The same product line in a different size, color, capacity, software version or license bundle is not a match."
+  },
+  "exact_shortcut": false,
+  "judge_status": "live",
+  "linktransformer": "retrieval only; its LLM judge was not run",
+  "budget_usd": 0.5,
+  "new_api_calls": 16886,
+  "new_api_cost_usd": 0.35170854600000107,
+  "source_hashes": {
+    "left.parquet": "69356f42e521a7ef4574f2526699e2893e941e2655be4b2feddd1f96bbb47282",
+    "right.parquet": "3fcb4f96591465e7d6c74add2696f7546b7d6b3b4794bad735163134ca07450e",
+    "truth.parquet": "715e8f20763e5f9ff2a6bfd28aeceaa8ffb14a1f05fe3a61e222452efb44712b",
+    "meta.json": "524e63cafb3eb828e8765619462d26ccdcf5d5539c38c3bea628858a0dbaf083"
+  },
+  "partitions": {
+    "dev": {
+      "records": {
+        "left": 326,
+        "right": 330,
+        "truth": 331
+      },
+      "retrieval_seconds": {
+        "lexical": 0.1897110420104582,
+        "semantic": 4.613229665992549
+      },
+      "retrieval": {
+        "lexical": {
+          "pairs": 3232,
+          "known_matches_found": 331,
+          "known_matches": 331,
+          "candidate_recall": 1.0,
+          "added_pairs": 0,
+          "recovered_matches": 0,
+          "lost_matches": 0
+        },
+        "semantic": {
+          "pairs": 3260,
+          "known_matches_found": 322,
+          "known_matches": 331,
+          "candidate_recall": 0.972809667673716,
+          "added_pairs": 1359,
+          "recovered_matches": 0,
+          "lost_matches": 9
+        },
+        "hybrid": {
+          "pairs": 4591,
+          "known_matches_found": 331,
+          "known_matches": 331,
+          "candidate_recall": 1.0,
+          "added_pairs": 1359,
+          "recovered_matches": 0,
+          "lost_matches": 0
+        },
+        "linktransformer": {
+          "pairs": 3260,
+          "known_matches_found": 325,
+          "known_matches": 331,
+          "candidate_recall": 0.9818731117824774,
+          "added_pairs": 1330,
+          "recovered_matches": 0,
+          "lost_matches": 6
+        }
+      },
+      "linktransformer_metadata": {
+        "api": "linktransformer.merge_knn",
+        "seconds_including_model_load": 2.2213397080195136,
+        "version": "0.1.18",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "requested_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "resolved_snapshot": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "infer_sha256": "4016bbd6833414d84910bae5f15186d6e3b48fed275068b90f38073dd5e62e4a",
+        "score_semantics": "embedding cosine, not match probability",
+        "new_api_calls": 0,
+        "OMP_NUM_THREADS": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "packages": {
+          "sentence-transformers": "5.2.2",
+          "torch": "2.10.0",
+          "transformers": "5.1.0",
+          "numpy": "2.4.2",
+          "pandas": "3.0.0",
+          "faiss-cpu": "1.13.2"
+        }
+      },
+      "judgments": {
+        "calls": 5011,
+        "cached": 95,
+        "cost": 0.10370997000000011,
+        "resolved_models": [
+          "typesafe/jev-1.13-20260917"
+        ],
+        "unjudged": 0
+      },
+      "same_judge_comparison": {
+        "lexical": {
+          "candidates": {
+            "pairs": 3232,
+            "truth_pairs": 331,
+            "covered_truth_pairs": 331,
+            "recall": 1.0
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 310,
+            "listed_fn": 21,
+            "predicted_pairs": 326,
+            "listed_positive_recall": 0.9365558912386707,
+            "precision": 0.950920245398773,
+            "recall": 0.9365558912386707,
+            "f1": 0.943683409436834,
+            "tp": 310,
+            "fp": 16,
+            "fn": 21,
+            "scored_pairs": 3232,
+            "unjudged_pairs": 0,
+            "brier": 0.00944891707920792,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 2807,
+                "mean_p": 0.013512646954043462,
+                "match_rate": 0.0010687566797292483
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 74,
+                "mean_p": 0.09783783783783784,
+                "match_rate": 0.08108108108108109
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 26,
+                "mean_p": 0.3734615384615384,
+                "match_rate": 0.5
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 57,
+                "mean_p": 0.6714035087719298,
+                "match_rate": 0.8421052631578947
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 196,
+                "mean_p": 0.9001020408163266,
+                "match_rate": 0.9642857142857143
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 72,
+                "mean_p": 0.9644444444444444,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "jev": {
+                "listed_tp": 310,
+                "listed_fn": 21,
+                "predicted_pairs": 326,
+                "listed_positive_recall": 0.9365558912386707,
+                "precision": 0.950920245398773,
+                "recall": 0.9365558912386707,
+                "f1": 0.943683409436834,
+                "tp": 310,
+                "fp": 16,
+                "fn": 21,
+                "pairs": 3232,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 310,
+            "listed_fn": 21,
+            "predicted_pairs": 326,
+            "listed_positive_recall": 0.9365558912386707,
+            "precision": 0.950920245398773,
+            "recall": 0.9365558912386707,
+            "f1": 0.943683409436834,
+            "tp": 310,
+            "fp": 16,
+            "fn": 21,
+            "resolver_warnings": []
+          }
+        },
+        "semantic": {
+          "candidates": {
+            "pairs": 3260,
+            "truth_pairs": 331,
+            "covered_truth_pairs": 322,
+            "recall": 0.972809667673716
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 303,
+            "listed_fn": 19,
+            "predicted_pairs": 313,
+            "listed_positive_recall": 0.9409937888198758,
+            "precision": 0.9680511182108626,
+            "recall": 0.9409937888198758,
+            "f1": 0.9543307086614173,
+            "tp": 303,
+            "fp": 10,
+            "fn": 19,
+            "scored_pairs": 3260,
+            "unjudged_pairs": 0,
+            "brier": 0.00800739263803681,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 2877,
+                "mean_p": 0.013385470976711852,
+                "match_rate": 0.0010427528675703858
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 55,
+                "mean_p": 0.09254545454545454,
+                "match_rate": 0.10909090909090909
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 16,
+                "mean_p": 0.3425,
+                "match_rate": 0.6875
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 49,
+                "mean_p": 0.6944897959183672,
+                "match_rate": 0.9387755102040817
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 195,
+                "mean_p": 0.9001025641025642,
+                "match_rate": 0.9641025641025641
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 68,
+                "mean_p": 0.9641176470588233,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "jev": {
+                "listed_tp": 303,
+                "listed_fn": 19,
+                "predicted_pairs": 313,
+                "listed_positive_recall": 0.9409937888198758,
+                "precision": 0.9680511182108626,
+                "recall": 0.9409937888198758,
+                "f1": 0.9543307086614173,
+                "tp": 303,
+                "fp": 10,
+                "fn": 19,
+                "pairs": 3260,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 303,
+            "listed_fn": 28,
+            "predicted_pairs": 313,
+            "listed_positive_recall": 0.9154078549848943,
+            "precision": 0.9680511182108626,
+            "recall": 0.9154078549848943,
+            "f1": 0.9409937888198758,
+            "tp": 303,
+            "fp": 10,
+            "fn": 28,
+            "resolver_warnings": []
+          }
+        },
+        "hybrid": {
+          "candidates": {
+            "pairs": 4591,
+            "truth_pairs": 331,
+            "covered_truth_pairs": 331,
+            "recall": 1.0
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 310,
+            "listed_fn": 21,
+            "predicted_pairs": 326,
+            "listed_positive_recall": 0.9365558912386707,
+            "precision": 0.950920245398773,
+            "recall": 0.9365558912386707,
+            "f1": 0.943683409436834,
+            "tp": 310,
+            "fp": 16,
+            "fn": 21,
+            "scored_pairs": 4591,
+            "unjudged_pairs": 0,
+            "brier": 0.0066902417773905465,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 4166,
+                "mean_p": 0.012666826692270764,
+                "match_rate": 0.0007201152184349496
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 74,
+                "mean_p": 0.09783783783783784,
+                "match_rate": 0.08108108108108109
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 26,
+                "mean_p": 0.3734615384615384,
+                "match_rate": 0.5
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 57,
+                "mean_p": 0.6714035087719298,
+                "match_rate": 0.8421052631578947
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 196,
+                "mean_p": 0.9001020408163266,
+                "match_rate": 0.9642857142857143
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 72,
+                "mean_p": 0.9644444444444444,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "jev": {
+                "listed_tp": 310,
+                "listed_fn": 21,
+                "predicted_pairs": 326,
+                "listed_positive_recall": 0.9365558912386707,
+                "precision": 0.950920245398773,
+                "recall": 0.9365558912386707,
+                "f1": 0.943683409436834,
+                "tp": 310,
+                "fp": 16,
+                "fn": 21,
+                "pairs": 4591,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 310,
+            "listed_fn": 21,
+            "predicted_pairs": 326,
+            "listed_positive_recall": 0.9365558912386707,
+            "precision": 0.950920245398773,
+            "recall": 0.9365558912386707,
+            "f1": 0.943683409436834,
+            "tp": 310,
+            "fp": 16,
+            "fn": 21,
+            "resolver_warnings": []
+          }
+        },
+        "linktransformer": {
+          "candidates": {
+            "pairs": 3260,
+            "truth_pairs": 331,
+            "covered_truth_pairs": 325,
+            "recall": 0.9818731117824774
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 305,
+            "listed_fn": 20,
+            "predicted_pairs": 316,
+            "listed_positive_recall": 0.9384615384615385,
+            "precision": 0.9651898734177216,
+            "recall": 0.9384615384615385,
+            "f1": 0.9516380655226209,
+            "tp": 305,
+            "fp": 11,
+            "fn": 20,
+            "scored_pairs": 3260,
+            "unjudged_pairs": 0,
+            "brier": 0.008587852760736195,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 2856,
+                "mean_p": 0.013560924369747901,
+                "match_rate": 0.0010504201680672268
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 66,
+                "mean_p": 0.09621212121212121,
+                "match_rate": 0.09090909090909091
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 23,
+                "mean_p": 0.37086956521739134,
+                "match_rate": 0.5217391304347826
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 50,
+                "mean_p": 0.691,
+                "match_rate": 0.92
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 193,
+                "mean_p": 0.8999999999999999,
+                "match_rate": 0.9637305699481865
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 72,
+                "mean_p": 0.9644444444444444,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "jev": {
+                "listed_tp": 305,
+                "listed_fn": 20,
+                "predicted_pairs": 316,
+                "listed_positive_recall": 0.9384615384615385,
+                "precision": 0.9651898734177216,
+                "recall": 0.9384615384615385,
+                "f1": 0.9516380655226209,
+                "tp": 305,
+                "fp": 11,
+                "fn": 20,
+                "pairs": 3260,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 305,
+            "listed_fn": 26,
+            "predicted_pairs": 316,
+            "listed_positive_recall": 0.9214501510574018,
+            "precision": 0.9651898734177216,
+            "recall": 0.9214501510574018,
+            "f1": 0.9428129829984544,
+            "tp": 305,
+            "fp": 11,
+            "fn": 26,
+            "resolver_warnings": []
+          }
+        }
+      }
+    },
+    "test": {
+      "records": {
+        "left": 755,
+        "right": 762,
+        "truth": 766
+      },
+      "retrieval_seconds": {
+        "lexical": 0.4139495829876978,
+        "semantic": 5.4314155419997405
+      },
+      "retrieval": {
+        "lexical": {
+          "pairs": 7533,
+          "known_matches_found": 759,
+          "known_matches": 766,
+          "candidate_recall": 0.9908616187989556,
+          "added_pairs": 0,
+          "recovered_matches": 0,
+          "lost_matches": 0
+        },
+        "semantic": {
+          "pairs": 7550,
+          "known_matches_found": 732,
+          "known_matches": 766,
+          "candidate_recall": 0.9556135770234987,
+          "added_pairs": 3165,
+          "recovered_matches": 4,
+          "lost_matches": 31
+        },
+        "hybrid": {
+          "pairs": 10698,
+          "known_matches_found": 763,
+          "known_matches": 766,
+          "candidate_recall": 0.9960835509138382,
+          "added_pairs": 3165,
+          "recovered_matches": 4,
+          "lost_matches": 0
+        },
+        "linktransformer": {
+          "pairs": 7550,
+          "known_matches_found": 742,
+          "known_matches": 766,
+          "candidate_recall": 0.9686684073107049,
+          "added_pairs": 3108,
+          "recovered_matches": 6,
+          "lost_matches": 23
+        }
+      },
+      "linktransformer_metadata": {
+        "api": "linktransformer.merge_knn",
+        "seconds_including_model_load": 4.680332249990897,
+        "version": "0.1.18",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "requested_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "resolved_snapshot": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "infer_sha256": "4016bbd6833414d84910bae5f15186d6e3b48fed275068b90f38073dd5e62e4a",
+        "score_semantics": "embedding cosine, not match probability",
+        "new_api_calls": 0,
+        "OMP_NUM_THREADS": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "packages": {
+          "sentence-transformers": "5.2.2",
+          "torch": "2.10.0",
+          "transformers": "5.1.0",
+          "numpy": "2.4.2",
+          "pandas": "3.0.0",
+          "faiss-cpu": "1.13.2"
+        }
+      },
+      "judgments": {
+        "calls": 11875,
+        "cached": 66,
+        "cost": 0.24799857600000094,
+        "resolved_models": [
+          "typesafe/jev-1.13-20260917"
+        ],
+        "unjudged": 3
+      },
+      "same_judge_comparison": {
+        "lexical": {
+          "candidates": {
+            "pairs": 7533,
+            "truth_pairs": 766,
+            "covered_truth_pairs": 759,
+            "recall": 0.9908616187989556
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 715,
+            "listed_fn": 44,
+            "predicted_pairs": 782,
+            "listed_positive_recall": 0.9420289855072463,
+            "precision": 0.9143222506393862,
+            "recall": 0.9420289855072463,
+            "f1": 0.9279688513951979,
+            "tp": 715,
+            "fp": 67,
+            "fn": 44,
+            "scored_pairs": 7530,
+            "unjudged_pairs": 3,
+            "brier": 0.011414103585657368,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 6411,
+                "mean_p": 0.01570269848697551,
+                "match_rate": 0.00031196381219778506
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 239,
+                "mean_p": 0.09828451882845189,
+                "match_rate": 0.06694560669456066
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 103,
+                "mean_p": 0.33563106796116504,
+                "match_rate": 0.27184466019417475
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 129,
+                "mean_p": 0.6674418604651162,
+                "match_rate": 0.6821705426356589
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 436,
+                "mean_p": 0.9088761467889908,
+                "match_rate": 0.9472477064220184
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 212,
+                "mean_p": 0.9645283018867925,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "error": {
+                "listed_tp": 0,
+                "listed_fn": 0,
+                "predicted_pairs": 0,
+                "listed_positive_recall": null,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "pairs": 3,
+                "unjudged_pairs": 3
+              },
+              "jev": {
+                "listed_tp": 715,
+                "listed_fn": 44,
+                "predicted_pairs": 782,
+                "listed_positive_recall": 0.9420289855072463,
+                "precision": 0.9143222506393862,
+                "recall": 0.9420289855072463,
+                "f1": 0.9279688513951979,
+                "tp": 715,
+                "fp": 67,
+                "fn": 44,
+                "pairs": 7530,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 715,
+            "listed_fn": 51,
+            "predicted_pairs": 782,
+            "listed_positive_recall": 0.933420365535248,
+            "precision": 0.9143222506393862,
+            "recall": 0.933420365535248,
+            "f1": 0.9237726098191215,
+            "tp": 715,
+            "fp": 67,
+            "fn": 51,
+            "resolver_warnings": []
+          }
+        },
+        "semantic": {
+          "candidates": {
+            "pairs": 7550,
+            "truth_pairs": 766,
+            "covered_truth_pairs": 732,
+            "recall": 0.9556135770234987
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 685,
+            "listed_fn": 47,
+            "predicted_pairs": 741,
+            "listed_positive_recall": 0.9357923497267759,
+            "precision": 0.9244264507422402,
+            "recall": 0.9357923497267759,
+            "f1": 0.9300746775288526,
+            "tp": 685,
+            "fp": 56,
+            "fn": 47,
+            "scored_pairs": 7549,
+            "unjudged_pairs": 1,
+            "brier": 0.010895668300437143,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 6497,
+                "mean_p": 0.015336309065722642,
+                "match_rate": 0.00030783438510081576
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 220,
+                "mean_p": 0.09940909090909092,
+                "match_rate": 0.08181818181818182
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 93,
+                "mean_p": 0.33258064516129027,
+                "match_rate": 0.3118279569892473
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 114,
+                "mean_p": 0.674561403508772,
+                "match_rate": 0.7105263157894737
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 424,
+                "mean_p": 0.9086792452830188,
+                "match_rate": 0.9457547169811321
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 201,
+                "mean_p": 0.9644776119402986,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "error": {
+                "listed_tp": 0,
+                "listed_fn": 0,
+                "predicted_pairs": 0,
+                "listed_positive_recall": null,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "pairs": 1,
+                "unjudged_pairs": 1
+              },
+              "jev": {
+                "listed_tp": 685,
+                "listed_fn": 47,
+                "predicted_pairs": 741,
+                "listed_positive_recall": 0.9357923497267759,
+                "precision": 0.9244264507422402,
+                "recall": 0.9357923497267759,
+                "f1": 0.9300746775288526,
+                "tp": 685,
+                "fp": 56,
+                "fn": 47,
+                "pairs": 7549,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 685,
+            "listed_fn": 81,
+            "predicted_pairs": 741,
+            "listed_positive_recall": 0.8942558746736292,
+            "precision": 0.9244264507422402,
+            "recall": 0.8942558746736292,
+            "f1": 0.9090909090909091,
+            "tp": 685,
+            "fp": 56,
+            "fn": 81,
+            "resolver_warnings": []
+          }
+        },
+        "hybrid": {
+          "candidates": {
+            "pairs": 10698,
+            "truth_pairs": 766,
+            "covered_truth_pairs": 763,
+            "recall": 0.9960835509138382
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 716,
+            "listed_fn": 47,
+            "predicted_pairs": 783,
+            "listed_positive_recall": 0.9384010484927916,
+            "precision": 0.9144316730523627,
+            "recall": 0.9384010484927916,
+            "f1": 0.926261319534282,
+            "tp": 716,
+            "fp": 67,
+            "fn": 47,
+            "scored_pairs": 10695,
+            "unjudged_pairs": 3,
+            "brier": 0.00832135577372604,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 9560,
+                "mean_p": 0.014415271966527197,
+                "match_rate": 0.00020920502092050208
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 252,
+                "mean_p": 0.09793650793650793,
+                "match_rate": 0.07142857142857142
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 105,
+                "mean_p": 0.3369523809523809,
+                "match_rate": 0.2761904761904762
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 130,
+                "mean_p": 0.6665384615384616,
+                "match_rate": 0.6846153846153846
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 436,
+                "mean_p": 0.9088761467889908,
+                "match_rate": 0.9472477064220184
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 212,
+                "mean_p": 0.9645283018867925,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "error": {
+                "listed_tp": 0,
+                "listed_fn": 0,
+                "predicted_pairs": 0,
+                "listed_positive_recall": null,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "tp": 0,
+                "fp": 0,
+                "fn": 0,
+                "pairs": 3,
+                "unjudged_pairs": 3
+              },
+              "jev": {
+                "listed_tp": 716,
+                "listed_fn": 47,
+                "predicted_pairs": 783,
+                "listed_positive_recall": 0.9384010484927916,
+                "precision": 0.9144316730523627,
+                "recall": 0.9384010484927916,
+                "f1": 0.926261319534282,
+                "tp": 716,
+                "fp": 67,
+                "fn": 47,
+                "pairs": 10695,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 716,
+            "listed_fn": 50,
+            "predicted_pairs": 783,
+            "listed_positive_recall": 0.9347258485639687,
+            "precision": 0.9144316730523627,
+            "recall": 0.9347258485639687,
+            "f1": 0.9244673983214977,
+            "tp": 716,
+            "fp": 67,
+            "fn": 50,
+            "resolver_warnings": []
+          }
+        },
+        "linktransformer": {
+          "candidates": {
+            "pairs": 7550,
+            "truth_pairs": 766,
+            "covered_truth_pairs": 742,
+            "recall": 0.9686684073107049
+          },
+          "judge_conditional_on_candidates": {
+            "listed_tp": 696,
+            "listed_fn": 46,
+            "predicted_pairs": 754,
+            "listed_positive_recall": 0.9380053908355795,
+            "precision": 0.9230769230769231,
+            "recall": 0.9380053908355795,
+            "f1": 0.93048128342246,
+            "tp": 696,
+            "fp": 58,
+            "fn": 46,
+            "scored_pairs": 7550,
+            "unjudged_pairs": 0,
+            "brier": 0.01092871523178808,
+            "calibration": [
+              {
+                "bin": "(-0.001, 0.05]",
+                "n": 6463,
+                "mean_p": 0.015587188612099645,
+                "match_rate": 0.00030945381401825775
+              },
+              {
+                "bin": "(0.05, 0.2]",
+                "n": 236,
+                "mean_p": 0.09817796610169492,
+                "match_rate": 0.06779661016949153
+              },
+              {
+                "bin": "(0.2, 0.5]",
+                "n": 100,
+                "mean_p": 0.3358,
+                "match_rate": 0.3
+              },
+              {
+                "bin": "(0.5, 0.8]",
+                "n": 117,
+                "mean_p": 0.6713675213675212,
+                "match_rate": 0.7094017094017094
+              },
+              {
+                "bin": "(0.8, 0.95]",
+                "n": 428,
+                "mean_p": 0.9091588785046729,
+                "match_rate": 0.9462616822429907
+              },
+              {
+                "bin": "(0.95, 1.0]",
+                "n": 206,
+                "mean_p": 0.9645631067961165,
+                "match_rate": 1.0
+              }
+            ],
+            "score_is_probability": true,
+            "by_source": {
+              "jev": {
+                "listed_tp": 696,
+                "listed_fn": 46,
+                "predicted_pairs": 754,
+                "listed_positive_recall": 0.9380053908355795,
+                "precision": 0.9230769230769231,
+                "recall": 0.9380053908355795,
+                "f1": 0.93048128342246,
+                "tp": 696,
+                "fp": 58,
+                "fn": 46,
+                "pairs": 7550,
+                "unjudged_pairs": 0
+              }
+            }
+          },
+          "final_assignment": {
+            "listed_tp": 696,
+            "listed_fn": 70,
+            "predicted_pairs": 754,
+            "listed_positive_recall": 0.9086161879895561,
+            "precision": 0.9230769230769231,
+            "recall": 0.9086161879895561,
+            "f1": 0.9157894736842105,
+            "tp": 696,
+            "fp": 58,
+            "fn": 70,
+            "resolver_warnings": []
+          }
+        }
+      }
+    }
+  },
+  "embedding_config": {
+    "type": "embeddings",
+    "name": "embeddings:name,description,price",
+    "columns": [
+      [
+        "name",
+        "name"
+      ],
+      [
+        "description",
+        "description"
+      ],
+      [
+        "price",
+        "price"
+      ]
+    ],
+    "k": 10,
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "resolved_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "min_sim": 0.0,
+    "reverse": false,
+    "batch_size": 64,
+    "device": "cpu",
+    "serialization": "single_text_or_labeled_json_v1",
+    "search": "chunked_exact_cosine_v1",
+    "custom_encoder": false,
+    "reconstructable": true
+  },
+  "environment": {
+    "python": "3.12.14 (main, Sep  1 2026, 14:09:38) [Clang 22.1.3 ]",
+    "packages": {
+      "jlink": "0.1.0",
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.9.1",
+      "sentence-transformers": "5.7.0"
+    }
+  },
+  "code_hashes": {
+    "bench/hybrid.py": "4439fc3afea1b130632f068a2f8bff9b7c5c747d82ed867b12d90d90e52ba82b",
+    "bench/linktransformer_retrieval.py": "a7ffdfe0ccfbd363a21fee175f29169e48a8fe62a33f9cae598d4d6fc242cb29",
+    "bench/evaluation.py": "c0b8d493caf76bf6b4acb00ba66e0d01c50bcdab93accc040e1d125f333c2bce",
+    "src/jlink/embeddings.py": "b18b2d394dcb88e1d2767cbc4e1d7b95c4a32b0fbf7a54a52669063527c4e947",
+    "src/jlink/block.py": "1a2497d41559d4a3ba6cfd2cc52f429b034f7ce55d4e3f53b5b8c582f231608b",
+    "src/jlink/judge.py": "9d0c4aba4fae0c4c07506f6985b217358e169774e4fa069664c8388fbab7ddd7"
+  },
+  "artifacts": {
+    "dev-hybrid-candidates.csv": "5725f868f94c671750e0e9fd8be26562aaf13f47d170889d46e4f21887b99bcf",
+    "dev-hybrid-links.csv": "e6e417f5f52690beca9e00f1a2259b5f5c38d5c15fed21ea3389ac5011fc42c3",
+    "dev-lexical-candidates.csv": "f5ffbb399f8e7f664d51f2911c0a12b917196f7d57d90d7d97dd003967af7213",
+    "dev-lexical-links.csv": "b71c5702207d628cb5c485b270c308f39866ce78331daeca6471a5deaf394554",
+    "dev-linktransformer/candidates.csv": "b0aaf9562061274a4095e689298211fe94a289be0242fcd9a77dbd6c1b2fe838",
+    "dev-linktransformer/left.parquet": "383c555b7c55911c0bf3c9c42b2147831daaf3904dddf8ea3202764758a6d281",
+    "dev-linktransformer/metadata.json": "b64b7a71865a2c2b14f5ba6756afe41910816afaa5820df8998eb7bf545dbb9d",
+    "dev-linktransformer/process.log": "c500828603040fcc1e08752672793076910db8967b83bb61c3c9362d4f11e302",
+    "dev-linktransformer/request.json": "e301ee23fb6fb8c5671268123cb7d981d5f4eea00e90eea64672eb4b74e27186",
+    "dev-linktransformer/right.parquet": "0f838c058dd7d8e3dcaafe9523eb8fb26bcdaf56bc3d5aaf532d351ffe0c136e",
+    "dev-linktransformer-candidates.csv": "b248a425472fa15233ed7f338c3decb1788295834395cd80ed61fbd9c8ba1705",
+    "dev-linktransformer-links.csv": "bccf2842eec4e408e86949b744df7979d9dd318171812f059d98caedb2d1bb07",
+    "dev-semantic-candidates.csv": "e3b12dcb9fed20127c1b725eaba4e66219f6c8873e80f543d5155a36c51474a2",
+    "dev-semantic-links.csv": "6aada459b79de80141847057afa3170a68cc13e62fb253fee55fb7666cea34f5",
+    "dev-union-scores.csv": "8696083b0cc09214fcff9e1b52f4abfe3f9faf9465c811a8099253aeddc90163",
+    "split.csv": "87ba1a0243ebd50528d0c6b5b08b4cf1d08a8e9058e42d8c2c8453653df235e9",
+    "test-hybrid-candidates.csv": "88bc8e8a18c5228748e2ad1950d9a9cca3f0f45bd3d3a87e59fa38b6ac1ac652",
+    "test-hybrid-links.csv": "9e886f715c50cc29d474b18f92eee6189a0e37286d2fbe0f3ed14878eef1edb6",
+    "test-lexical-candidates.csv": "2fde76e1cb2b2b06a8ed5dd679f20530a8d1ce8ece150ebdcfb3216ee939d7ba",
+    "test-lexical-links.csv": "93579d29cecaa28459c4f670d7e48340da280b77d4714ba66fc374c9cacdd7af",
+    "test-linktransformer/candidates.csv": "1da4218cc66369fedb6015faeefd24a002ab3fd22dee247cea832819d8b63b44",
+    "test-linktransformer/left.parquet": "c5093bfbe8f702e944544d04b9c100953824151d677c334cac212926b952f430",
+    "test-linktransformer/metadata.json": "7f196c58d665e756542e5507a4165383568a2cf4b71b24079f57b1e49c23f0f1",
+    "test-linktransformer/process.log": "57b75455c136af5a0528b1abd81463e5e3d63510b2533f3946937a9519980f7f",
+    "test-linktransformer/request.json": "e301ee23fb6fb8c5671268123cb7d981d5f4eea00e90eea64672eb4b74e27186",
+    "test-linktransformer/right.parquet": "a79776cdd80c4b9b24359bc9d15b7c1c63082c38f662b436153544ed0ef08646",
+    "test-linktransformer-candidates.csv": "36b17fd7754e7a04004e7a3d5ec195cd12b871e2202c464aa5dcc9bab2a1274e",
+    "test-linktransformer-links.csv": "63abe712cfc63ebbd79a6f477fbe24772052462511cb18d1b47b30d70cceb586",
+    "test-semantic-candidates.csv": "dad39fbdf1105ed9130f1396b686c5e48eed68360190ec748e9bffc56fc7e2fb",
+    "test-semantic-links.csv": "7032d16e26cb62da0163c56385e565915770ca09b13b16ecbc6417d0fe048ba1",
+    "test-union-scores.csv": "f58c8fe73ad338594891196da2d492844fc662ff3d20e2064aa16ca5db0296a9"
+  }
+}

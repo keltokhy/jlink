@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from jlink.audit import Evaluation, audit_sample, evaluate, score_against_truth
+from jlink.resolve import resolve
 
 
 def scores(probabilities):
@@ -177,11 +178,11 @@ def test_summary_and_markdown_are_appendix_ready():
                       n_boot=50)
     text = result.to_markdown()
     assert "| Metric | Estimate | 95% interval |" in text
-    assert "| Candidate-pair recall |" in text
+    assert "| Judged-candidate recall |" in text
     assert "| Weighted Brier score |" in text
     assert "Weighted match rate" in text and "hi\\|gh" in text
     assert "threshold 0.5" in text and "4 labeled pairs" in text
-    assert "Recall is among candidate pairs" in result.summary()
+    assert "Recall is among judged candidate pairs only" in result.summary()
     assert "lost in blocking" in result.summary()
 
 
@@ -272,3 +273,182 @@ def test_score_against_truth_empty_sets_and_duplicate_validation():
     assert all(np.isnan(result[name]) for name in ["precision", "recall", "f1"])
     with pytest.raises(ValueError, match="duplicate"):
         score_against_truth(pd.concat([one, one]), one)
+
+
+def test_one_to_one_competition_separates_pair_scores_from_final_links():
+    frame = pd.DataFrame({"left_id": ["A", "A"], "right_id": ["X", "Y"],
+                          "p": [.9, .8], "sim": [1., 1.]})
+    links = resolve(frame)
+    assert links.right_id.tolist() == ["X"]
+    sample = audit_sample(frame, links=links)
+    sample["is_match"] = sample.right_id.eq("X")
+    pair = evaluate(sample, n_boot=20)
+    final = evaluate(sample, mode="selected", n_boot=20)
+    assert pair.mode == "threshold" and pair.threshold == .5
+    assert pair.precision[0] == .5 and pair.recall[0] == 1
+    assert final.mode == "selected" and final.threshold is None
+    assert final.precision[0] == final.recall[0] == final.f1[0] == 1
+    assert final.brier == pair.brier
+    pd.testing.assert_frame_equal(final.calibration, pair.calibration)
+    assert "Pair-scoring evaluation at threshold 0.5" in pair.summary()
+    assert "Final-link evaluation using saved selected membership" in final.to_markdown()
+    assert "no threshold is reapplied" in final.summary()
+    assert "Brier and calibration assess pair scores" in final.summary()
+    assert "do not estimate blocking uncertainty" in final.summary()
+
+
+@pytest.mark.parametrize("how, chosen", [
+    ("one-to-one", {("A", "Y"), ("B", "X")}),
+    ("many-to-one", {("A", "X"), ("B", "X")}),
+    ("one-to-many", {("A", "X"), ("A", "Y")}),
+    ("many-to-many", {("A", "X"), ("A", "Y"), ("B", "X")}),
+])
+def test_selection_is_actual_global_or_directional_assignment(how, chosen):
+    frame = pd.DataFrame({"left_id": ["A", "A", "B"], "right_id": ["X", "Y", "X"],
+                          "p": [.9, .8, .85], "sim": [1., 1., 1.]})
+    sample = audit_sample(frame, links=resolve(frame, how=how), bins=(0, 1))
+    selected = sample.loc[sample.selected]
+    assert set(zip(selected.left_id, selected.right_id)) == chosen
+    truth = {("A", "Y"), ("B", "X")}
+    sample["is_match"] = [pair in truth for pair in zip(sample.left_id, sample.right_id)]
+    result = evaluate(sample, mode="selected", n_boot=20)
+    assert result.precision[0] == pytest.approx(len(chosen & truth) / len(chosen))
+    assert result.recall[0] == pytest.approx(len(chosen & truth) / len(truth))
+
+
+@pytest.mark.parametrize("options, count", [
+    ({"min_margin": .2}, 0), ({"threshold": .95}, 0), ({"threshold": .85}, 1),
+])
+def test_margin_and_nondefault_threshold_are_already_reflected_in_selection(options, count):
+    frame = pd.DataFrame({"left_id": ["A", "A"], "right_id": ["X", "Y"],
+                          "p": [.9, .8], "sim": [1., 1.]})
+    sample = audit_sample(frame, links=resolve(frame, **options))
+    sample["is_match"] = sample.right_id.eq("X")
+    assert sample.selected.sum() == count
+    # A new evaluation threshold cannot alter the saved decision, in either direction.
+    for threshold in (0, 1):
+        result = evaluate(sample, mode="selected", threshold=threshold, n_boot=20)
+        assert result.recall[0] == count
+        assert result.f1[0] == count
+        if not count:
+            assert np.isnan(result.precision[0]) and "No selected links" in result.summary()
+        else:
+            assert result.precision[0] == 1
+
+
+def test_low_threshold_selection_is_not_rethresholded_at_default_half():
+    frame = scores([.3, .2]).assign(sim=1.)
+    sample = audit_sample(frame, links=resolve(frame, threshold=.25), bins=(0, 1))
+    sample["is_match"] = sample.p.eq(.3)
+    result = evaluate(sample, mode="selected", n_boot=20)
+    assert result.precision[0] == result.recall[0] == result.f1[0] == 1
+    assert evaluate(sample, n_boot=20).recall[0] == 0
+
+
+def test_selected_bootstrap_retains_weights_and_is_reproducible():
+    frame = labeled([.8, .7, .6, .1], [1, 0, 1, 0], [2, 4, 10, 20], ["high", "high", "low", "low"])
+    frame = frame.assign(left_id=range(4), right_id=range(4), selected=[True, True, False, False])
+    result = evaluate(frame, mode="selected", n_boot=299, seed=48)
+    assert result.precision[0] == pytest.approx(2 / 6)
+    assert result.recall[0] == pytest.approx(2 / 12)
+    assert result.f1[0] == pytest.approx(4 / 18)
+    rng = np.random.default_rng(48)
+    draws = np.column_stack([rng.integers(0, 2, size=(299, 2)), rng.integers(2, 4, size=(299, 2))])
+    values = []
+    for draw in draws:
+        boot = frame.iloc[draw]
+        tp = (boot.weight * boot.is_match * boot.selected).sum()
+        linked = boot.weight[boot.selected].sum()
+        true = (boot.weight * boot.is_match).sum()
+        values.append([tp / linked, tp / true if true else np.nan, 2 * tp / (linked + true)])
+    expected = np.nanquantile(values, [.025, .975], axis=0)
+    repeated = evaluate(frame, mode="selected", n_boot=299, seed=48)
+    for index, name in enumerate(("precision", "recall", "f1")):
+        assert getattr(result, name)[1:] == pytest.approx(expected[:, index])
+        assert getattr(result, name) == getattr(repeated, name)
+
+
+def test_sampling_preserves_selection_with_unequal_bin_weights():
+    frame = scores([.1] * 30 + [.9] * 10)
+    links = frame.iloc[30:35]
+    sample = audit_sample(frame, links=links, n=10, seed=8)
+    assert sample.weight.sum() == len(frame)
+    assert sample.selected.dtype == bool
+    assert sample.selected.equals(sample.left_id.between(30, 34))
+    sample["is_match"] = sample.left_id.mod(2).eq(0)
+    result = evaluate(sample, mode="selected", n_boot=20)
+    tp = (sample.weight * sample.selected * sample.is_match).sum()
+    assert result.precision[0] == pytest.approx(tp / sample.weight[sample.selected].sum())
+    assert result.recall[0] == pytest.approx(tp / sample.weight[sample.is_match].sum())
+
+
+def test_unjudged_pairs_are_not_in_audit_or_recall_denominator():
+    frame = scores([.9, .8, np.nan, np.nan]).assign(source=["exact", "jev", "unjudged", "error"])
+    sample = audit_sample(frame, links=frame.iloc[:1], bins=(0, 1))
+    assert set(sample.left_id) == {0, 1}
+    assert sample.weight.sum() == 2
+    sample["is_match"] = True
+    result = evaluate(sample, mode="selected", n_boot=20)
+    assert result.recall[0] == .5
+    assert "excludes pairs without a probability" in result.summary()
+    with pytest.raises(ValueError, match="without a judged 'p'"):
+        audit_sample(frame, links=frame.iloc[2:3])
+
+
+def test_selected_incomplete_labels_and_empty_strata():
+    frame = labeled([.9, .8, .1], [1, "", 0], bins=["high", "high", "low"])
+    frame = frame.assign(left_id=range(3), right_id=range(3), selected=[1, 0, 0])
+    result = evaluate(frame, mode="selected", n_boot=20)
+    assert result.n_labeled == 2 and result.n_unlabeled == 1
+    assert result.precision[0] == 1
+    assert "selective missing labels can bias" in result.summary()
+    frame.loc[2, "is_match"] = ""
+    result = evaluate(frame, mode="selected", n_boot=20)
+    assert np.isnan(result.precision).all() and np.isnan(result.brier)
+    assert "No labels in bin(s) low" in result.summary()
+
+
+def test_selected_csv_representations_and_old_files():
+    values = [1, 0, True, False, " TRUE ", "false", 1.0, 0.0, "1", "0"]
+    frame = labeled([.9] * len(values), [1] * len(values))
+    frame = frame.assign(left_id=range(len(values)), right_id=range(len(values)), selected=values)
+    for data in (frame, pd.read_csv(StringIO(frame.to_csv(index=False))),
+                 pd.read_csv(StringIO(frame.to_csv(index=False)), dtype=str)):
+        result = evaluate(data, mode="selected", n_boot=20)
+        assert result.precision[0] == 1 and result.recall[0] == .5
+    old = frame.drop(columns="selected")
+    assert evaluate(old, n_boot=20).recall[0] == 1
+    with pytest.raises(ValueError, match="from actual final links"):
+        evaluate(old, mode="selected", n_boot=20)
+
+
+@pytest.mark.parametrize("value", ["yes", "no", "maybe", "", " ", None, np.nan, pd.NA, 2, -1, .5, np.inf])
+def test_invalid_selection_is_rejected_even_for_unlabeled_rows(value):
+    frame = labeled([.9, .8], [1, ""]).assign(left_id=[0, 1], right_id=[0, 1], selected=[True, value])
+    with pytest.raises(ValueError, match="column 'selected'.*nonmissing"):
+        evaluate(frame, mode="selected", n_boot=20)
+
+
+def test_selection_pair_keys_and_supplied_link_membership_are_validated():
+    frame = scores([.9, .8])
+    for links, error in ((pd.concat([frame.iloc[:1]] * 2), "duplicate"),
+                         (frame.assign(left_id=["other", "absent"]), "absent from scores"),
+                         (frame.assign(left_id=[None, None]), "missing IDs")):
+        with pytest.raises(ValueError, match=error):
+            audit_sample(frame, links=links)
+    sample = audit_sample(frame, links=frame.iloc[:1]).assign(is_match=1)
+    with pytest.raises(ValueError, match="duplicate"):
+        evaluate(pd.concat([sample] * 2), mode="selected", n_boot=20)
+    with pytest.raises(ValueError, match="left_id"):
+        evaluate(sample.drop(columns="left_id"), mode="selected", n_boot=20)
+    with pytest.raises(ValueError, match="mode must be"):
+        evaluate(sample, mode="unknown")
+
+
+def test_standalone_scores_do_not_infer_selection_and_empty_links_are_known_false():
+    frame = scores([.9, .8]).assign(selected=True)
+    assert "selected" not in audit_sample(frame)
+    sample = audit_sample(frame, links=frame.iloc[:0])
+    assert not sample.selected.any()
+    empty = audit_sample(frame, links=frame.iloc[:1], n=0)
+    assert empty.empty and empty.selected.dtype == bool
