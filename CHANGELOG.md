@@ -36,3 +36,5 @@
 - Add `--save DIR` to `link` and `dedupe`: the run directory that `Result.save()` writes, which
   `review create` and `jlink.load` read. The review workflow was unreachable from the command
   line alone before. Stata's `rundir()` and R's `run_dir =` forward it.
+- Settings, `report()` and `methods()` now quote the question exactly as `judge()` sent it;
+  `judge()` records it in `scores.attrs["question"]` and is the only place it is built.
