@@ -155,12 +155,34 @@ def test_window_inside_within_on_a_numeric_group_key():
     assert grouped.dropped(left, right)["right"]["missing"] == 1
 
 
-@pytest.mark.xfail(strict=False, reason="within's group keys compare 75 with 75.0 as text; the fix to "
-                   "block._keys is being made on the base branch (PR #1). Remove this marker after rebasing.")
 def test_window_inside_within_when_one_numeric_group_key_is_float_because_of_a_missing_value():
+    # One missing precinct makes the whole column float64. Group keys read 75 and 75.0 as one key.
     left, right = numeric_groups("float64")
     assert right.precinct.dtype == "float64" and left.precinct.dtype == "int64"
-    assert_array_equal(block.within(block.window("day", 1), "precinct").pairs(left, right), [[0, 0], [2, 1]])
+    grouped = block.within(block.window("day", 1), "precinct")
+    assert_array_equal(grouped.pairs(left, right), [[0, 0], [2, 1]])
+    text = right.assign(precinct=["75.0", "40", "40.0", None])  # the same column after a trip through CSV
+    assert_array_equal(grouped.pairs(left, text), [[0, 0], [2, 1]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        table = block.candidates(left, right, on="day", blockers=[grouped])
+    assert len(table) == 2 and table.attrs["blocking"]["passes"][0]["dropped_values"]["right"]["missing"] == 1
+
+
+def test_a_grouped_window_warns_when_group_keys_disagree_and_only_then():
+    articles = pd.DataFrame({"boro": ["BROOKLYN", "BRONX"], "day": [1, 1]})
+    register = pd.DataFrame({"boro": ["K", "X"], "day": [1, 2]})            # coded differently
+    grouped = block.within(block.window("day", 1), "boro")
+    with pytest.warns(UserWarning, match=r"within:boro\[drop\]\(window:day\[-1\.\.1\]\)' proposed no pairs: its key "
+                                         r"columns have no value in common.*'brooklyn'.*'k'") as caught:
+        assert block.candidates(articles, register, on="day", blockers=[grouped]).empty
+    assert caught[0].filename == __file__  # reported at the caller, not inside jlink
+    # Keys agree and the window is simply empty, or the pass has no keys at all: an answer, not a fault.
+    far = register.assign(boro=["BROOKLYN", "BRONX"], day=[50, 60])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert block.candidates(articles, far, on="day", blockers=[grouped]).empty
+        assert block.candidates(articles, far, on="day", blockers=[block.window("day", 1)]).empty
 
 
 def test_a_wrong_date_format_is_reported_and_an_explicit_one_is_honored():
