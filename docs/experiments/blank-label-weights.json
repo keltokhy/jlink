@@ -37,6 +37,26 @@
       "recall": {
         "mean_estimate": 0.6772936184797351,
         "interval_coverage": 0.8666666666666667
+      },
+      "recall_coverage_by_low_bins": {
+        "share_of_audits_with_a_bin_below_half_showing_no_match": 0.68,
+        "coverage_in_those_audits": 0.8235294117647058,
+        "coverage_in_the_other_audits": 0.9583333333333334
+      }
+    },
+    "same labels, all labeled": {
+      "precision": {
+        "mean_estimate": 0.8824651848206473,
+        "interval_coverage": 0.94
+      },
+      "recall": {
+        "mean_estimate": 0.6927195477427561,
+        "interval_coverage": 0.88
+      },
+      "recall_coverage_by_low_bins": {
+        "share_of_audits_with_a_bin_below_half_showing_no_match": 0.77,
+        "coverage_in_those_audits": 0.8528138528138528,
+        "coverage_in_the_other_audits": 0.9710144927536232
       }
     }
   }

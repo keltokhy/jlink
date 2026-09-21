@@ -155,6 +155,18 @@ was 0.681. Dropping the blanks estimated 0.872, and its 95% interval covered the
 6% of replicates. Reweighting estimated 0.677 with 87% coverage; the fully labeled audits
 gave 0.679 with 92%. Precision was 0.881 throughout, because no link lies in those bins.
 
+The reweighted intervals fall short of 95% because few labels remain in the low bins, where
+true matches are rare, and not because of the reweighting. A partial audit is as informative
+as a fully labeled audit that drew only as many pairs in each bin as were labeled. The same
+simulation draws such an audit independently, with no blank rows and no reweighting, and its
+intervals covered the truth in 88% of replicates, which is within this simulation's noise of
+about two points of the reweighted 87%. The shortfall sits in the audits where some bin
+below 0.5 showed no match among its labels (68% of them): coverage was 82% there and 96% in
+the others. Such a bin adds nothing to the bootstrap's spread, although the matches it failed
+to show belong to recall's denominator. This is the sparse-bin caution under
+[Intervals](#intervals), and fully labeled audits with few pairs per bin share it. Labeling
+more of the low-probability pairs is what narrows the gap.
+
 ## Intervals
 
 The 95% intervals use seeded within-bin resampling of labeled rows with their weights,
@@ -168,7 +180,10 @@ from unjudged candidates, assignment changes in another dataset, model-call vari
 labels left blank for reasons related to the truth. They do not apply
 a finite-population correction; a fully labeled census can still have bootstrap intervals.
 A bin with only one label cannot reveal within-bin variability, and undefined bootstrap
-replicates are excluded and reported. Treat sparse-bin intervals cautiously.
+replicates are excluded and reported. Treat sparse-bin intervals cautiously: a bin whose few
+labels show no match contributes no spread at all, so intervals for recall run short when
+true matches are rare in the low bins, with or without blank labels (see the simulation
+under [Blank labels](#blank-labels)).
 
 ## Changes to reported numbers
 
