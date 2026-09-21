@@ -411,3 +411,11 @@ def test_installed_entrypoints(program):
                             capture_output=True, text=True, check=False)
     assert result.returncode == 2 and result.stderr.startswith("jlink:")
     assert result.stderr.count("\n") == 1 and "absent.csv" in result.stderr
+
+
+def test_cli_estimate_names_the_short_record_scenario(downstream, inputs, capsys):
+    command.cli(["estimate", *map(str, inputs), "--on", "name"])
+    output = capsys.readouterr().out
+    assert "Short-record judging cost scenario:" in output
+    assert "Short-record judging time scenario:" in output
+    assert "330 input tokens" in output and "No API calls" in output

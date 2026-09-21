@@ -426,3 +426,56 @@ def test_cli_window_spec_forms():
     for bad in ("=", "a=b=c", " "):
         with pytest.raises(ValueError, match="--date-format"):
             dates(bad)
+
+
+@pytest.mark.parametrize("value,date_format,utc", [
+    ("03/01/2024 12:00 PM -0500", "%m/%d/%Y %I:%M %p %z", "2024-03-01T17:00:00Z"),
+    ("20240301120000-0500", "%Y%m%d%H%M%S%z", "2024-03-01T17:00:00Z"),
+    ("03/01/2024 05:00 PM UTC", "%m/%d/%Y %I:%M %p %Z", "2024-03-01T17:00:00Z")])
+def test_custom_date_formats_preserve_offset_awareness(value, date_format, utc):
+    left = pd.DataFrame({"date": [value, "unreadable", None]})
+    right = pd.DataFrame({"date": [utc]})
+    window = block.window("date", 0, unit="seconds", date_format=(date_format, None))
+    assert_array_equal(window.pairs(left, right), [[0, 0]])
+    assert window.dropped(left, right)["left"] == {
+        "column": "date", "missing": 1, "unparseable": 1, "time_zone": "utc_offsets"}
+    with pytest.raises(ValueError, match="one side's times carry UTC offsets"):
+        window.pairs(left, pd.DataFrame({"date": [utc[:-1]]}))
+
+
+def test_custom_date_format_handles_different_offsets_and_literal_directives():
+    left = pd.DataFrame({"date": ["03/01/2024 12:00 PM -0500", "03/01/2024 06:00 PM +0100"]})
+    right = pd.DataFrame({"date": ["2024-03-01T17:00:00Z"]})
+    window = block.window("date", 0, unit="seconds", date_format=("%m/%d/%Y %I:%M %p %z", None))
+    assert_array_equal(window.pairs(left, right), [[0, 0], [1, 0]])
+    literal = block.window("date", 0, unit="seconds", date_format=("%Y-%m-%d %%z", None))
+    naive = pd.DataFrame({"date": ["2024-03-01 %z"]})
+    assert_array_equal(literal.pairs(naive, pd.DataFrame({"date": ["2024-03-01"]})), [[0, 0]])
+    assert literal.dropped(naive, pd.DataFrame({"date": ["2024-03-01"]}))["left"]["time_zone"] == "none"
+
+
+@pytest.mark.parametrize("bounds", [(-0.6e-9, 0.6e-9), (0.6e-9, 0.6e-9),
+                                    (0.6e-9, 1.6e-9), (-1.6e-9, -0.6e-9)])
+def test_fractional_nanosecond_bounds_do_not_broaden_the_window(bounds):
+    from fractions import Fraction
+
+    values = [pd.Timestamp("2024-01-01") + pd.Timedelta(n, unit="ns") for n in range(4)]
+    frame = pd.DataFrame({"date": values})
+    low, high = (Fraction(v) * 10**9 for v in bounds)
+    expected = np.array([[i, j] for i, a in enumerate(values) for j, b in enumerate(values)
+                         if low <= a.value - b.value <= high], dtype=np.int64).reshape(-1, 2)
+    window = block.window("date", between=bounds, unit="seconds")
+    assert_array_equal(window.pairs(frame, frame), expected)
+    if bounds == (-0.6e-9, 0.6e-9):
+        assert_array_equal(block.window("date", 0.6e-9, unit="seconds").pairs(frame, frame), expected)
+
+
+@pytest.mark.parametrize("bounds", [(-1, -1), (1, 1), (-2, -1), (1, 2), (0, 0), (-1, 1)])
+def test_date_search_overflow_never_matches_a_saturated_endpoint(bounds):
+    values = [pd.Timestamp.min, pd.Timestamp.min + pd.Timedelta(1, unit="s"),
+              pd.Timestamp.max - pd.Timedelta(1, unit="s"), pd.Timestamp.max]
+    frame = pd.DataFrame({"date": values})
+    low, high = (v * 10**9 for v in bounds)
+    expected = np.array([[i, j] for i, a in enumerate(values) for j, b in enumerate(values)
+                         if low <= a.value - b.value <= high], dtype=np.int64).reshape(-1, 2)
+    assert_array_equal(block.window("date", between=bounds, unit="seconds").pairs(frame, frame), expected)

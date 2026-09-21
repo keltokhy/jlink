@@ -194,3 +194,35 @@ def test_merged_accepts_ids_already_named_left_id_and_right_id(tmp_path):
     result = jlink.Linker("firm", "name", exact_shortcut=True).link(left, right, left_id="left_id", right_id="right_id", progress=False)
     back = jlink.load(result.save(tmp_path / "named"))
     assert len(back.relink().merged(left, right)) == 1
+
+
+@pytest.mark.parametrize("dedupe", [False, True])
+def test_estimate_exposes_short_record_assumptions_and_accepts_token_input(dedupe):
+    estimator = jlink.Linker("article", "text", blockers=[jlink.block.exact("group")])
+    short = pd.DataFrame({"text": ["a"] * 10, "group": [1] * 10})
+    long = short.assign(text="a" * 50_000)
+    estimates = [estimator.estimate(frame, *([] if dedupe else [frame])) for frame in (short, long)]
+    assert estimates[0]["dollars"] == estimates[1]["dollars"]  # pair-count scenario, no length inference
+    assumptions = {"tokens_per_pair": 330, "price_per_million_tokens": 0.042, "pairs_per_second": 200,
+                   "token_basis": "short_records", "throughput_basis": "short_records"}
+    assert estimates[0]["assumptions"] == estimates[1]["assumptions"] == assumptions
+    supplied = estimator.estimate(long, *([] if dedupe else [long]), tokens_per_pair=10_000)
+    assert supplied["dollars"] == round(supplied["pairs"] * 10_000 * 0.042 / 1e6, 4)
+    assert supplied["assumptions"] == assumptions | {"tokens_per_pair": 10_000, "token_basis": "caller_supplied"}
+    assert supplied["seconds"] == estimates[0]["seconds"]  # no new throughput calibration
+
+
+@pytest.mark.parametrize("tokens", [True, 0, -1, float("nan"), float("inf"), "330"])
+def test_estimate_rejects_invalid_token_assumptions(tokens):
+    with pytest.raises(ValueError, match="tokens_per_pair"):
+        linker().estimate(LEFT, RIGHT, tokens_per_pair=tokens)
+
+
+def test_default_identity_link_retains_main_saved_settings(tmp_path):
+    result = run()
+    assert "style" not in result.settings  # absence means identity, as in origin/main
+    directory = result.save(tmp_path / "run")
+    assert "style" not in json.loads((directory / "settings.json").read_text())
+    back = jlink.load(directory)
+    assert back.settings == result.settings and back.report() == result.report()
+    assert back.methods() == result.methods()
