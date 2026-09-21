@@ -349,13 +349,14 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
         brier = float("nan")
     else:
         if totals[1] == 0:
-            description = ("No predicted links at this threshold" if mode == "threshold"
-                           else "No selected links")
+            description = ("No predicted links among labeled pairs at this threshold" if mode == "threshold"
+                           else "No selected links among labeled pairs")
             notes.append(f"{description}: precision and its interval are NaN.")
         if totals[2] == 0:
             notes.append("No true matches among labeled pairs: recall and its interval are NaN.")
         if totals[1] + totals[2] == 0:
-            notes.append("No predicted links or true matches: F1 and its interval are NaN.")
+            links = "predicted" if mode == "threshold" else "selected"
+            notes.append(f"No {links} links or true matches among labeled pairs: F1 and its interval are NaN.")
         boot = _bootstrap(contributions, groups, n_boot, seed)
         for index, name in enumerate(("precision", "recall", "F1")):
             finite = np.isfinite(boot[:, index])
