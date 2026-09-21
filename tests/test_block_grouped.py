@@ -1,6 +1,7 @@
 """Grouped/reverse candidate search, streaming limits, and public diagnostics."""
 
 import json
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -90,6 +91,60 @@ def test_typed_group_nulls_follow_missing_policy(values):
     assert_array_equal(block.within(block.exact("name"), "group", missing="match").pairs(frame, frame),
                        [[0, 0], [0, 1], [1, 0], [1, 1], [2, 2]])
     assert_array_equal(block.exact("group").pairs(frame, frame), [[2, 2]])
+
+
+@pytest.mark.parametrize("left_years,right_years", [
+    ([1985, 1990, 2001], [1985.0, 1990.0, 2001.0, np.nan]),          # any missing value makes a column float
+    (["1985", "1990", "2001"], ["1985.0", "1990.0", "2001.0", None]),  # the same column after a CSV round trip
+    (np.array([1985, 1990, 2001], dtype=np.int32), ["1985", "1990.00", " 2001 ", ""]),
+    (pd.array([1985, 1990, 2001], dtype="Int64"), pd.array([1985, 1990, 2001, None], dtype="Float64")),
+    # Sixteen-digit identifiers are still exact as doubles, beyond where the judge's cleaning makes ints.
+    ([4000000000000001, 4000000000000002, 4000000000000003], [4000000000000001.0, 4000000000000002.0,
+                                                               4000000000000003.0, np.nan]),
+])
+def test_whole_number_keys_agree_across_integer_float_and_text_columns(left_years, right_years):
+    left = pd.DataFrame({"name": ["Acme Corp", "Bolt Inc", "Cargo LLC"], "year": left_years})
+    right = pd.DataFrame({"name": ["Acme Corporation", "Bolt Incorporated", "Cargo", "Acme Corp"],
+                          "year": right_years})
+    expected = [[0, 0], [1, 1], [2, 2]]
+    assert_array_equal(block.exact("year").pairs(left, right), expected)
+    grouped = block.within(block.ngrams("name", k=5, min_sim=0), "year")
+    assert_array_equal(grouped.pairs(left, right), expected)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result = block.candidates(left, right, on="name", blockers=[grouped])
+    assert _pairs(result) == {(0, 0), (1, 1), (2, 2)}
+    assert result.attrs["blocking"]["passes"][0]["proposed_pairs"] == 3
+
+
+def test_numeric_keys_stay_distinct_unless_they_are_the_same_whole_number():
+    left = pd.DataFrame({"key": [1985.5, 1985.0, "1985.05", "v1.0.0", "02139"]})
+    right = pd.DataFrame({"key": ["1985", 1985.5, "1985.50", "v1", "1985.05", 2139]})
+    assert_array_equal(block.exact("key").pairs(left, right), [[0, 1], [1, 0], [2, 4]])
+
+
+@pytest.mark.parametrize("make", [lambda: block.exact("year"),
+                                  lambda: block.within(block.ngrams("name", k=2), "year")])
+def test_keyed_pass_without_any_shared_key_warns_instead_of_silently_proposing_nothing(make):
+    left = pd.DataFrame({"name": ["Acme", "Bolt"], "year": [1985, 1990]})
+    right = pd.DataFrame({"name": ["Acme", "Bolt"], "year": ["FY85", "FY90"]})
+    with pytest.warns(UserWarning, match=r"proposed no pairs.*no value in common.*'1985'.*'fy85'"):
+        result = block.candidates(left, right, on="name", blockers=[make()])
+    assert result.empty
+    with pytest.warns(UserWarning, match="right: no complete key"):
+        block.candidates(left, right.assign(year=None), on="name", blockers=[make()])
+
+
+def test_no_key_warning_for_empty_inputs_shared_keys_or_unkeyed_passes():
+    left = pd.DataFrame({"name": ["Acme"], "year": [1985]})
+    right = pd.DataFrame({"name": ["Zzzz"], "year": [1985.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        # The groups agree; it is the inner search that finds nothing.
+        inner = block.candidates(left, right, on="name", blockers=[block.within(block.ngrams("name", k=1), "year")])
+        unkeyed = block.candidates(left, right, on="name", blockers=[block.initials("name")])
+        empty = block.candidates(left, right.iloc[:0], on="name", blockers=[block.exact("year")])
+    assert inner.empty and unkeyed.empty and empty.empty
 
 
 @pytest.mark.parametrize("right_state", ["CA", "NY"])
