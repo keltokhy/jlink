@@ -161,7 +161,9 @@ from unjudged candidates, assignment changes in another dataset, model-call vari
 labels left blank for reasons related to the truth. They do not apply
 a finite-population correction; a fully labeled census can still have bootstrap intervals.
 A bin with only one label cannot reveal within-bin variability, and undefined bootstrap
-replicates are excluded and reported. Treat sparse-bin intervals cautiously.
+replicates are excluded and reported. Treat sparse-bin intervals cautiously: a bin whose few
+labels show no match contributes no spread at all, so intervals for recall run short when
+true matches are rare in the low bins, with or without blank labels.
 
 ## Changes to reported numbers
 
