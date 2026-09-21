@@ -42,5 +42,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/jlink"]
 
+[tool.hatch.build.targets.sdist]
+# The package and what describes it. Benchmarks, docs and tests stay in the repository.
+include = ["/src", "/README.md", "/LICENSE", "/pyproject.toml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
