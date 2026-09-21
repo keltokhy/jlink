@@ -94,6 +94,30 @@ def test_saved_integer_ids_restore_before_alignment(source):
     assert review.apply().links.iloc[0].left_id == 2**53 + 1
 
 
+def test_saved_float_ids_restore_before_alignment(source, capsys):
+    settings_path = source / "run" / "settings.json"
+    settings = json.loads(settings_path.read_text())
+    settings["id_kinds"]["left_id"] = "float"
+    settings_path.write_text(json.dumps(settings))
+    for file in ("scores.csv", "links.csv"):
+        frame = pd.read_csv(source / "run" / file, keep_default_na=False, dtype=str)
+        frame["left_id"] = frame.left_id.map({"001": "1001.0", "NA": "1002.5"})
+        frame.to_csv(source / "run" / file, index=False)
+    left = pd.read_csv(source / "left.csv", keep_default_na=False, dtype=str)
+    # A delimited export may spell the same double with or without its decimal part.
+    left.assign(id=["1001", "1002.5", "1003.0"]).to_csv(source / "left.csv", index=False)
+    cli(create_args(source))
+    review = jlink.read_review(source / "review.json")
+    assert review.to_dict()["source"]["records"]["left"][0]["id"] == {"type": "float", "value": "1001.0"}
+    assert review.apply().links.iloc[0].left_id == 1001.0
+    left.assign(id=["1001", "not a number", "1003"]).to_csv(source / "left.csv", index=False)
+    (source / "review.html").unlink(), (source / "review.json").unlink()
+    with pytest.raises(SystemExit):
+        cli(create_args(source))
+    assert "disagrees with saved floating-point IDs" in capsys.readouterr().err
+    assert not (source / "review.html").exists()
+
+
 @pytest.mark.parametrize("args", [["--help"], ["review", "--help"], ["review", "create", "--help"],
                                  ["review", "apply", "--help"], ["review", "page", "--help"]])
 def test_review_is_discoverable(args, capsys):

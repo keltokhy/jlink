@@ -235,7 +235,7 @@ class Result:
         d.mkdir(parents=True, exist_ok=True)
         self.links.to_csv(d / "links.csv", index=False)
         self.scores.to_csv(d / "scores.csv", index=False)
-        kinds = {c: "int" if pd.api.types.is_integer_dtype(self.scores[c]) else "str" for c in ("left_id", "right_id")}
+        kinds = {c: _id_kind(self.scores[c]) for c in ("left_id", "right_id")}
         (d / "settings.json").write_text(json.dumps(
             self.settings | {"result_format_version": 2, "id_kinds": kinds}, indent=2), encoding="utf-8")
         return d
@@ -249,12 +249,13 @@ class Result:
 
 
 def load(directory: str | Path) -> Result:
-    """Read a result written by `Result.save`. IDs come back as they were: integers or strings."""
+    """Read a result written by `Result.save`. IDs come back as they were: integers, floats or strings."""
     d = Path(directory)
     settings = json.loads((d / "settings.json").read_text(encoding="utf-8"))
     settings.pop("result_format_version", None)
     kinds = settings.pop("id_kinds", {})
-    dtype = {c: "int64" if kinds.get(c) == "int" else str for c in ("left_id", "right_id")}
+    # Runs saved before float IDs were recorded call them "str", and still load as text.
+    dtype = {c: _ID_DTYPES.get(kinds.get(c), str) for c in ("left_id", "right_id")}
     # Missing numeric scores/errors are separate from literal IDs such as NA, NULL and 001.
     numeric = ("sim", "p", "margin", "answered_at")
     optional_text = ("error", "model", "provider", "score_origin")
@@ -277,6 +278,16 @@ def load(directory: str | Path) -> Result:
                   answer_provenance=settings.get("answer_provenance", []),
                   cost_sources=settings.get("cost_sources", {}))
     return Result(links, scores, settings, meter)
+
+
+_ID_DTYPES = {"int": "int64", "float": "float64"}
+
+
+def _id_kind(ids_: pd.Series) -> str:
+    """Stata often stores numeric IDs as doubles; as text they would no longer merge with the source."""
+    if pd.api.types.is_integer_dtype(ids_):
+        return "int"
+    return "float" if pd.api.types.is_float_dtype(ids_) else "str"
 
 
 def _model_description(settings: dict) -> str:

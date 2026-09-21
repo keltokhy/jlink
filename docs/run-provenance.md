@@ -118,9 +118,11 @@ or runs serialized blockers.
 
 ## Backward compatibility and unknown provenance
 
-Old result directories remain loadable. Existing string/integer ID types are retained; literal
-IDs `"NA"`, `"NULL"`, `"nan"`, empty strings, and leading-zero strings are not treated as missing
-scores. Numeric score columns and optional error/provenance columns handle empty CSV cells
+Old result directories remain loadable. String, integer and floating-point ID types are
+retained, so a loaded result still merges with source tables whose numeric IDs are stored as
+doubles, as Stata often stores them. Float IDs saved before this was recorded load as text,
+as they did then. Literal IDs `"NA"`, `"NULL"`, `"nan"`, empty strings, and leading-zero
+strings are not treated as missing scores. Numeric score columns and optional error/provenance columns handle empty CSV cells
 separately; literal error messages `"NA"` and `"NULL"` survive. Floating-point scores use the
 round-trip CSV parser so reloading does not shift a threshold boundary by a rounding unit.
 The saved format records `result_format_version=2` alongside the historical `id_kinds`.
