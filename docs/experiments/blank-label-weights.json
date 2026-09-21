@@ -1,0 +1,43 @@
+{
+  "population_pairs": 60000,
+  "audit_n": 600,
+  "blank_rate_below_half": 0.7,
+  "replicates": 300,
+  "n_boot": 200,
+  "truth": {
+    "precision": 0.881233595800525,
+    "recall": 0.6808618504435995
+  },
+  "arms": {
+    "all labeled": {
+      "precision": {
+        "mean_estimate": 0.8807144192913381,
+        "interval_coverage": 0.9433333333333334
+      },
+      "recall": {
+        "mean_estimate": 0.6789013329210455,
+        "interval_coverage": 0.9166666666666666
+      }
+    },
+    "dropped": {
+      "precision": {
+        "mean_estimate": 0.8807144192913381,
+        "interval_coverage": 0.9466666666666667
+      },
+      "recall": {
+        "mean_estimate": 0.8720302538282312,
+        "interval_coverage": 0.06
+      }
+    },
+    "reweighted": {
+      "precision": {
+        "mean_estimate": 0.8807144192913381,
+        "interval_coverage": 0.9466666666666667
+      },
+      "recall": {
+        "mean_estimate": 0.6772936184797351,
+        "interval_coverage": 0.8666666666666667
+      }
+    }
+  }
+}
