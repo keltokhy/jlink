@@ -140,11 +140,17 @@ def _selected(values: pd.Series) -> pd.Series:
     return text.map(mapping).astype(bool)
 
 
+def _blank(values: pd.Series) -> pd.Series:
+    """Rows whose human label is missing or only whitespace."""
+    text = values.astype("string").str.strip()
+    return text.isna() | text.eq("").fillna(False)
+
+
 def _labels(values: pd.Series) -> pd.Series:
     text = values.astype("string").str.strip().str.casefold()
     mapping = {"1": 1.0, "1.0": 1.0, "true": 1.0, "y": 1.0, "yes": 1.0,
                "0": 0.0, "0.0": 0.0, "false": 0.0, "n": 0.0, "no": 0.0}
-    blank = text.isna() | text.eq("").fillna(False)
+    blank = _blank(values)
     invalid = ~blank & ~text.isin(mapping)
     if invalid.any():
         bad = values.loc[invalid].iloc[0]
