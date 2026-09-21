@@ -13,6 +13,16 @@ Modules are built in parallel by different people. This file is the contract bet
 Do not change a signature or a column name here without raising it; note the problem in your
 DONE.md instead.
 
+The correctness/provenance update supersedes the original exact-match, budget, saved-result,
+and shared-core assumptions below. See [run provenance](docs/run-provenance.md) for the
+fieldwise nonmissing exact policy, cache-only zero budgets, additive score/settings metadata,
+backward-compatible cache extensions, and the documented divergence from jgrep's core.
+
+The [hybrid linkage update](docs/hybrid-linkage.md) further supersedes the original automatic
+exact policy: `exact_shortcut=False` is now the default, with explicit Python/CLI opt-in.
+It adds optional `block.embeddings` and an optional install extra; the base runtime dependency
+set and candidate/score/link column meanings remain unchanged. Historical scores are preserved.
+
 ## Pipeline and modules
 
 ```
@@ -75,7 +85,7 @@ columns literally named `left_id` and `right_id`, whatever the source columns we
 | column | type | meaning |
 |---|---|---|
 | `p` | float | probability the pair is a match; NaN if not judged |
-| `source` | str | `exact` (all `on` fields identical after normalization; no API call), `jev`, `error`, or `unjudged` (budget ran out) |
+| `source` | str | `exact` (only with `exact_shortcut=True`: every `on` field nonempty and identical after normalization; no API call), `jev`, `error`, or `unjudged` (budget ran out) |
 | `error` | str or NA | message when `source == "error"` |
 
 **links**: the chosen pairs, with every `scores` column plus
@@ -93,23 +103,36 @@ class Blocker:
     name: str
     def pairs(self, left: pd.DataFrame, right: pd.DataFrame) -> np.ndarray: ...
         # shape (m, 2), dtype int64: positions (not IDs) of left and right rows
+    def iter_pairs(self, left: pd.DataFrame, right: pd.DataFrame) -> Iterator[np.ndarray]: ...
+        # bounded batches for built-ins; fallback calls pairs() for existing custom passes
+    def to_config(self) -> dict: ...  # JSON-safe configuration; recursive for within
 
 def exact(*columns: str | tuple[str, str], name: str | None = None) -> Blocker
 def ngrams(*columns: str | tuple[str, str], k: int = 10, n: tuple[int, int] = (2, 4),
-           min_sim: float = 0.1, name: str | None = None) -> Blocker
+           min_sim: float = 0.1, name: str | None = None, reverse: bool = False) -> Blocker
 def initials(column: str | tuple[str, str], min_len: int = 2, name: str | None = None) -> Blocker
+def within(blocker: Blocker, *columns: str | tuple[str, str], missing: str = "drop",
+           name: str | None = None) -> Blocker
 def candidates(left, right, *, on, blockers: list[Blocker] | None = None, left_id=None, right_id=None,
                max_pairs: int | None = 5_000_000) -> pd.DataFrame
 def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
 ```
 
-- `exact`: pairs whose listed columns are all equal after `normalize`. Rows with an empty key
-  never pair. Default name `exact:<columns>`.
+- `exact`: pairs whose listed columns are all equal after `normalize`. Whole numbers agree
+  however they are stored: integer 1985, float 1985.0 and the texts "1985" and "1985.0" are one
+  key. Rows with an empty key never pair. Default name `exact:<columns>`.
 - `ngrams`: for each left row, the `k` right rows with the highest character n-gram TF-IDF
   cosine similarity on the listed columns (joined as in `record_text`), keeping only
   similarity >= `min_sim`. Must scale: 100,000 by 100,000 rows in a few minutes and under
   4 GB, so multiply sparse matrices in row chunks and take top-k per chunk. Never build a
   dense n-by-m matrix. Default name `ngrams:<columns>`.
+  With `reverse=True`, select up to `k` left neighbors per right row, still returning
+  `(left_position, right_position)`; default name `ngrams-reverse:<columns>`. Union forward
+  and reverse passes for symmetric search. The default remains forward only.
+- `within`: run its child blocker separately in each matching normalized exact group,
+  supporting mapped left/right columns and restoring original positions. N-gram TF-IDF is
+  fit within each group. `missing="drop"` omits incomplete keys; `missing="match"` allows
+  identical incomplete keys (empty components are equal, not wildcards).
 - `initials`: pairs where one side's normalized text, read as one token of at least `min_len`
   letters, equals the initials of the other side's tokens, in either direction ("IBM" and
   "International Business Machines"). Ignore the stop words `and`, `of`, `the`, `for` and
@@ -118,8 +141,12 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   `initials:<column>`.
 - `candidates`: run each blocker, union the pairs, fill `block` and `sim`, map positions to
   IDs. `blockers=None` means `[ngrams(*all on fields, k=10)]`. If the union exceeds
-  `max_pairs`, raise `ValueError` that says how many pairs there were and suggests a smaller
-  `k` or an `exact` pass.
+  `max_pairs`, raise `ValueError` at the first excess unique pair, reporting an "at least"
+  count and suggesting smaller `k`, `within(...)`, or constraining/removing broad passes.
+  Built-ins stream bounded pair batches via `iter_pairs`; custom `pairs` implementations
+  remain supported. Adding `exact` cannot constrain another pass because passes are unioned.
+  `Blocker.to_config()` and `candidates.attrs["blocking"]` expose nested configurations and
+  per-pass contributions; see [the schema and ordering contract](docs/blocking.md).
 - `pairs_completeness`: share of `truth` pairs (columns `left_id`, `right_id`) present in
   `candidates`. This is blocking recall.
 
@@ -128,12 +155,16 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
 ```python
 def judge(candidates, left, right, *, on, entity: str, definition: str = "", left_id=None, right_id=None,
           api=None, model=None, concurrency=32, budget: float | None = 5.0, cache=True,
-          exact_shortcut=True, progress=True, transport=None) -> tuple[pd.DataFrame, Meter]
+          exact_shortcut=False, progress=True, transport=None) -> tuple[pd.DataFrame, Meter]
 ```
 
 One call per pair. The state is `{"record_a": {label: value, ...}, "record_b": {...}}` with
 missing fields dropped. Pairs are judged in descending `sim`, so a budget is spent on the
 likeliest pairs first. Returns the scores table and the cost meter.
+
+By default every pair is judged, equal text included: identical names need not be one entity.
+`exact_shortcut=True` accepts a pair at `p = 1` without a call when every `on` field is
+nonempty on both sides and equal, field by field, after `normalize`.
 
 ## resolve.py
 
@@ -157,6 +188,10 @@ pass). The default is no margin filter: a filter at 0 would silently remove ever
 higher-scoring competitor, which guts `many-to-many`.
 
 ## audit.py
+
+The evaluation extension in [docs/evaluation.md](docs/evaluation.md) adds optional `links=`
+to `audit_sample` and `mode="threshold"|"selected"` to `evaluate`. It supersedes this older
+section where noted; threshold evaluation remains the backward-compatible default.
 
 ```python
 def audit_sample(scores, *, n=200, bins=(0, 0.05, 0.2, 0.5, 0.8, 0.95, 1.0), seed=0,

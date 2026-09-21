@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>jlink · Local review</title>
+<style>/* REVIEW_CSS */</style>
+</head>
+<body>
+<header>
+  <div class="brand">jlink <span>LOCAL REVIEW</span></div>
+  <div class="toolbar"><button id="export">Export review JSON</button><label class="button secondary" for="import">Import review JSON<input id="import" type="file" accept=".json,application/json"></label></div>
+</header>
+<section class="intro">
+  <div><p class="eyebrow">RECORD LINKAGE / HUMAN REVIEW</p><h1>Make the uncertain links explicit.</h1>
+  <p id="rule"></p><p id="settings" class="muted"></p></div>
+  <div class="reviewer"><label for="reviewer">Reviewer identity <span aria-hidden="true">*</span></label><input id="reviewer" placeholder="Name or researcher ID" autocomplete="off"><p class="muted">Required for every decision. Export JSON to keep a durable copy.</p></div>
+</section>
+<div id="status" role="status" aria-live="polite">Ready. Everything on this page stays on this device.</div>
+<div id="conflicts" role="alert" hidden></div>
+<section class="stats" aria-label="Review progress"><div><strong id="n-records">0</strong><span>records</span></div><div><strong id="n-links">0</strong><span>original links</span></div><div><strong id="n-reviewed">0</strong><span>pairs reviewed</span></div><div><strong id="n-events">0</strong><span>history events</span></div></section>
+<main>
+  <aside>
+    <div class="queue-controls"><h2>Review queue</h2><p class="muted">Close competitors and unmatched records first.</p>
+    <label for="side">Record table</label><select id="side"><option value="left">Left records</option><option value="right">Right records</option></select>
+    <label for="filter">Show</label><select id="filter"><option value="all">All records</option><option value="close">Close competitors</option><option value="unmatched">Originally unmatched</option><option value="no-candidate">No candidate</option><option value="unjudged">Unjudged / error candidates</option><option value="reviewed">Has human decisions</option></select>
+    <label for="search">Search IDs or fields</label><input id="search" type="search" placeholder="Search records"></div>
+    <p id="queue-count" class="muted"></p><div id="queue" aria-label="Records"></div>
+  </aside>
+  <section id="detail" aria-label="Record and competing candidates"></section>
+</main>
+<footer><details><summary>How decisions are applied</summary><p>Accept pins a link, even below the threshold or without a model judgment. Reject removes a candidate. Unsure releases a previous constraint. Probabilities and original links stay unchanged. Conflicting accepts stop application. Remaining candidates use the declared cardinality, threshold and margin, with margins recomputed among feasible candidates.</p><p>After export, run: <code>jev-link review apply review.json -o reviewed-links.json</code>. Use <code>--csv reviewed-links.csv</code> for a spreadsheet-safe display copy.</p><p>The page shows original selection, plus pending manual constraints. It does not claim to show the recomputed assignment. Local storage is a convenience; the exported JSON is the durable record. Independent amendments to the same history branch must be reconciled explicitly.</p></details><p id="run-id"></p></footer>
+<script id="review-data" type="application/json">REVIEW_DATA</script>
+<script>/* REVIEW_JS */</script>
+</body>
+</html>

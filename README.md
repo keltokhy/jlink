@@ -120,10 +120,12 @@ What the table says:
   with character-level corruption, and TF-IDF cosine is nearly perfect there and free. jlink
   made no false links (precision 1.00) but was too cautious at 0.5; at a threshold of 0.3 its
   F1 is 0.98.
-- **The firm benchmark has a ceiling that no name-based method can pass.** A third of the NBER
-  crosswalk's links are ownership facts with nothing in common in the names ("Homogeneous
-  Metals Inc" to "United Technologies Corp"), so blocking can propose only 67% of true links.
-  jlink found 93% of those. (A sliver of its error is the benchmark's: 11 Compustat names appear
+- **The firm run was limited by its candidate search.** The default forward top-10 n-gram
+  pass proposed 67% of known links; this is measured blocking recall, not a ceiling for
+  name-based methods. Ownership links such as "Homogeneous Metals Inc" to "United Technologies
+  Corp" can be difficult to retrieve from names. jlink found 93% of the proposed true links.
+  [Offline blocking comparisons](docs/blocking.md) show the recall and pair-count tradeoffs of
+  reverse search and larger `k`. (A sliver of its error is the benchmark's: 11 Compustat names appear
   under two IDs, which accounts for 14 of jlink's 331 false links.)
 - **Amazon to Google is hard for everyone**, because listings differ in version and edition
   details that the records often omit.
@@ -144,7 +146,11 @@ probability.
 **Speed.** The firm run judged 45,567 pairs in 176 seconds (259 pairs a second, 64 calls in
 flight, median latency 214 ms, one retry). Blocking 100,000 by 100,000 records takes about four
 minutes and 1 GB on an M3 Ultra; blocking time grows roughly with the square of the data, so
-beyond that size add an `exact` pass on a field such as state or year to split the problem.
+beyond that size, a reliable shared field such as state or year can restrict the search with
+`jlink.block.within(jlink.block.ngrams("name"), "state")`. This searches separately inside
+matching groups. Adding a separate `exact("state")` pass unions more pairs and does not split
+the existing search. Grouping can lose matches when group values disagree or are missing;
+see [grouping, reverse search, and pair limits](docs/blocking.md).
 
 Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`, then
 `uv run python bench/live.py nber-firms --budget 1.00`. Baselines and data provenance are in
@@ -157,16 +163,17 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
    ten nearest right records by character n-grams. Add passes for what n-grams miss:
    `jlink.block.initials("name")` pairs "IBM" with "International Business Machines", and
    `jlink.block.exact("state")` pairs everything within a state.
-2. **Judge.** Each candidate pair goes to Jev with your rule. Pairs whose fields are identical
-   after normalizing case, accents and punctuation are accepted without a call. Likelier pairs
-   are judged first, so if a budget runs out it is the long shots that go unjudged.
+2. **Judge.** Each candidate pair goes to Jev with your rule, including equal names: identical
+   text need not identify the same entity. If equal compared fields establish identity in your
+   data, explicitly enable `Linker(..., exact_shortcut=True)` to accept complete normalized
+   equalities without a call. Likelier pairs are judged first; cached scores remain available after the budget runs out.
 3. **Resolve.** Choose links from the probabilities: `one-to-one` (the default; the best
    overall assignment with no record used twice), `many-to-one`, `one-to-many` or
    `many-to-many`, with a probability threshold and an optional margin over the runner-up.
    `result.relink(...)` tries other rules without paying again.
 4. **Audit.** `result.audit_sample(200)` draws pairs across the probability range, links and
    non-links alike, with both records side by side. Label them in a spreadsheet, then
-   `jlink.evaluate(labeled)` reports precision, recall and calibration.
+   `jlink.evaluate(labeled, mode="selected")` evaluates the delivered links and pair-score calibration.
 
 ```python
 linker = jlink.Linker(
@@ -183,21 +190,54 @@ panel = strict.merged()                                   # both tables side by 
 result.save("linkage/")                                   # links.csv, scores.csv, settings.json
 ```
 
+`budget=0` allows cache hits and explicitly enabled exact shortcuts only; `budget=None` is unlimited. A positive
+budget stops new requests at the observed cost, but calls already in flight can overshoot it.
+Saved runs retain input fingerprints, blocker parameters, and model identities, including
+cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
+
+### Optional semantic candidate search
+
+Install `uv add 'jlink[embeddings]'` (or `uv sync --extra embeddings` in this checkout), then
+combine local embeddings with character matching:
+
+```python
+passes = [
+    jlink.block.ngrams(("conm", "assignee"), k=10),
+    jlink.block.embeddings(("conm", "assignee"), k=10,
+        model="sentence-transformers/all-MiniLM-L6-v2",
+        revision="1110a243fdf4706b3f48f1d95db1a4f5529b4d41"),
+]
+linker = jlink.Linker("firm", [("conm", "assignee")], definition="...", blockers=passes)
+```
+
+The embedding model runs locally; its weights download on first use. The union can recover
+aliases that character similarity misses, at the cost of more candidate pairs. This is an
+optional retrieval method, not a claim that any particular encoder beats other systems.
+See [semantic retrieval and benchmark instructions](docs/hybrid-linkage.md).
+
 ## Checking the links
 
 ```python
 sample = result.audit_sample(n=200)
 sample.to_csv("audit.csv", index=False)      # fill in is_match with 1 or 0, then:
 
-ev = jlink.evaluate(pd.read_csv("audit.csv"))
+labeled = pd.read_csv("audit.csv", dtype={"left_id": str, "right_id": str})
+ev = jlink.evaluate(labeled, mode="selected")
 print(ev.summary())
 print(ev.to_markdown())                      # a table for the appendix
 ```
 
 The sample is stratified by probability, so the uncertain middle is covered and not only the
-easy ends, and the estimates are weighted back to all judged pairs. Recall is measured among
-candidate pairs. A true match that blocking never proposed is invisible to the audit, so widen
-blocking (a larger `k`, an extra pass) and see whether new links appear.
+easy ends, and the estimates are weighted back to all judged pairs. Selected mode uses the
+sample's saved membership in the final links; the default `mode="threshold"` instead assesses
+`p >= threshold`, before assignment and margin filtering. Recall covers judged candidates
+only, excluding unjudged pairs and true matches lost in blocking. Brier and calibration always
+assess pair scores. See [evaluation modes and limitations](docs/evaluation.md) for incomplete
+labels, bootstrap assumptions and the exported table contract.
+
+For a local side-by-side review page with accept/reject/unsure decisions, durable history,
+and offline recomputation, see [Local human review](docs/review.md). Start with
+`jlink.create_review(result).write_html("review.html")` or `jev-link review --help`.
 
 ## Command line, Stata and R
 
@@ -207,8 +247,9 @@ jlink link compustat.dta patents.csv --on conm=assignee --on state --entity firm
       --define "A parent company and its subsidiary are different firms." \
       --left-id gvkey --right-id assignee_id --block ngrams:conm=assignee:10 --block initials:conm=assignee \
       -o links.csv --scores scores.csv --report report.md
-jlink audit scores.csv --left compustat.dta --right patents.csv --on conm=assignee -n 200 -o audit.csv
-jlink evaluate audit.csv --markdown
+jlink audit scores.csv --links links.csv --left compustat.dta --right patents.csv --on conm=assignee \
+      --left-id gvkey --right-id assignee_id -n 200 -o audit.csv
+jlink evaluate audit.csv --mode selected --markdown
 ```
 
 The Stata and R wrappers are single files in this repository, not part of the Python package: copy
@@ -247,12 +288,13 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 ## Development
 
 ```bash
-uv sync --group bench && uv run pytest   # 279 tests, offline, no key; Stata and R tests skip if absent
+uv sync --group bench && uv run pytest   # offline, no key; Stata and R tests skip if absent
 ```
 
 `SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the
-Jev client (two backends, retries, cache, cost meter), shared verbatim with
+Jev client (two backends, retries, cache, cost meter), historically shared with
 [jgrep](https://github.com/keltokhy/jgrep), which is grep with a description in place of a
-pattern.
+pattern. jlink's additive cache/provenance extensions are documented in
+[run provenance](docs/run-provenance.md#backward-compatibility-and-unknown-provenance).
 
 MIT license. The benchmark datasets keep their own terms; see `bench/FIRM_DATA.md`.

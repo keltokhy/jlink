@@ -5,4 +5,5 @@ dist/
 bench/data/
 bench/out/
 .env
+.DS_Store
 *.key
