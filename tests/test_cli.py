@@ -252,6 +252,34 @@ def test_audit_without_sources_and_numeric_errors(downstream, tmp_path, capsys):
                  "with a blank label need theirs too, so restore it from the table `audit` wrote")
 
 
+def test_evaluate_names_stata_bins_without_changing_any_number(tmp_path, capsys):
+    from jlink.audit import audit_sample, evaluate
+    from jlink.io import write_table
+
+    scores = pd.DataFrame({"left_id": range(600), "right_id": range(600),
+                           "p": [.01, .1, .3, .6, .9, .99] * 100})
+    sample = audit_sample(scores, n=60, seed=0)
+    sample["is_match"] = ["1" if p > .5 else "0" if i % 3 else "" for i, p in enumerate(sample.p)]
+    write_table(sample, tmp_path / "audit.dta")
+    sample.to_csv(tmp_path / "audit.csv", index=False)
+    coded = read_table(tmp_path / "audit.dta")
+    assert coded.bin.dtype.kind == "i"  # read_table keeps Stata's codes on purpose
+    command.cli(["evaluate", str(tmp_path / "audit.dta"), "--markdown"])
+    from_stata = capsys.readouterr().out
+    command.cli(["evaluate", str(tmp_path / "audit.csv"), "--markdown"])
+    assert from_stata == capsys.readouterr().out  # the same report as from a delimited audit
+    assert "| (0.2, 0.5] | 7 |" in from_stata and "| 2 | 7 |" not in from_stata
+    assert "((0.05, 0.2] x2, [0, 0.05] x1.67, (0.2, 0.5] x1.43)" in from_stata
+    by_code, by_name = evaluate(coded), evaluate(coded.assign(bin=coded.bin.map(
+        dict(enumerate(sample.bin.cat.categories)))))
+    assert (by_code.precision, by_code.recall, by_code.f1, by_code.brier) == (
+        by_name.precision, by_name.recall, by_name.f1, by_name.brier)
+    # Codes without a complete, unambiguous set of labels are left as they are.
+    write_table(coded, tmp_path / "unlabeled.dta")
+    command.cli(["evaluate", str(tmp_path / "unlabeled.dta")])
+    assert "sampling weight (1 x2, 0 x1.67, 2 x1.43)" in capsys.readouterr().out
+
+
 def test_audit_aligns_numeric_stata_ids(downstream, tmp_path):
     paths = ("left.dta", "right.dta", "scores.csv", "a.csv")
     left, right, scores, output = [tmp_path / name for name in paths]
