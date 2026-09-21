@@ -117,12 +117,17 @@ column, or one `(left, right)` pair; repeat the pass or wrap it in `within` for 
   `date_format="%m/%d/%Y"`, or `date_format=(left_format, right_format)` with `None` for an
   ISO side. Without it `03/02/2024` is unreadable, not a guess between March and February.
   Dates are compared as whole nanoseconds, exactly; they must fall in the years 1677 to 2262.
+  Fractional-nanosecond bounds use the ceiling of the lower bound and floor of the upper
+  bound, computed from the supplied binary floats. An interval containing no whole nanosecond
+  admits no pairs. Search endpoints beyond the timestamp range cannot add boundary matches.
 - A date-only value is midnight. `between=(0, 3), unit="days"` therefore pairs an article
   stamped `2024-03-05T09:00` with an incident on `2024-03-02` only if the incident has a
   time of day at or after 09:00. Truncate timestamps to dates first when you mean calendar
   days, or widen the window.
 - Times with UTC offsets are compared in UTC. A column that mixes offset and offset-free
   times, or one side with offsets and the other without, is an error and not an assumption.
+  Explicit formats detect awareness from parsed values, including `%z` offsets and supported
+  `%Z` zone names such as UTC, before conversion to UTC.
 - Missing values (nulls, empty or blank text) and unreadable values never pair.
   `blocker.dropped(left, right)` returns the count of each per side, and `candidates` stores the
   same object as `dropped_values` in that pass's diagnostics. Unreadable values also raise a
@@ -270,6 +275,8 @@ inherits `{"type": "custom", "name": ..., "class": ..., "reconstructable": false
 That record explicitly does not claim to preserve custom constructor parameters. A
 custom blocker can override `to_config()` with a JSON-safe parameter description.
 This API describes configuration; it does not deserialize or execute saved classes.
+Link and dedupe runs validate and capture blocker configurations after generating candidates
+and before judging. A configuration that cannot be saved as JSON fails before any model request.
 
 `candidates.attrs["blocking"]` is a JSON-safe object with `schema_version: 1`,
 `max_pairs`, `pair_count`, and `passes` in the submitted order. Each pass has:

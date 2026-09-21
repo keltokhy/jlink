@@ -169,6 +169,8 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame, *, unorder
 - `window`: pairs with `low <= left - right <= high`, from `tolerance=t` (`-t` to `t`) or
   `between=(low, high)`, which may be one-sided. No `unit` means numbers; a `unit` of weeks,
   days, hours, minutes or seconds means dates, read as ISO 8601 unless `date_format` is given.
+  Date differences use whole nanoseconds within the supplied bounds (ceiling of the lower,
+  floor of the upper); overflowing search endpoints do not broaden the interval.
   Sort the right values once and binary-search each left value; never compare all pairs.
   Missing and unreadable values never pair and are counted by `dropped(left, right)`; nothing
   is guessed. Default name `window:<column>[<low>..<high><unit letter>]`.
@@ -306,6 +308,12 @@ deduped.labeled(frame), deduped.split_pairs(), deduped.audit_sample(n=200)
 deduped.report(), deduped.methods(), deduped.save(directory)     # jlink.load returns a DedupeResult
 ```
 
+Dedupe save/load preserves integer, float and string IDs and full float score precision using
+the existing version 2 `id_kinds` metadata. `cluster` reads probabilities without rounding;
+pass the original `--records` and `--id` to retain numeric ID types, isolated records and
+record order. With the same scores, settings and ID order, reclustering reproduces the
+in-memory clusters exactly with zero model calls.
+
 ## io.py and cli.py
 
 `io.read_table(path)` and `io.write_table(frame, path)` choose the format from the extension:
@@ -332,11 +340,15 @@ jlink evaluate LABELED [--threshold 0.5] [--markdown]
 jlink --version
 ```
 
-`--save DIR` writes the folder that `Result.save(DIR)` (or `DedupeResult.save`) writes, which is what
+`--save DIR` rejects a directory equal to an input or output path and reserved run members that
+are not files, before blocking or judging. It writes the folder that `Result.save(DIR)`
+(or `DedupeResult.save`) writes, which is what
 `review create` and `jlink.load` read. `--on city=town` means left column `city`, right column `town`; `--on text=` is a left-only
 field and `--on "=place"` a right-only one (quoted, because zsh expands a leading `=`). `--style rule` requires `--define` and makes `--entity`
-optional. Cost estimate: about 330 input
-tokens per pair at $0.042 per million tokens; time estimate: about 200 pairs a second. Exit
+optional. The CLI labels cost and time as short-record scenarios: 330 input tokens per pair
+at $0.042 per million tokens and 200 pairs a second. The API returns these `assumptions` and
+accepts a finite positive `tokens_per_pair` override; it does not infer tokens from record
+length or adjust the short-record throughput assumption. Exit
 status 0 on success, 2 on any error, with a one-line message on stderr prefixed `jlink:`.
 Console scripts `jlink` and `jev-link` are the same program; macOS ships a Java tool at
 `/usr/bin/jlink`, so the docs must mention `jev-link` and `python -m jlink`.
