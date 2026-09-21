@@ -425,6 +425,9 @@ def create_review(result: "Result", *, left: pd.DataFrame | None = None, right: 
     Only string, integer and finite float IDs are supported, preserving their types exactly.
     Explicit frames override Result's attached frames; loaded Results need both frames.
     """
+    if result.settings.get("task") == "dedupe":
+        raise ValueError("review pages resolve links between two tables and do not handle dedupe clusters "
+                         "yet; label a DedupeResult.audit_sample() instead")
     left = result._left if left is None else left
     right = result._right if right is None else right
     if left is None or right is None:

@@ -231,6 +231,30 @@ mix. One-sided fields are shown to the judge only; a blocking pass needs a colum
 and says so if given one. See [relation linking](docs/relation-linking.md) and
 [windows on dates and numbers](docs/blocking.md#windows-on-dates-and-numbers).
 
+### Dedupe: one table against itself
+
+```python
+events = jlink.dedupe(
+    articles, style="rule", on=["text", "published"], id="article_id",
+    definition="Both news articles report the same shooting incident.",
+    blockers=[jlink.block.within(jlink.block.window("published", 3, unit="days"), "borough")],
+)
+events.clusters                          # id, cluster_id, cluster_size: one row per article
+events.labeled()                         # the articles, with cluster_id appended
+looser = events.recluster(threshold=0.4) # no new calls, like relink
+```
+
+`jlink.dedupe` blocks a table against itself, never pairs a record with itself, judges each
+unordered pair once (earlier row as record A), and groups records into clusters. Joining every
+pair above the threshold lets one wrong pair chain two unrelated groups together, so the default
+is average linkage in which every pair between two clusters votes, a pair that blocking never
+proposed counting as a non-match. That resists chaining and can split a true group that
+blocking covered only in part; `unproposed="ignore"` and `linkage="components"` are the other
+two rules, and switching is free. `report()` counts the high-probability pairs the rule left
+apart, and `result.split_pairs()` lists them. [Dedupe](docs/dedupe.md) measures both failure
+modes on synthetic scores, and states what is not known: nothing here measures Jev on a dedupe
+task, or whether it answers (A, B) and (B, A) alike.
+
 ### Optional semantic candidate search
 
 Install `uv add 'jlink[embeddings]'` (or `uv sync --extra embeddings` in this checkout), then
@@ -292,6 +316,10 @@ jlink audit scores.csv --links links.csv --left compustat.dta --right patents.cs
 jlink evaluate audit.csv --mode selected --markdown
 ```
 
+`jlink dedupe firms.dta --on name --entity firm --id gvkey -o clusters.csv --scores scores.csv`
+groups the records of one file, and `jlink cluster scores.csv --threshold 0.8 -o strict.csv`
+regroups saved scores without API calls.
+
 `--style rule` asks the relation in `--define` and makes `--entity` optional; `--on text=` and
 `--on =neighborhood` are the one-sided fields. Stata's `style(rule)` and R's `style = "rule"`
 forward the same option. `--block window:published=occurred:0..3d` is the date window above,
@@ -329,7 +357,10 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 - The default model ID is an alias for the latest Jev. Pin one with `model=` or `--model`
   (for example `typesafe/jev-1.13` on OpenRouter) and report it; `result.methods()` does.
 - The Stata and R wrappers were run on macOS against Stata 19.5 and R 4.5.1. They do not
-  support Windows yet.
+  support Windows yet, and they call `link` only: dedupe and the review page need the command
+  line or Python.
+- Rule-style relation linking, the window blocker and dedupe are tested against a fake model
+  and synthetic data only. No benchmark in this README covers them.
 
 ## Development
 

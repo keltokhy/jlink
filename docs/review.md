@@ -5,6 +5,9 @@ It opens as a local HTML file, uses no hosted service or remote assets, and make
 calls. The review artifact contains the original records, scores, links and settings,
 plus the decision history. Keep the JSON file with your replication materials.
 
+The page reviews links between two tables. It does not handle [dedupe](dedupe.md) clusters yet:
+`create_review` refuses a `DedupeResult` and points to `audit_sample`.
+
 ## Start from Python
 
 ```python

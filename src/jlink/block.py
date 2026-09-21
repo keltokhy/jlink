@@ -604,14 +604,29 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
     check_columns(left, a, "left")
     check_columns(right, b, "right")
     left_ids, right_ids = ids(left, left_id, "left"), ids(right, right_id, "right")
-    if max_pairs is not None and (isinstance(max_pairs, (bool, np.bool_))
-                                  or not isinstance(max_pairs, Integral) or max_pairs < 0):
-        raise ValueError("`max_pairs` must be a nonnegative integer, or None for no limit")
+    _check_limit(max_pairs)
     if blockers is None:
         if not paired:
             raise ValueError("the default n-gram pass needs an `on` field that both sides have; every field "
                              "here is one-sided, so choose the passes yourself with `blockers=`")
         blockers = [ngrams(*[(lc, rc) for _, lc, rc in paired], k=10)]
+    return _union(left, right, blockers, a, b, left_ids, right_ids, max_pairs)
+
+
+def _check_limit(max_pairs: object) -> None:
+    if max_pairs is not None and (isinstance(max_pairs, (bool, np.bool_))
+                                  or not isinstance(max_pairs, Integral) or max_pairs < 0):
+        raise ValueError("`max_pairs` must be a nonnegative integer, or None for no limit")
+
+
+def _union(left: pd.DataFrame, right: pd.DataFrame, blockers: list, a: list[str], b: list[str],
+           left_ids: pd.Index, right_ids: pd.Index, max_pairs: int | None, *,
+           unordered: bool = False) -> pd.DataFrame:
+    """Run the passes, union their pairs under the limit, score `sim`, and map positions to IDs.
+
+    ``unordered=True`` is for one table paired with itself: a record is never paired with
+    itself, and (i, j) and (j, i) are one pair, kept with the earlier row first.
+    """
     if not isinstance(blockers, list) or any(not isinstance(p, Blocker) for p in blockers):
         raise ValueError("`blockers` must be a list of Blocker passes, or None for the default n-gram pass")
     union = {}
@@ -622,6 +637,8 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
         proposed = unique = 0
         for batch in _checked_batches(blocker, left, right):
             proposed += len(batch)
+            if unordered:
+                batch = np.sort(batch[batch[:, 0] != batch[:, 1]], axis=1)
             for i, j in batch:
                 key = (int(i), int(j))
                 previous = union.get(key, 0)
@@ -636,7 +653,12 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
         if not proposed and len(left) and len(right) and isinstance(blocker, (_Exact, _Within)):
             # Disagreeing keys lose every pair of this pass without any other sign.
             if (message := _no_shared_key(blocker, left, right)) is not None:
-                warnings.warn(message, stacklevel=2)
+                if unordered:
+                    # One table cannot disagree with itself. A keyed pass is silent here only when
+                    # no record has a complete key; keys that are all different are an answer.
+                    message = (f"blocking pass {blocker.name!r} proposed no pairs: none of the {len(left):,} "
+                               "records has a complete key in its key columns")
+                warnings.warn(message, stacklevel=3)
         added = len(union) - before
         diagnostics.append({"pass": pass_number, "name": blocker.name, "config": blocker.to_config(),
                             "proposed_pairs": proposed, "unique_pairs": unique, "added_pairs": added,
@@ -669,6 +691,35 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
     return result
 
 
+def self_candidates(frame: pd.DataFrame, *, on: str | list[str], blockers: list[Blocker] | None = None,
+                    id: str | None = None, max_pairs: int | None = 5_000_000) -> pd.DataFrame:
+    """Candidate pairs within one table, for dedupe: no self-pairs, each unordered pair once.
+
+    Every pass runs with the table on both sides. ``left_id`` is the record in the earlier row and
+    ``right_id`` the later one, whichever direction a pass proposed; the judge sees them in that
+    order. A record is its own nearest n-gram neighbor, so the default pass is ``ngrams`` with
+    ``k=11``, which leaves ten others. ``max_pairs`` counts unordered pairs. A one-sided window
+    acts in both directions here: ``between=(0, 3)`` keeps pairs at most three apart.
+    """
+    try:
+        fields = parse_on(on)
+    except TypeError as error:
+        raise ValueError("`on` must list column names") from error
+    mapped = [(lc, rc) for _, lc, rc in fields if lc != rc]
+    if mapped:
+        raise ValueError(f"dedupe compares a table with itself, so each `on` field is one column name; "
+                         f"got the pair {mapped[0]!r}")
+    columns, _ = _columns(frame, frame, fields)
+    record_ids = ids(frame, id, "deduplicated")
+    _check_limit(max_pairs)
+    if blockers is None:
+        blockers = [ngrams(*columns, k=11)]
+    result = _union(frame, frame, blockers, columns, columns, record_ids, record_ids, max_pairs,
+                    unordered=True)
+    result.attrs["blocking"]["unordered"] = True
+    return result
+
+
 def _warn_unreadable(name: str, lost: dict) -> None:
     """Missing values are ordinary; values that are present but unreadable usually mean a wrong format."""
     parts = [f"{lost[side]['unparseable']:,} {side} values in {lost[side]['column']!r}"
@@ -677,16 +728,23 @@ def _warn_unreadable(name: str, lost: dict) -> None:
         hint = ("dates must be ISO 8601 unless `date_format` says otherwise" if lost["kind"] == "dates"
                 else "for dates, give the window a `unit`")
         warnings.warn(f"blocker {name!r} could not read {' and '.join(parts)} as {lost['kind']}; those "
-                      f"records were dropped from this pass, not guessed ({hint})", stacklevel=3)
+                      f"records were dropped from this pass, not guessed ({hint})", stacklevel=4)
 
 
-def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float:
-    """Share of distinct truth pairs proposed; NaN when there are no known truth pairs."""
+def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame, *, unordered: bool = False) -> float:
+    """Share of distinct truth pairs proposed; NaN when there are no known truth pairs.
+
+    ``unordered=True`` is for dedupe, where (a, b) and (b, a) name the same pair of records.
+    """
     columns = ["left_id", "right_id"]
     for label, frame in (("candidates", candidates), ("truth", truth)):
         if not isinstance(frame, pd.DataFrame):
             raise ValueError(f"the {label} data must be a pandas DataFrame")
         check_columns(frame, columns, label)
+    if unordered:
+        known, proposed = ({frozenset(pair) for pair in zip(frame.left_id, frame.right_id)}
+                           for frame in (truth, candidates))
+        return len(known & proposed) / len(known) if known else float("nan")
     known = pd.MultiIndex.from_frame(truth[columns].drop_duplicates())
     if not len(known):
         return float("nan")

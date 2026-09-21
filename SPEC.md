@@ -39,6 +39,11 @@ The window update adds `block.window`, a pass over dates or numbers described in
 forms of `--block`, `--date-format`, and an optional `dropped_values` entry in a pass's
 blocking diagnostics. No existing pass, column or default changed.
 
+The [dedupe update](docs/dedupe.md) links one table to itself: `block.self_candidates`,
+`jlink.cluster` (`cluster.py`), `Linker.dedupe`, `jlink.dedupe`, `DedupeResult`, and the `dedupe`
+and `cluster` commands. Scores keep the `left_id`/`right_id` columns, with the earlier row as
+`left_id`, so `audit_sample` and `evaluate` apply unchanged. Two-table behavior is unchanged.
+
 ## Pipeline and modules
 
 ```
@@ -141,7 +146,9 @@ def window(column: str | tuple[str, str], tolerance: float | None = None, *,
            name: str | None = None) -> Blocker
 def candidates(left, right, *, on, blockers: list[Blocker] | None = None, left_id=None, right_id=None,
                max_pairs: int | None = 5_000_000) -> pd.DataFrame
-def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
+def self_candidates(frame, *, on, blockers: list[Blocker] | None = None, id=None,
+                    max_pairs: int | None = 5_000_000) -> pd.DataFrame
+def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame, *, unordered: bool = False) -> float
 ```
 
 - `exact`: pairs whose listed columns are all equal after `normalize`. Whole numbers agree
@@ -179,6 +186,10 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   remain supported. Adding `exact` cannot constrain another pass because passes are unioned.
   `Blocker.to_config()` and `candidates.attrs["blocking"]` expose nested configurations and
   per-pass contributions; see [the schema and ordering contract](docs/blocking.md).
+- `self_candidates`: the same union with one table on both sides, for dedupe. No record is
+  paired with itself; (i, j) and (j, i) are one pair with the earlier row as `left_id`;
+  `max_pairs` counts unordered pairs; `blockers=None` means `[ngrams(*all on fields, k=11)]`
+  because a record is its own nearest neighbor. `on` items must be plain column names.
 - `pairs_completeness`: share of `truth` pairs (columns `left_id`, `right_id`) present in
   `candidates`. This is blocking recall.
 
@@ -224,6 +235,20 @@ Rows with NaN `p` are ignored. `how` is one of:
 Then compute `margin`. When `min_margin` is given, drop links with `margin < min_margin` (NaN margins
 pass). The default is no margin filter: a filter at 0 would silently remove every link that has a
 higher-scoring competitor, which guts `many-to-many`.
+
+## cluster.py
+
+```python
+def cluster(scores: pd.DataFrame, *, ids=None, threshold: float = 0.5, linkage: str = "average",
+            unproposed: str = "nonmatch") -> pd.DataFrame      # id, cluster_id, cluster_size
+```
+
+Rows with NaN `p` are no evidence. `linkage="components"`: connected components of pairs with
+`p >= threshold`. `linkage="average"`: greedy agglomeration, best pair of clusters first, while
+the mean `p` between them is at least `threshold`; with `unproposed="nonmatch"` a pair absent
+from `scores` counts as 0 in that mean, with `"ignore"` only judged pairs count. Exact integer
+arithmetic; ties go to the clusters earliest in `ids`; independent of the row order of
+`scores`; no API calls. `cluster_id` numbers clusters by first appearance in `ids`.
 
 ## audit.py
 
@@ -272,6 +297,13 @@ result.relink(how=..., threshold=..., min_margin=...)   # no new API calls
 result.merged(left, right)                             # left and right columns side by side, plus p
 result.audit_sample(n=200), result.report(), result.methods()
 result.save(directory); jlink.load(directory)
+
+deduped = linker.dedupe(frame, id="gvkey", threshold=0.5, linkage="average", unproposed="nonmatch",
+                        budget=5.0)                     # or jlink.dedupe(frame, entity=..., on=..., ...)
+deduped.clusters, deduped.scores, deduped.links, deduped.settings, deduped.meter
+deduped.recluster(threshold=..., linkage=..., unproposed=...)   # no new API calls
+deduped.labeled(frame), deduped.split_pairs(), deduped.audit_sample(n=200)
+deduped.report(), deduped.methods(), deduped.save(directory)     # jlink.load returns a DedupeResult
 ```
 
 ## io.py and cli.py
@@ -290,6 +322,11 @@ jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on =place]
            [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md]
            [--api typesafe|openrouter] [--model ID] [--no-cache] [-j 32]
 jlink estimate LEFT RIGHT --on ...      # blocking only: pair count, cost and time estimate, no API calls
+jlink dedupe TABLE --on name --entity firm [--id COL] [--block ...] [--threshold 0.5]
+           [--linkage average|components] [--unproposed nonmatch|ignore] [--estimate]
+           [-o clusters.csv] [--scores scores.csv] [--links links.csv] [--report report.md]
+jlink cluster SCORES [--records TABLE --id COL] [--threshold 0.5] [--linkage ...] [--unproposed ...]
+           [-o clusters.csv] [--links links.csv]          # no API calls
 jlink audit SCORES [-n 200] [--left LEFT --right RIGHT --on ...] -o audit.csv
 jlink evaluate LABELED [--threshold 0.5] [--markdown]
 jlink --version
