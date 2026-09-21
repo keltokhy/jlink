@@ -112,17 +112,60 @@ def _add_fields(parser: argparse.ArgumentParser, *, required: bool = True) -> No
                         help="unique right record ID; default: zero-based row number")
 
 
+def _add_question(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--entity", help="kind of record, for example firm, person or product; "
+                                         "required unless --style rule")
+    parser.add_argument("--define", dest="definition", default="", metavar="TEXT",
+                        help="your match rule in plain English (default: no additional rule)")
+    parser.add_argument("--style", choices=("identity", "rule"), default="identity",
+                        help="identity asks whether both records are the same --entity; rule asks whether "
+                             "the pair satisfies --define, which may state any relation (default: identity)")
+
+
+def _add_clustering(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--linkage", choices=("average", "components"), default="average",
+                        help="average: merge two clusters while the mean probability between them reaches "
+                             "--threshold, so one wrong pair does not chain groups; components: join "
+                             "everything reachable through pairs at or above it (default: average)")
+    parser.add_argument("--unproposed", choices=("nonmatch", "ignore"), default="nonmatch",
+                        help="under average linkage, a pair that blocking never proposed counts as a "
+                             "non-match (p = 0), or is ignored so that only judged pairs vote; ignore keeps "
+                             "thinly blocked groups whole but lets a lone wrong pair join two groups "
+                             "(default: nonmatch)")
+
+
+def _add_judging(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--budget", type=_nonnegative, default=5.0,
+                        help="stop new requests at this observed USD cost; in-flight calls may overshoot "
+                             "(default: 5; 0: cached/exact only)")
+    parser.add_argument("--scores", metavar="FILE", help="save all candidate scores for a later audit")
+    parser.add_argument("--report", metavar="FILE", help="save the report as Markdown")
+    parser.add_argument("--api", choices=("typesafe", "openrouter"),
+                        help="API provider (default: configured provider)")
+    parser.add_argument("--model", metavar="ID", help="model identifier (default: provider's Jev model)")
+    parser.add_argument("--no-cache", action="store_true", help="do not reuse or save cached judgments")
+    parser.add_argument("--exact-shortcut", action="store_true",
+                        help="accept equal nonempty normalized fields without judging; opt in only "
+                             "when those fields establish identity (default: judge equal text too)")
+    parser.add_argument("-j", type=_positive, default=32, dest="concurrency", metavar="N",
+                        help="maximum simultaneous API requests (default: 32)")
+
+
 def _add_pair_inputs(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("left", metavar="LEFT", help="left .csv, .tsv, .dta or .parquet file")
     parser.add_argument("right", metavar="RIGHT", help="right .csv, .tsv, .dta or .parquet file")
     _add_fields(parser)
+    _add_blocking(parser, "Default: 10 nearest text matches across all paired --on fields")
+
+
+def _add_blocking(parser: argparse.ArgumentParser, default: str) -> None:
     parser.add_argument("--block", action="append", metavar="RULE",
                         help="ngrams finds similar text, exact requires equal fields, initials finds "
                              "abbreviations, window keeps left minus right within a tolerance (1) or a "
                              "range (0..3), in weeks, days, hours, minutes or seconds with a w/d/h/m/s "
                              "suffix and as plain numbers without; within:COLS:RULE runs RULE inside "
                              f"groups equal on COLS; repeat to combine passes. Forms: {_BLOCK_FORMS}. "
-                             "Default: 10 nearest text matches across all paired --on fields")
+                             + default)
     parser.add_argument("--date-format", metavar="FORMAT",
                         help="strptime format of text dates in window passes, such as %%m/%%d/%%Y; "
                              "LEFT=RIGHT gives each file its own and an empty side stays ISO 8601 "
@@ -151,13 +194,7 @@ def _parser() -> argparse.ArgumentParser:
                '--right-id id -o links.csv',
     )
     _add_pair_inputs(link)
-    link.add_argument("--entity", help="kind of record, for example firm, person or product; "
-                                       "required unless --style rule")
-    link.add_argument("--define", dest="definition", default="", metavar="TEXT",
-                      help="your match rule in plain English (default: no additional rule)")
-    link.add_argument("--style", choices=("identity", "rule"), default="identity",
-                      help="identity asks whether both records are the same --entity; rule asks whether "
-                           "the pair satisfies --define, which may state any relation (default: identity)")
+    _add_question(link)
     link.add_argument("--how", choices=_HOW, default="one-to-one",
                       help="one-to-one: unique on both sides; many-to-one: one right per left; "
                            "one-to-many: one left per right; many-to-many: all qualifying pairs "
@@ -167,22 +204,52 @@ def _parser() -> argparse.ArgumentParser:
     link.add_argument("--min-margin", type=_margin, default=None,
                       help="keep a link only if its probability leads every competing pair by this much, "
                            "-1 to 1 (default: no such requirement)")
-    link.add_argument("--budget", type=_nonnegative, default=5.0,
-                      help="stop new requests at this observed USD cost; in-flight calls may overshoot "
-                           "(default: 5; 0: cached/exact only)")
     link.add_argument("-o", "--output", metavar="FILE", help="links table; default: CSV on standard output")
-    link.add_argument("--scores", metavar="FILE", help="save all candidate scores for a later audit")
-    link.add_argument("--report", metavar="FILE", help="save the linkage report as Markdown")
-    link.add_argument("--api", choices=("typesafe", "openrouter"),
-                      help="API provider (default: configured provider)")
-    link.add_argument("--model", metavar="ID", help="model identifier (default: provider's Jev model)")
-    link.add_argument("--no-cache", action="store_true", help="do not reuse or save cached judgments")
-    link.add_argument("--exact-shortcut", action="store_true",
-                      help="accept equal nonempty normalized fields without judging; opt in only "
-                           "when those fields establish identity (default: judge equal text too)")
-    link.add_argument("-j", type=_positive, default=32, dest="concurrency", metavar="N",
-                      help="maximum simultaneous API requests (default: 32)")
+    _add_judging(link)
     link.set_defaults(run=_link)
+    dedupe = sub.add_parser(
+        "dedupe", help="group the records of one dataset that match each other",
+        description="Link one dataset to itself: propose pairs of its records, judge each unordered pair "
+                    "once, and group the records into clusters.",
+        epilog='Example: jev-link dedupe firms.dta --on name --on city --entity firm --id gvkey '
+               '--block ngrams:name:11 -o clusters.csv --scores scores.csv',
+    )
+    dedupe.add_argument("table", metavar="TABLE", help=".csv, .tsv, .dta or .parquet file to deduplicate")
+    dedupe.add_argument("--on", action="append", required=True, metavar="COL",
+                        help="field to compare; repeat for more fields")
+    dedupe.add_argument("--id", metavar="COL", help="unique record ID; default: zero-based row number")
+    _add_blocking(dedupe, "Default: 11 nearest text matches across all --on fields, because a record is "
+                          "its own nearest match")
+    _add_question(dedupe)
+    dedupe.add_argument("--threshold", type=_probability, default=0.5,
+                        help="probability that joins records, 0 to 1 (default: 0.5)")
+    _add_clustering(dedupe)
+    dedupe.add_argument("--estimate", action="store_true",
+                        help="run blocking only; print the pair count and estimated cost without API calls")
+    dedupe.add_argument("-o", "--output", metavar="FILE",
+                        help="clusters table, one row per record; default: CSV on standard output")
+    dedupe.add_argument("--links", metavar="FILE",
+                        help="save the judged pairs that share a cluster, for `audit --links`")
+    _add_judging(dedupe)
+    dedupe.set_defaults(run=_dedupe)
+    regroup = sub.add_parser(
+        "cluster", help="group records again from saved dedupe scores, without API calls",
+        description="Cluster saved dedupe scores under another threshold or linkage. No API calls.",
+        epilog="Example: jev-link cluster scores.csv --records firms.dta --id gvkey --threshold 0.8 "
+               "-o clusters.csv",
+    )
+    regroup.add_argument("scores", metavar="SCORES", help="scores table saved by dedupe --scores")
+    regroup.add_argument("--records", metavar="TABLE",
+                         help="the deduplicated dataset, so that records without any pair are listed too")
+    regroup.add_argument("--id", metavar="COL", help="record ID in --records; default: zero-based row number")
+    regroup.add_argument("--threshold", type=_probability, default=0.5,
+                         help="probability that joins records, 0 to 1 (default: 0.5)")
+    _add_clustering(regroup)
+    regroup.add_argument("-o", "--output", metavar="FILE",
+                         help="clusters table; default: CSV on standard output")
+    regroup.add_argument("--links", metavar="FILE",
+                         help="save the judged pairs that share a cluster, for `audit --links`")
+    regroup.set_defaults(run=_cluster)
     estimate = sub.add_parser(
         "estimate", help="count candidates and estimate cost without API calls",
         description="Run blocking only; estimate judging cost and time without making API calls.",
@@ -240,6 +307,11 @@ def _inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame, list,
     specs = [_block_spec(rule) for rule in args.block or []]
     left, right = read_table(args.left), read_table(args.right)
     on = _fields(args, left, right)
+    return left, right, on, _blockers(args, specs, left, right, args.left, args.right)
+
+
+def _blockers(args: argparse.Namespace, specs: list, left: pd.DataFrame, right: pd.DataFrame,
+              left_name: str, right_name: str) -> list | None:
     blockers = None
     if specs:
         from . import block
@@ -247,8 +319,8 @@ def _inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame, list,
         def build(spec):
             kind, columns, options = spec
             for _, a, b in parse_on(columns):
-                check_columns(left, [a], args.left)
-                check_columns(right, [b], args.right)
+                check_columns(left, [a], left_name)
+                check_columns(right, [b], right_name)
             kwargs = dict(options)
             if kind == "within":
                 return block.within(build(kwargs.pop("child")), *columns)
@@ -260,7 +332,7 @@ def _inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame, list,
             return getattr(block, kind)(*columns, **kwargs)
 
         blockers = [build(spec) for spec in specs]
-    return left, right, on, blockers
+    return blockers
 
 
 def _date_formats(value: str | None) -> tuple[str | None, str | None] | None:
@@ -296,10 +368,7 @@ def _outputs(inputs: list[str], tables: list[str | None], report: str | None = N
 
 def _link(args: argparse.Namespace) -> None:
     _outputs([args.left, args.right], [args.output, args.scores], args.report)
-    if args.style == "rule" and not args.definition.strip():
-        raise ValueError("--style rule asks whether a pair satisfies --define, so --define cannot be empty")
-    if args.style == "identity" and not (args.entity or "").strip():
-        raise ValueError("--entity must name a kind of record, such as firm (only --style rule can omit it)")
+    _question(args)
     left, right, on, blockers = _inputs(args)
     from .linker import Linker
 
@@ -327,6 +396,10 @@ def _estimate(args: argparse.Namespace) -> None:
     from .block import candidates
 
     pairs = candidates(left, right, on=on, blockers=blockers, left_id=args.left_id, right_id=args.right_id)
+    _print_estimate(pairs, f"{len(left):,} left records; {len(right):,} right records")
+
+
+def _print_estimate(pairs: pd.DataFrame, sizes: str) -> None:
     n = len(pairs)
     for item in pairs.attrs.get("blocking", {}).get("passes", []):
         lost = item.get("dropped_values")
@@ -335,12 +408,91 @@ def _estimate(args: argparse.Namespace) -> None:
         if counts and any(counts.values()):
             print(f"{item['name']}: {counts['left']:,} left and {counts['right']:,} right records have a "
                   f"missing or unreadable value and cannot pair in this pass")
-    print(f"{len(left):,} left records; {len(right):,} right records; {n:,} candidate pairs\n"
+    print(f"{sizes}; {n:,} candidate pairs\n"
           f"Estimated judging cost: ${n * 330 * 0.042 / 1_000_000:.6f}\n"
           f"Estimated judging time: {n / 200:.1f} seconds\n"
           "Assumes 330 input tokens per pair at $0.042 per million and 200 pairs/second. "
           "Actual cost and time depend on caching, exact matches, record length and the provider. "
           "No API calls.")
+
+
+def _question(args: argparse.Namespace) -> None:
+    if args.style == "rule" and not args.definition.strip():
+        raise ValueError("--style rule asks whether a pair satisfies --define, so --define cannot be empty")
+    if args.style == "identity" and not (args.entity or "").strip():
+        raise ValueError("--entity must name a kind of record, such as firm (only --style rule can omit it)")
+
+
+def _dedupe(args: argparse.Namespace) -> None:
+    tables = [] if args.estimate else [args.output, args.scores, args.links]
+    _outputs([args.table], tables, None if args.estimate else args.report)
+    if not args.estimate:
+        _question(args)
+    specs = [_block_spec(rule) for rule in args.block or []]
+    frame = read_table(args.table)
+    on = [_column(item) for item in args.on]
+    for _, a, b in parse_on(on):
+        check_columns(frame, [a, b], args.table)
+    ids(frame, args.id, args.table)
+    blockers = _blockers(args, specs, frame, frame, args.table, args.table)
+    if args.estimate:
+        from .block import self_candidates
+
+        pairs = self_candidates(frame, on=on, blockers=blockers, id=args.id)
+        return _print_estimate(pairs, f"{len(frame):,} records, paired with each other")
+    from .linker import Linker
+
+    linker = Linker(entity=args.entity, definition=args.definition, on=on, blockers=blockers,
+                    style=args.style, api=args.api, model=args.model, cache=not args.no_cache,
+                    concurrency=args.concurrency, exact_shortcut=args.exact_shortcut)
+    result = linker.dedupe(frame, id=args.id, threshold=args.threshold, linkage=args.linkage,
+                           unproposed=args.unproposed, budget=args.budget, progress=sys.stderr.isatty())
+    _write_clusters(result.clusters, result.links, args)
+    if args.scores:
+        write_table(result.scores, args.scores)
+    if args.report:
+        Path(args.report).expanduser().write_text(result.report(), encoding="utf-8")
+    print(f"jlink: {len(frame):,} records; {len(result.candidates):,} candidate pairs; "
+          f"{_grouped(result.clusters)}; {result.meter.calls:,} calls; ${result.meter.cost:.4f}",
+          file=sys.stderr)
+
+
+def _grouped(clusters: pd.DataFrame) -> str:
+    sizes = clusters.drop_duplicates("cluster_id")["cluster_size"]
+    return (f"{int((sizes > 1).sum()):,} clusters of two or more records, "
+            f"holding {int(sizes[sizes > 1].sum()):,}")
+
+
+def _write_clusters(clusters: pd.DataFrame, links: pd.DataFrame, args: argparse.Namespace) -> None:
+    if args.output:
+        write_table(clusters, args.output)
+    else:
+        clusters.to_csv(sys.stdout, index=False)
+    if args.links:
+        write_table(links, args.links)
+
+
+def _cluster(args: argparse.Namespace) -> None:
+    _outputs([args.scores] + ([args.records] if args.records else []), [args.output, args.links])
+    if args.id and not args.records:
+        raise ValueError("--id names a column of --records; give both, or neither")
+    scores = read_table(args.scores)
+    check_columns(scores, ["left_id", "right_id"], args.scores)
+    _numeric(scores, ["p"], args.scores)
+    record_ids = None
+    if args.records:
+        records = read_table(args.records)
+        _align_ids(scores, records, args.id, "left", key="left_id")
+        _align_ids(scores, records, args.id, "right", key="right_id")
+        record_ids = ids(records, args.id, args.records)
+    from .cluster import cluster
+    from .linker import DedupeResult
+
+    clusters = cluster(scores, ids=record_ids, threshold=args.threshold, linkage=args.linkage,
+                       unproposed=args.unproposed)
+    _write_clusters(clusters, DedupeResult(clusters, scores, {}).links, args)
+    print(f"jlink: {len(clusters):,} records; {_grouped(clusters)}; {args.linkage} linkage at "
+          f"{args.threshold:g}; no API calls", file=sys.stderr)
 
 
 def _numeric(frame: pd.DataFrame, columns: list[str], path: str, *, every_row: str = "") -> None:
@@ -354,14 +506,15 @@ def _numeric(frame: pd.DataFrame, columns: list[str], path: str, *, every_row: s
             raise ValueError(f"{path!r}: column {column!r} must contain {allowed}") from None
 
 
-def _align_ids(scores: pd.DataFrame, frame: pd.DataFrame, column: str | None, side: str) -> None:
+def _align_ids(scores: pd.DataFrame, frame: pd.DataFrame, column: str | None, side: str,
+               key: str | None = None) -> None:
     values = ids(frame, column, side)
     # CSV scores contain text even when the original Stata IDs were numeric.
     # Translate through the source IDs, without guessing numeric types for text IDs.
     mapping = {str(value): value for value in values}
     if len(mapping) != len(values):
         raise ValueError(f"{side!r}: IDs must also be unique when written as text")
-    key = f"{side}_id"
+    key = key or f"{side}_id"
     converted = scores[key].map(lambda value: mapping.get(str(value), value))
     if not converted.isin(values).all():
         raise ValueError(f"scores column {key!r} contains an ID absent from the original {side} data")

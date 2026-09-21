@@ -97,7 +97,7 @@ def assert_error(args, capsys, expected):
     assert expected in captured.err
 
 
-@pytest.mark.parametrize("subcommand", [None, "link", "estimate", "audit", "evaluate"])
+@pytest.mark.parametrize("subcommand", [None, "link", "estimate", "dedupe", "cluster", "audit", "evaluate"])
 def test_help(subcommand, capsys):
     with pytest.raises(SystemExit) as exc:
         command.cli(([subcommand] if subcommand else []) + ["--help"])

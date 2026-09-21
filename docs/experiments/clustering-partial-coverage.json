@@ -1,0 +1,51 @@
+{
+  "experiment": "clustering",
+  "records": 100000,
+  "group_size": 10,
+  "cross": 10,
+  "wrong": 0.0,
+  "reach": 2,
+  "seed": 20260920,
+  "true_groups": 10000,
+  "pairs": 1199823,
+  "wrong_high_pairs": 0,
+  "threshold": 0.5,
+  "rules": [
+    {
+      "linkage": "components",
+      "unproposed": "ignore",
+      "seconds": 0.072866166010499,
+      "clusters": 10000,
+      "largest_cluster": 10,
+      "true_groups_recovered_exactly": 10000,
+      "records_in_mixed_clusters": 0
+    },
+    {
+      "linkage": "average",
+      "unproposed": "ignore",
+      "seconds": 0.0803071669943165,
+      "clusters": 10000,
+      "largest_cluster": 10,
+      "true_groups_recovered_exactly": 10000,
+      "records_in_mixed_clusters": 0
+    },
+    {
+      "linkage": "average",
+      "unproposed": "nonmatch",
+      "seconds": 1.2519383750041015,
+      "clusters": 31093,
+      "largest_cluster": 4,
+      "true_groups_recovered_exactly": 0,
+      "records_in_mixed_clusters": 0
+    }
+  ],
+  "environment": {
+    "python": "3.13.15",
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "packages": {
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scipy": "1.18.1"
+    }
+  }
+}

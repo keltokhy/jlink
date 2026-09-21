@@ -76,6 +76,11 @@ Settings with `provenance_version=1` retain:
   `provider` and `request_model` after defaults/environment selection, all `resolved_models`,
   `unknown_model_answers`, and grouped `answer_provenance` counts.
 
+A dedupe run writes `clusters.csv` in place of `links.csv`. Its settings add `task: "dedupe"`,
+`id`, `n_records`, `linkage`, `unproposed`, `threshold`, `pair_order` (which record the judge saw
+as record A) and `blocking.unordered`, and fingerprint the one table under `inputs.records`.
+`jlink.load` returns a `DedupeResult` for such a directory; `recluster` reuses its scores.
+
 The input hash format `jlink-input-v1` uses canonical JSON with type tags and field boundaries.
 String `"001"` differs from integer `1`; moving words between fields changes the hash; row
 order matters because blocking ties can depend on it. Ordinary tabular scalar values retain
