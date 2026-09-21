@@ -12,7 +12,7 @@ import pandas as pd
 
 from . import __version__
 from .fields import check_columns, ids, parse_on
-from .io import FORMATS, read_table, write_table
+from .io import FORMATS, read_table, stata_value_labels, write_table
 
 _BLOCK_FORMS = "ngrams:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name"
 _HOW = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
@@ -337,6 +337,11 @@ def _audit(args: argparse.Namespace) -> None:
 def _evaluate(args: argparse.Namespace) -> None:
     labeled = read_table(args.labeled)
     check_columns(labeled, ["is_match", "bin"], args.labeled)
+    # Stata stores the bins as coded value labels. Naming them is a one-to-one relabeling: the
+    # strata, their order and every number stay as they are, and the report reads "(0.2, 0.5]", not "2".
+    names = stata_value_labels(args.labeled, "bin")
+    if len(set(names.values())) == len(names) and labeled["bin"].isin(names).all():
+        labeled["bin"] = labeled["bin"].map(names)
     _numeric(labeled, ["p"], args.labeled)  # a row without a label may lack its probability
     _numeric(labeled, ["weight"], args.labeled,
              every_row="rows with a blank label need theirs too, so restore it from the table `audit` wrote")

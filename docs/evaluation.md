@@ -83,7 +83,7 @@ selection does not depend on pandas attributes or categorical metadata:
 | `p` | Pair probability between 0 and 1. Sampled pairs have finite probabilities. |
 | `selected` | Optional boolean: true exactly when this pair belongs to the complete final links table. Absence means unknown, not false. |
 | `is_match` | Human truth label: 1/0, True/False, y/n or yes/no, ignoring case and surrounding spaces. A blank is an incomplete label. |
-| `bin` | Original sampling stratum; do not recompute it after labeling or filtering. |
+| `bin` | Original sampling stratum; do not recompute it after labeling or filtering. In a `.dta` audit it is a coded value label; `jev-link evaluate` names the codes from those labels for display, which changes no stratum and no number. |
 | `weight` | Positive inverse inclusion weight: bin population divided by bin sample size. Required on every row, including rows whose label is blank. |
 | `a_<field>`, `b_<field>` | Optional fields displayed for human comparison; not used in the metrics. |
 
