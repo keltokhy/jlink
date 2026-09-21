@@ -17,7 +17,8 @@ linker = jlink.Linker(
     style="rule",
     definition="Record A is a news article that reports the shooting incident in record B.",
     on=[("text", None), ("published", None), (None, "occurred"), (None, "neighborhood")],
-    blockers=[...],
+    blockers=[jlink.block.within(
+        jlink.block.window(("published", "occurred"), between=(0, 3), unit="days"), "borough")],
 )
 ```
 
@@ -25,8 +26,12 @@ linker = jlink.Linker(
 jev-link link articles.csv incidents.csv --style rule \
     --define "Record A is a news article that reports the shooting incident in record B." \
     --on text= --on published= --on =occurred --on =neighborhood \
-    --left-id article_id --right-id incident_id --how many-to-one --block ... -o links.csv
+    --left-id article_id --right-id incident_id --how many-to-one \
+    --block within:borough:window:published=occurred:0..3d -o links.csv
 ```
+
+The window pass pairs `published` with `occurred` for blocking only. See
+[windows on dates and numbers](blocking.md#windows-on-dates-and-numbers).
 
 `Linker`, `jlink.link`, `jlink.judge`, the `link` command, Stata's `style()` and R's `style =`
 all accept the option. Under rule style an empty definition is an error: there would be nothing
@@ -83,7 +88,8 @@ same entity, lists which source each one-sided field came from, and quotes the p
 
 - Do not rely on Jev to compare numbers or dates. jlink treats that as a known weak spot of the
   model and has not measured it. A rule such as "published within three days of the incident"
-  belongs in blocking, where the arithmetic is exact and only plausible pairs are asked about.
+  belongs in blocking, where the arithmetic is exact and only plausible pairs are asked about:
+  `jlink.block.window(("published", "occurred"), between=(0, 3), unit="days")`.
 - Jev reads the fields it is given and returns a probability. It does not extract a name, an
   address or a date from the text, and it never generates text.
 - The `estimate` figures assume about 330 input tokens per pair, which was measured on short

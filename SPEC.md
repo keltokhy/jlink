@@ -34,6 +34,11 @@ whose proposition is the definition itself, makes `entity` optional under that s
 `on` item be one-sided: `(left, None)` or `(None, right)`. Identity wording, paired fields and
 every table's columns are unchanged; `fields.parse_on` accepts one-sided items only on request.
 
+The window update adds `block.window`, a pass over dates or numbers described in
+[docs/blocking.md](docs/blocking.md#windows-on-dates-and-numbers), the `window:` and `within:`
+forms of `--block`, `--date-format`, and an optional `dropped_values` entry in a pass's
+blocking diagnostics. No existing pass, column or default changed.
+
 ## Pipeline and modules
 
 ```
@@ -130,6 +135,10 @@ def ngrams(*columns: str | tuple[str, str], k: int = 10, n: tuple[int, int] = (2
 def initials(column: str | tuple[str, str], min_len: int = 2, name: str | None = None) -> Blocker
 def within(blocker: Blocker, *columns: str | tuple[str, str], missing: str = "drop",
            name: str | None = None) -> Blocker
+def window(column: str | tuple[str, str], tolerance: float | None = None, *,
+           between: tuple[float, float] | None = None, unit: str | None = None,
+           date_format: str | tuple[str | None, str | None] | None = None,
+           name: str | None = None) -> Blocker
 def candidates(left, right, *, on, blockers: list[Blocker] | None = None, left_id=None, right_id=None,
                max_pairs: int | None = 5_000_000) -> pd.DataFrame
 def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
@@ -150,6 +159,12 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   supporting mapped left/right columns and restoring original positions. N-gram TF-IDF is
   fit within each group. `missing="drop"` omits incomplete keys; `missing="match"` allows
   identical incomplete keys (empty components are equal, not wildcards).
+- `window`: pairs with `low <= left - right <= high`, from `tolerance=t` (`-t` to `t`) or
+  `between=(low, high)`, which may be one-sided. No `unit` means numbers; a `unit` of weeks,
+  days, hours, minutes or seconds means dates, read as ISO 8601 unless `date_format` is given.
+  Sort the right values once and binary-search each left value; never compare all pairs.
+  Missing and unreadable values never pair and are counted by `dropped(left, right)`; nothing
+  is guessed. Default name `window:<column>[<low>..<high><unit letter>]`.
 - `initials`: pairs where one side's normalized text, read as one token of at least `min_len`
   letters, equals the initials of the other side's tokens, in either direction ("IBM" and
   "International Business Machines"). Ignore the stop words `and`, `of`, `the`, `for` and
@@ -269,7 +284,9 @@ strings to numbers (`dtype=str` for delimited files, then leave conversion to th
 jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on =place]
            --entity firm [--define "..."] [--style identity|rule]
            [--left-id COL] [--right-id COL] [--block ngrams:name:10] [--block exact:state]
-           [--block initials:name] [--how one-to-one] [--threshold 0.5] [--min-margin M]
+           [--block initials:name] [--block window:year:1] [--block window:a=b:0..3d]
+           [--block within:state:RULE] [--date-format FORMAT|LEFT=RIGHT]
+           [--how one-to-one] [--threshold 0.5] [--min-margin M]
            [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md]
            [--api typesafe|openrouter] [--model ID] [--no-cache] [-j 32]
 jlink estimate LEFT RIGHT --on ...      # blocking only: pair count, cost and time estimate, no API calls

@@ -1,0 +1,29 @@
+{
+  "experiment": "window",
+  "incidents": 24000,
+  "articles": 48000,
+  "groups": 5,
+  "days": 6570,
+  "possible_pairs": 1152000000,
+  "seed": 20260920,
+  "pass": "within:boro[drop](window:published=occurred[0..3d])",
+  "pass_only": false,
+  "pairs": 188280,
+  "seconds": 1.079958499991335,
+  "planted_recall": 1.0,
+  "peak_rss_mib": 264.234375,
+  "dropped_values": {
+    "left": 0,
+    "right": 0
+  },
+  "environment": {
+    "python": "3.13.15",
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "packages": {
+      "numpy": "2.5.3",
+      "pandas": "2.3.3",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1"
+    }
+  }
+}

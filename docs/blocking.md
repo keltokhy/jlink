@@ -1,4 +1,4 @@
-# Candidate search: groups, reverse neighbors, and limits
+# Candidate search: groups, windows, reverse neighbors, and limits
 
 `block.candidates` unions its passes. An added pass can recover candidates; it cannot
 remove candidates or make an earlier search cheaper. The default remains a forward
@@ -79,6 +79,96 @@ The separate exact pass adds every NY pair and retains the CA n-gram candidate. 
 wrapper searches only NY and returns its best neighbor. This example is an executable
 regression in `tests/test_block_grouped.py`.
 
+## Windows on dates and numbers
+
+```python
+after = block.window(("published", "occurred"), between=(0, 3), unit="days")
+nearby = block.window("year", 1)                       # numbers: -1 <= left - right <= 1
+in_borough = block.within(after, ("boro", "BORO"))     # compose like any other pass
+```
+
+`window(column, tolerance=None, *, between=None, unit=None, date_format=None, name=None)`
+proposes every pair whose **left value minus right value** lies inside the window. Give
+exactly one of:
+
+| Argument | Pairs kept |
+|---|---|
+| `tolerance=t` (`t >= 0`) | `-t <= left - right <= t` |
+| `between=(low, high)` | `low <= left - right <= high` |
+
+`between` may exclude one direction. With articles on the left and incidents on the right,
+`between=(0, 3), unit="days"` keeps an article published on the day of the incident or up to
+three days after it, and never one published before it. Swapping the tables flips the sign:
+the same window is then `between=(-3, 0)`.
+
+Without `unit` the values are numbers. With `unit` (`"weeks"`, `"days"`, `"hours"`,
+`"minutes"` or `"seconds"`) they are dates or times and the bounds are in that unit; bounds
+may be fractions. The two cases are never inferred from the data: a date column without a
+unit, or a number column with one, is an error that names the column. The window takes one
+column, or one `(left, right)` pair; repeat the pass or wrap it in `within` for more.
+
+**How values are read.** Nothing is repaired or guessed.
+
+- Numbers: numeric columns as they are; text through `pd.to_numeric`. `"1,000"`, `"abc"`
+  and infinities do not parse. Values are compared as float64, so integers above 2^53 lose
+  precision. The test is `left - high <= right <= left - low`, evaluated in floating point.
+- Dates: datetime columns as they are; Python `date` and `datetime` objects; text in ISO
+  8601 (`2024-03-01`, `2024-03-01T14:30`). Any other text needs
+  `date_format="%m/%d/%Y"`, or `date_format=(left_format, right_format)` with `None` for an
+  ISO side. Without it `03/02/2024` is unreadable, not a guess between March and February.
+  Dates are compared as whole nanoseconds, exactly; they must fall in the years 1677 to 2262.
+- A date-only value is midnight. `between=(0, 3), unit="days"` therefore pairs an article
+  stamped `2024-03-05T09:00` with an incident on `2024-03-02` only if the incident has a
+  time of day at or after 09:00. Truncate timestamps to dates first when you mean calendar
+  days, or widen the window.
+- Times with UTC offsets are compared in UTC. A column that mixes offset and offset-free
+  times, or one side with offsets and the other without, is an error and not an assumption.
+- Missing values (nulls, empty or blank text) and unreadable values never pair.
+  `blocker.dropped(left, right)` returns the count of each per side, and `candidates` stores the
+  same object as `dropped_values` in that pass's diagnostics. Unreadable values also raise a
+  warning, because they usually mean a wrong format; missing values alone do not. Inside
+  `within`, the counts still cover the whole tables.
+
+**How it searches.** The right values are sorted once. Each left value finds the start and
+end of its range by binary search, and the pairs in that range are streamed in batches of at
+most 8,192 like every built-in pass, so `max_pairs` stops an oversized window after one
+batch. No left-by-right comparison is made. Output order is left row order, then right row
+position. Inside `within`, the sort and search run separately in each group.
+
+A window is only as selective as the data are sparse. A three-day window over a register with
+four incidents a day proposes about sixteen incidents for each article. Group it with
+`within(...)` on a field that reliably agrees (borough, state), and remember that grouping loses
+pairs whose keys disagree or are missing. Union it with other passes like any blocker: a union
+adds pairs and never narrows the window.
+
+Measured offline on this Mac (Python 3.13.15, macOS arm64; single runs, synthetic data with
+uniformly spread dates and five groups, each article planted 0 to 3 days after one incident):
+
+| Articles x incidents | Possible pairs | Pass | Pairs | Seconds | Peak RSS |
+|---|---:|---|---:|---:|---:|
+| 48,000 x 24,000 | 1.15 billion | full `candidates`, grouped 0 to 3 days | 188,280 | 1.08 | 264 MiB |
+| 2,000,000 x 1,000,000 | 2 trillion | pass only, grouped 0 to 3 days | 17,997,740 | 6.80 | 1,343 MiB |
+
+The first row includes the union and `sim` scoring and found every planted pair, which the
+construction guarantees; it says nothing about recall on real dates. The second row times
+`iter_pairs` alone, without the union, whose memory grows with the number of pairs. Neither
+row involved judging. Raw outputs: [register scale](experiments/blocking-window-register.json)
+and [one million incidents](experiments/blocking-window-1m-pass.json).
+
+On the command line the rule is `window:COLUMN:TOLERANCE` or `window:LEFT=RIGHT:LOW..HIGH`,
+with a `w`, `d`, `h`, `m` or `s` suffix for dates and none for numbers, and
+`within:COLUMNS:RULE` wraps any rule:
+
+```bash
+jev-link estimate articles.csv incidents.csv --on text= --on =neighborhood \
+    --block within:boro=BORO:window:published=OCCUR_DATE:0..3d --date-format "=%m/%d/%Y"
+```
+
+`--date-format FORMAT` applies to both files and `LEFT=RIGHT` gives each its own, where an
+empty side stays ISO 8601. `estimate` prints, for each window pass, how many records on each
+side have a missing or unreadable value. `within` on the command line always uses
+`missing="drop"`.
+
 ## Recover candidates from the reverse direction
 
 ```python
@@ -110,7 +200,7 @@ values, dtypes, and nonconsecutive DataFrame indexes remain mapped to original r
 
 ## Pair limits and memory
 
-Built-in `exact`, `initials`, `ngrams`, and `within` stream pair batches through
+Built-in `exact`, `initials`, `ngrams`, `window`, and `within` stream pair batches through
 `Blocker.iter_pairs`. `candidates(max_pairs=...)` checks the unique union as it grows
 and raises at the first excess pair, before scoring candidates. Duplicates and overlaps
 do not consume the limit. The error reports an **at least** count; it intentionally
@@ -148,6 +238,7 @@ Every built-in exposes a JSON-safe `to_config()` dictionary. Common fields are `
 | `initials` | `min_len` |
 | `ngrams` | `k`, `n` (two-element list), `min_sim`, `reverse` |
 | `within` | `missing`, `blocker` (recursive child configuration) |
+| `window` | `low`, `high`, `unit` (null for numbers), `difference` (`left_minus_right`), `date_format` (two-element list, or null for numbers), `values` (how values were compared) |
 
 For example:
 
@@ -188,6 +279,7 @@ This API describes configuration; it does not deserialize or execute saved class
 | `overlapping_pairs` | Distinct pairs already proposed by earlier passes. |
 | `union_pairs` | Cumulative union size after this pass. |
 | `exclusive_pairs` | Pairs supplied only by this pass after all passes finish. |
+| `dropped_values` | Only for passes that drop unusable values (`window`, or `within` around one): `kind`, and per side the `column`, `missing` and `unparseable` counts and the `time_zone` convention. |
 
 Counts are independent of ambiguous joined `block` labels and need no additional
 pair sets. `added_pairs` sum to `pair_count`; `exclusive_pairs` quantify what removing
@@ -289,6 +381,10 @@ PYTHONPATH=src uv run python docs/experiments/blocking.py scale \
   --rows 20000 --groups 50 --output docs/experiments/blocking-scale-20k-grouped.json
 PYTHONPATH=src uv run python docs/experiments/blocking.py guard \
   --rows 100000 --output docs/experiments/blocking-guard-100k.json
+PYTHONPATH=src uv run python docs/experiments/blocking.py window \
+  --rows 24000 --groups 5 --output docs/experiments/blocking-window-register.json
+PYTHONPATH=src uv run python docs/experiments/blocking.py window \
+  --rows 1000000 --groups 5 --pass-only --output docs/experiments/blocking-window-1m-pass.json
 PYTHONPATH=src uv run pytest
 ```
 

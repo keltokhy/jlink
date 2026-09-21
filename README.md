@@ -161,8 +161,9 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
 1. **Block.** Comparing every record with every other is wasteful, so jlink first proposes
    candidate pairs on your machine, at no cost. By default each left record is paired with its
    ten nearest right records by character n-grams. Add passes for what n-grams miss:
-   `jlink.block.initials("name")` pairs "IBM" with "International Business Machines", and
-   `jlink.block.exact("state")` pairs everything within a state.
+   `jlink.block.initials("name")` pairs "IBM" with "International Business Machines",
+   `jlink.block.exact("state")` pairs everything within a state, and
+   `jlink.block.window("year", 1)` pairs records whose years differ by at most one.
 2. **Judge.** Each candidate pair goes to Jev with your rule, including equal names: identical
    text need not identify the same entity. If equal compared fields establish identity in your
    data, explicitly enable `Linker(..., exact_shortcut=True)` to accept complete normalized
@@ -205,21 +206,30 @@ record B satisfy the following match rule. ..." The two tables then rarely share
 `(None, "neighborhood")` on the right record only.
 
 ```python
+published_soon_after = jlink.block.window(          # article 0 to 3 days after the incident,
+    ("published", "occurred"), between=(0, 3), unit="days")           # never before it
 result = jlink.link(
     articles, incidents, style="rule",
     definition="Record A is a news article that reports the shooting incident in record B.",
     on=[("text", None), ("published", None),
-        (None, "occurred"), (None, "neighborhood"), (None, "victim_age_group")],
-    blockers=[jlink.block.exact(("published", "occurred"))],   # same day; see docs for date windows
+        (None, "occurred"), (None, "neighborhood"), (None, "victim_age_group"), (None, "fatal")],
+    blockers=[jlink.block.within(published_soon_after, "borough")],   # if both tables have one
     left_id="article_id", right_id="incident_id", how="many-to-one",
 )
 ```
+
+This is a sketch of a design, not a result: it has been run against a fake model in the tests
+and never against Jev, so nothing is known yet about how well Jev judges this relation. The
+date logic sits in blocking on purpose. `jlink.block.window` compares dates and numbers exactly
+on your machine, so the rule need not ask Jev to do arithmetic, and only pairs inside the
+window are paid for. `how="many-to-one"` lets several articles report one incident.
 
 `entity` is optional under `style="rule"` because the question no longer names one.
 `result.methods()` then describes a relation defined by your rule and does not say the records
 are the same entity. Identity and rule answers are cached under different questions and never
 mix. One-sided fields are shown to the judge only; a blocking pass needs a column on each side
-and says so if given one. See [relation linking](docs/relation-linking.md).
+and says so if given one. See [relation linking](docs/relation-linking.md) and
+[windows on dates and numbers](docs/blocking.md#windows-on-dates-and-numbers).
 
 ### Optional semantic candidate search
 
@@ -284,7 +294,9 @@ jlink evaluate audit.csv --mode selected --markdown
 
 `--style rule` asks the relation in `--define` and makes `--entity` optional; `--on text=` and
 `--on =neighborhood` are the one-sided fields. Stata's `style(rule)` and R's `style = "rule"`
-forward the same option.
+forward the same option. `--block window:published=occurred:0..3d` is the date window above,
+`--block window:year:1` a numeric one, and `--block within:borough:RULE` runs any rule inside
+groups; `--date-format` reads dates that are not ISO 8601.
 
 The Stata and R wrappers are single files in this repository, not part of the Python package: copy
 `stata/jlink.ado` and `stata/jlink.sthlp` to your personal ado directory (`sysdir` shows it), and

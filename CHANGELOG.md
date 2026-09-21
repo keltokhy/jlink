@@ -12,3 +12,11 @@
   or `--on =neighborhood` on the command line. Such a field is shown to the judge on that side
   only and enters that side's text for `sim`. Blocking passes and the exact shortcut need paired
   columns and say so. Saved settings, fingerprints, audit samples and review snapshots accept them.
+- Add `jlink.block.window`: candidate pairs whose left value minus right value lies within a
+  tolerance or a one-sided range, for numbers and for dates and times. It sorts once and uses
+  binary search, streams bounded batches under `max_pairs`, composes with `within` and unions
+  with other passes. Missing and unreadable values are dropped and counted, never guessed;
+  non-ISO dates need `date_format`. Blocking diagnostics record the counts as `dropped_values`.
+- Add `--block window:COLUMN:TOLERANCE`, `--block window:LEFT=RIGHT:LOW..HIGH` with `w/d/h/m/s`
+  units, `--block within:COLUMNS:RULE`, and `--date-format`. `estimate` reports records a window
+  cannot use.

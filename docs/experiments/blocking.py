@@ -127,9 +127,46 @@ def guard(rows):
     raise AssertionError("guard did not reject oversized exact group")
 
 
+def window(rows, groups, pass_only):
+    """Synthetic register and articles: each article follows one incident by 0 to 3 days, same group."""
+    rng = np.random.default_rng(20260920)
+    # The density of 24,000 incidents over eighteen years, capped so that every date stays inside
+    # the range of nanosecond timestamps; larger tables are therefore denser.
+    days = min(max(rows * 6570 // 24_000, 30), 100_000)
+    start = np.datetime64("1950-01-01")
+    occurred = start + rng.integers(0, days, rows).astype("timedelta64[D]")
+    boro = rng.integers(0, groups, rows)
+    source = rng.integers(0, rows, 2 * rows)
+    published = occurred[source] + rng.integers(0, 4, 2 * rows).astype("timedelta64[D]")
+    incidents = pd.DataFrame({"id": np.arange(rows), "occurred": occurred.astype(str),
+                              "boro": boro.astype(str)})
+    articles = pd.DataFrame({"id": np.arange(2 * rows), "published": published.astype(str),
+                             "boro": boro[source].astype(str)})
+    blocker = block.within(block.window(("published", "occurred"), between=(0, 3), unit="days"), "boro")
+    result = {"experiment": "window", "incidents": rows, "articles": 2 * rows, "groups": groups,
+              "days": int(days), "possible_pairs": 2 * rows * rows, "seed": 20260920, "pass": blocker.name}
+    begin = time.perf_counter()
+    if pass_only:
+        pairs = sum(len(batch) for batch in blocker.iter_pairs(articles, incidents))
+        planted = None
+    else:
+        table = block.candidates(articles, incidents, on=[("published", None), (None, "occurred")],
+                                 blockers=[blocker], left_id="id", right_id="id", max_pairs=None)
+        pairs = len(table)
+        truth = pd.DataFrame({"left_id": articles.id, "right_id": source})
+        planted = block.pairs_completeness(table, truth)
+    seconds = time.perf_counter() - begin
+    lost = blocker.dropped(articles, incidents)
+    return result | {"pass_only": pass_only, "pairs": int(pairs), "seconds": seconds,
+                     "planted_recall": planted, "peak_rss_mib": peak_mib(),
+                     "dropped_values": {side: lost[side]["missing"] + lost[side]["unparseable"]
+                                        for side in ("left", "right")}}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("experiment", choices=("firms", "scale", "guard"))
+    parser.add_argument("experiment", choices=("firms", "scale", "guard", "window"))
+    parser.add_argument("--pass-only", action="store_true", help="window: time the pass without the union")
     parser.add_argument("--data-root", type=Path)
     parser.add_argument("--rows", type=int, default=100_000)
     parser.add_argument("--groups", type=int, default=50)
@@ -144,6 +181,8 @@ def main():
         result = firms(args.data_root)
     elif args.experiment == "guard":
         result = guard(args.rows)
+    elif args.experiment == "window":
+        result = window(args.rows, args.groups, args.pass_only)
     else:
         result = scale(args.rows, args.groups, args.symmetric)
     result["environment"] = {"python": platform.python_version(), "platform": platform.platform(),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import re
 import sys
 import warnings
 from pathlib import Path
@@ -14,8 +15,12 @@ from . import __version__
 from .fields import check_columns, ids, parse_on
 from .io import FORMATS, read_table, stata_value_labels, write_table
 
-_BLOCK_FORMS = "ngrams:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name"
+_BLOCK_FORMS = ("ngrams:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name, "
+                "window:year:1, window:published=occurred:0..3d, within:state:ngrams:name:10")
 _HOW = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
+_NUMBER = r"[+-]?\d+(?:\.\d+)?"
+_WINDOW = re.compile(rf"(?:(?P<low>{_NUMBER})\.\.(?P<high>{_NUMBER})|(?P<tolerance>{_NUMBER}))"
+                     r"(?P<unit>[wdhms])?")
 
 
 class _Parser(argparse.ArgumentParser):
@@ -36,22 +41,36 @@ def _column(value: str, *, unpaired: bool = False) -> str | tuple[str | None, st
     return parts[0] if len(parts) == 1 else (parts[0], parts[1])
 
 
-def _block_spec(value: str) -> tuple[str, list, int | None]:
+def _block_spec(value: str) -> tuple[str, list, dict]:
+    """(kind, columns, options). A within rule wraps the rule that follows its columns."""
     parts = value.split(":")
     try:
-        kind = parts[0]
+        kind, options = parts[0], {}
         if kind in ("ngrams", "embeddings") and len(parts) == 3:
             if not parts[2].isascii() or not parts[2].isdigit() or int(parts[2]) < 1:
                 raise ValueError
-            k = int(parts[2])
-        elif kind in ("exact", "initials") and len(parts) == 2:
-            k = None
-        else:
+            options["k"] = int(parts[2])
+        elif kind == "window" and len(parts) == 3:
+            found = _WINDOW.fullmatch(parts[2])
+            if not found or not parts[2].isascii():
+                raise ValueError
+            if found["tolerance"] is not None:
+                options["tolerance"] = float(found["tolerance"])
+                if options["tolerance"] < 0:
+                    raise ValueError
+            else:
+                options["between"] = (float(found["low"]), float(found["high"]))
+                if options["between"][0] > options["between"][1]:
+                    raise ValueError
+            options["unit"] = found["unit"]
+        elif kind == "within" and len(parts) >= 4:
+            options["child"] = _block_spec(":".join(parts[2:]))
+        elif not (kind in ("exact", "initials") and len(parts) == 2):
             raise ValueError
         columns = [_column(item) for item in parts[1].split("+")]
-        if kind == "initials" and len(columns) != 1:
+        if kind in ("initials", "window") and len(columns) != 1:
             raise ValueError
-        return kind, columns, k
+        return kind, columns, options
     except ValueError:
         raise ValueError(f"--block {value!r}: accepted forms are {_BLOCK_FORMS}") from None
 
@@ -99,8 +118,15 @@ def _add_pair_inputs(parser: argparse.ArgumentParser) -> None:
     _add_fields(parser)
     parser.add_argument("--block", action="append", metavar="RULE",
                         help="ngrams finds similar text, exact requires equal fields, initials finds "
-                             f"abbreviations; repeat to combine passes. Forms: {_BLOCK_FORMS}. "
-                             "Default: 10 nearest text matches across all --on fields")
+                             "abbreviations, window keeps left minus right within a tolerance (1) or a "
+                             "range (0..3), in weeks, days, hours, minutes or seconds with a w/d/h/m/s "
+                             "suffix and as plain numbers without; within:COLS:RULE runs RULE inside "
+                             f"groups equal on COLS; repeat to combine passes. Forms: {_BLOCK_FORMS}. "
+                             "Default: 10 nearest text matches across all paired --on fields")
+    parser.add_argument("--date-format", metavar="FORMAT",
+                        help="strptime format of text dates in window passes, such as %%m/%%d/%%Y; "
+                             "LEFT=RIGHT gives each file its own and an empty side stays ISO 8601 "
+                             "(default: ISO 8601, for example 2024-03-01 or 2024-03-01T14:30)")
     parser.add_argument("--embedding-model", default="sentence-transformers/all-MiniLM-L6-v2",
                         help="local SentenceTransformer for embeddings passes (optional install)")
     parser.add_argument("--embedding-revision", help="pin the embedding model to a Hub commit")
@@ -218,18 +244,35 @@ def _inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame, list,
     if specs:
         from . import block
 
-        blockers = []
-        for kind, columns, k in specs:
+        def build(spec):
+            kind, columns, options = spec
             for _, a, b in parse_on(columns):
                 check_columns(left, [a], args.left)
                 check_columns(right, [b], args.right)
-            factory = getattr(block, kind)
-            kwargs = {"k": k} if kind in ("ngrams", "embeddings") else {}
+            kwargs = dict(options)
+            if kind == "within":
+                return block.within(build(kwargs.pop("child")), *columns)
             if kind == "embeddings":
                 kwargs.update(model=args.embedding_model, revision=args.embedding_revision,
                               device=args.embedding_device)
-            blockers.append(factory(*columns, **kwargs))
+            if kind == "window" and kwargs["unit"] is not None:
+                kwargs["date_format"] = _date_formats(args.date_format)
+            return getattr(block, kind)(*columns, **kwargs)
+
+        blockers = [build(spec) for spec in specs]
     return left, right, on, blockers
+
+
+def _date_formats(value: str | None) -> tuple[str | None, str | None] | None:
+    """FORMAT for both files, or LEFT=RIGHT, where an empty side keeps ISO 8601."""
+    if value is None:
+        return None
+    parts = value.split("=")
+    if len(parts) > 2 or not value.strip("= "):
+        raise ValueError(f"--date-format {value!r}: use FORMAT, or LEFT_FORMAT=RIGHT_FORMAT with an "
+                         "empty side for ISO 8601")
+    left, right = (parts[0], parts[-1])
+    return (left.strip() or None, right.strip() or None)
 
 
 def _outputs(inputs: list[str], tables: list[str | None], report: str | None = None) -> None:
@@ -285,6 +328,13 @@ def _estimate(args: argparse.Namespace) -> None:
 
     pairs = candidates(left, right, on=on, blockers=blockers, left_id=args.left_id, right_id=args.right_id)
     n = len(pairs)
+    for item in pairs.attrs.get("blocking", {}).get("passes", []):
+        lost = item.get("dropped_values")
+        counts = lost and {side: lost[side]["missing"] + lost[side]["unparseable"]
+                           for side in ("left", "right")}
+        if counts and any(counts.values()):
+            print(f"{item['name']}: {counts['left']:,} left and {counts['right']:,} right records have a "
+                  f"missing or unreadable value and cannot pair in this pass")
     print(f"{len(left):,} left records; {len(right):,} right records; {n:,} candidate pairs\n"
           f"Estimated judging cost: ${n * 330 * 0.042 / 1_000_000:.6f}\n"
           f"Estimated judging time: {n / 200:.1f} seconds\n"
