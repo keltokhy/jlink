@@ -1,5 +1,8 @@
 # Relation linking: rule-style questions and one-sided fields
 
+Rule runs record `style="rule"` in settings. Ordinary identity links retain the existing saved
+settings: an absent style means identity. Loading also accepts an explicit `style="identity"`.
+
 jlink was built for identity: two records, one firm. Some linkages ask a different question.
 A news article is not a police incident, a patent is not a product, a parent is not its
 subsidiary, yet each pair can stand in a relation that a sentence defines. This page covers
@@ -97,7 +100,10 @@ same entity, lists which source each one-sided field came from, and quotes the p
   `jlink.block.window(("published", "occurred"), between=(0, 3), unit="days")`.
 - Jev reads the fields it is given and returns a probability. It does not extract a name, an
   address or a date from the text, and it never generates text.
-- The `estimate` figures assume about 330 input tokens per pair, which was measured on short
-  firm records. Pairs that carry article text use more tokens and cost more than estimated.
+- The default `estimate` figures are a short-record scenario: 330 input tokens per pair,
+  $0.042 per million tokens and 200 pairs per second. The API returns these `assumptions`;
+  the CLI labels the scenario. Field lengths do not enter the calculation. Pass
+  `linker.estimate(left, right, tokens_per_pair=...)` to supply a token assumption; the time
+  scenario still uses short-record throughput. Article cost and throughput have not been measured.
 - Nothing here measures Jev on article-to-incident pairs or any other relation. Whether it
   judges yours well is an empirical question: audit a sample before relying on the links.

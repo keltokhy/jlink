@@ -182,7 +182,10 @@ linker = jlink.Linker(
     blockers=[jlink.block.ngrams(("conm", "assignee"), k=10), jlink.block.initials(("conm", "assignee"))],
 )
 linker.estimate(compustat, patents, left_id="gvkey", right_id="assignee_id")   # blocking only, no API calls
-# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': 0.6316, 'seconds': 227.8}
+# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': 0.6316, 'seconds': 227.8,
+#  'assumptions': {'tokens_per_pair': 330, 'price_per_million_tokens': 0.042,
+#                  'pairs_per_second': 200, 'token_basis': 'short_records',
+#                  'throughput_basis': 'short_records'}}
 # (the real run on these data cost $0.62 and took 176 seconds)
 
 result = linker.link(compustat, patents, left_id="gvkey", right_id="assignee_id", budget=2.00)
@@ -320,6 +323,8 @@ jlink evaluate audit.csv --mode selected --markdown
 and `settings.json` with the question, blocking and provenance. `jlink review create linkage/ ...`,
 `jlink.load` and a replication package all read that folder, so the review page is reachable
 from the command line alone. Stata's `rundir()` and R's `run_dir =` forward it.
+The save folder must be separate from input and output paths. Existing reserved run members
+must be files; these checks run before blocking or judging.
 
 `jlink dedupe firms.dta --on name --entity firm --id gvkey -o clusters.csv --scores scores.csv`
 groups the records of one file, and `jlink cluster scores.csv --threshold 0.8 -o strict.csv`

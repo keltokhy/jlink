@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+- Keep ordinary identity link settings compatible with main by omitting the implicit identity
+  style; saved runs with an explicit identity style remain readable.
+
+- Qualify API estimates with token, price and throughput assumptions and accept a caller-supplied
+  `tokens_per_pair`. Label CLI cost/time figures as short-record scenarios; no article calibration is claimed.
+
+- Keep date windows within their declared bounds at fractional-nanosecond and timestamp-range
+  boundaries, using directed integer bounds and excluding out-of-range search intervals.
+
+- Validate and capture blocker provenance before judging in both link and dedupe runs, restoring
+  the identity link validation order and preventing requests for unsaveable configurations.
+
+- Reject `--save` directories that equal an input or output path, and reserved run members
+  that are directories or special files, before blocking or judging.
+
+- Detect UTC awareness from parsed custom date formats in `window`, including `%z` and `%Z`,
+  so equivalent aware times compare and aware/naive comparisons are rejected.
+
+- Read saved probabilities at full float precision in `cluster`, preserving exact threshold
+  and average-linkage decisions without model calls.
+
+- Preserve full float precision when loading dedupe cluster IDs, including adjacent float IDs.
+  Saved version 2 runs keep the existing integer, float and string ID metadata.
+
 - Add `style="rule"` to `Linker`, `jlink.link`, `jlink.judge`, the `link` command (`--style rule`)
   and the Stata and R wrappers. The proposition becomes "Record A and record B satisfy the
   following match rule. <definition>", so a link can be a relation that is not identity. `entity`

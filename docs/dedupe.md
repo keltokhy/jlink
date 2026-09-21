@@ -153,6 +153,15 @@ jev-link evaluate audit.csv --mode selected --markdown
 that share a cluster, which is what `audit --links` expects. `cluster` regroups saved scores
 without API calls; without `--records` it can only list records that some pair mentions.
 
+Saved runs retain integer, float and string ID kinds, including literal `001` and `NA` strings.
+Loading preserves float IDs and probabilities exactly, so `recluster` reproduces the in-memory
+clusters with the same settings and record order, without calling the model.
+The `cluster` command also reads probabilities at full float precision. Use
+`cluster dedupe/scores.csv --records firms.dta --id firm_id` to retain the source ID types,
+records without candidates, and source order. CSV and TSV source IDs are strings; Stata and
+Parquet retain numeric ID types. Without `--records`, score order determines the ID order
+and can affect tie-breaking.
+
 ## What does not work yet
 
 - The local review page and `review apply` resolve links between two tables. They refuse a
