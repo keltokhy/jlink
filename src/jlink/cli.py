@@ -12,7 +12,7 @@ import pandas as pd
 
 from . import __version__
 from .fields import check_columns, ids, parse_on
-from .io import FORMATS, read_table, write_table
+from .io import FORMATS, read_table, stata_value_labels, write_table
 
 _BLOCK_FORMS = "ngrams:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name"
 _HOW = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
@@ -280,13 +280,15 @@ def _estimate(args: argparse.Namespace) -> None:
           "No API calls.")
 
 
-def _numeric(frame: pd.DataFrame, columns: list[str], path: str) -> None:
+def _numeric(frame: pd.DataFrame, columns: list[str], path: str, *, every_row: str = "") -> None:
+    """Parse numeric columns. `every_row` says how to recover a column that may have no empty cells."""
     check_columns(frame, columns, path)
     for column in columns:
         try:
             frame[column] = pd.to_numeric(frame[column], errors="raise")
         except (ValueError, TypeError):
-            raise ValueError(f"{path!r}: column {column!r} must contain numbers or empty cells") from None
+            allowed = f"a number in every row; {every_row}" if every_row else "numbers or empty cells"
+            raise ValueError(f"{path!r}: column {column!r} must contain {allowed}") from None
 
 
 def _align_ids(scores: pd.DataFrame, frame: pd.DataFrame, column: str | None, side: str) -> None:
@@ -334,10 +336,19 @@ def _audit(args: argparse.Namespace) -> None:
 
 def _evaluate(args: argparse.Namespace) -> None:
     labeled = read_table(args.labeled)
-    check_columns(labeled, ["is_match", "bin"], args.labeled)
-    _numeric(labeled, ["p", "weight"], args.labeled)
-    from .audit import evaluate
+    check_columns(labeled, ["is_match", "bin", "p"], args.labeled)
+    # Stata stores the bins as coded value labels. Naming them is a one-to-one relabeling: the
+    # strata, their order and every number stay as they are, and the report reads "(0.2, 0.5]", not "2".
+    names = stata_value_labels(args.labeled, "bin")
+    if len(set(names.values())) == len(names) and labeled["bin"].isin(names).all():
+        labeled["bin"] = labeled["bin"].map(names)
+    from .audit import _blank, evaluate
 
+    # As in the Python API, a row without a label need not have a usable probability.
+    labeled["p"] = labeled["p"].mask(_blank(labeled["is_match"]))
+    _numeric(labeled, ["p"], args.labeled)
+    _numeric(labeled, ["weight"], args.labeled,
+             every_row="rows with a blank label need theirs too, so restore it from the table `audit` wrote")
     result = evaluate(labeled, threshold=args.threshold, mode=args.mode)
     print(result.to_markdown() if args.markdown else result.summary())
 

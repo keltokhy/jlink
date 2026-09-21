@@ -83,8 +83,8 @@ selection does not depend on pandas attributes or categorical metadata:
 | `p` | Pair probability between 0 and 1. Sampled pairs have finite probabilities. |
 | `selected` | Optional boolean: true exactly when this pair belongs to the complete final links table. Absence means unknown, not false. |
 | `is_match` | Human truth label: 1/0, True/False, y/n or yes/no, ignoring case and surrounding spaces. A blank is an incomplete label. |
-| `bin` | Original sampling stratum; do not recompute it after labeling or filtering. |
-| `weight` | Positive inverse inclusion weight: bin population divided by bin sample size. |
+| `bin` | Original sampling stratum; do not recompute it after labeling or filtering. In a `.dta` audit it is a coded value label; `jev-link evaluate` names the codes from those labels for display, which changes no stratum and no number. |
+| `weight` | Positive inverse inclusion weight: bin population divided by bin sample size. Required on every row, including rows whose label is blank. |
 | `a_<field>`, `b_<field>` | Optional fields displayed for human comparison; not used in the metrics. |
 
 The exporter writes boolean `selected` values. The evaluator accepts booleans, numeric
@@ -107,26 +107,87 @@ missing `p` is rejected by evaluation, rather than counted as a negative predict
 For labels `y`, predictions `z` and sampling weights `w`, the weighted totals are
 `TP = sum(w*y*z)`, predicted matches `sum(w*z)` and true matches `sum(w*y)`. Precision is
 `TP / sum(w*z)`, recall is `TP / sum(w*y)`, and F1 is `2*TP / (sum(w*z) + sum(w*y))`.
-Zero denominators produce NaN and an explanation. Calibration and the weighted Brier
-score always compare **pair probabilities** to human truth across selected and unselected
-pairs alike. They do not measure the calibration of final-link membership.
+Zero denominators produce NaN and an explanation that speaks of labeled pairs, since a
+predicted or selected link on a row with a blank label enters no total. Calibration and the
+weighted Brier score always compare **pair probabilities** to human truth, over labeled
+pairs, across selected and unselected pairs alike. They do not measure the calibration of
+final-link membership.
 
-Blank labels are counted and dropped. Available labels retain their original weights;
-there is no adjustment for differential nonresponse across bins. Even if every bin has
-some labels, selective or unequal missingness can bias the result. If an entire known
-stratum has no labels, population-wide metrics and intervals are NaN. Keep blank rows in
-the file so evaluation can detect this. CSV does not preserve unused categorical bins:
-choose a sample size large enough to include every populated bin before exporting, and
-do not delete rows or bins. Once omitted rows or bins have been removed from a plain file,
-the evaluator cannot reconstruct them or verify the sample's coverage.
+## Blank labels
 
-The 95% intervals use seeded within-bin resampling of labeled rows with their weights and
-fixed predictions. They condition on the observed candidate pool and selection. They do
-**not** estimate blocking uncertainty, error from unjudged candidates, assignment changes
-in another dataset, model-call variability or selective missing labels. They do not apply
+A row whose `is_match` is blank is counted and left out of the totals, but it still says
+how much of the population its bin stands for. Within each bin, the labeled pairs are
+reweighted to the total weight of all the bin's sampled rows: each labeled weight is
+multiplied by (weight of all sampled rows in the bin) / (weight of its labeled rows). A
+bin in which 30 of 100 sampled pairs were labeled therefore counts as much as a bin in
+which all 100 were. Without this, bins with more blanks count for less. If a labeler works
+down from the likely matches and leaves most low-probability pairs blank, the true matches
+in those bins, which the links miss, are undercounted and recall is overstated.
+
+The factor applies to precision, recall, F1 and the weighted Brier score, in both modes,
+and to every bootstrap replicate. The summary lists the adjusted bins and their factors. **If no
+label is blank, every factor is exactly 1 and the results are identical to those of earlier
+versions.** If blanks are equally frequent in every bin, the factors are equal and the
+estimates do not move.
+
+What is adjusted is an unequal *rate* of blanks across bins. What is not adjusted is *which*
+pairs within a bin are blank. The adjustment treats a bin's labeled pairs as representative
+of its blank ones. If the pairs left blank within a bin are the hard ones, where the model
+is more often wrong, the labeled pairs flatter the bin and no reweighting can recover that.
+Label those pairs, or report the blank counts beside the estimates.
+
+Each calibration row describes the bin's **labeled** pairs. `n` counts them, and `mean_p`
+and `match_rate` are both weighted means over those same pairs; the reweighting factor is
+common to a bin and cancels, so a row is the same with or without it. `mean_p` is therefore
+not the mean probability of every pair sampled in the bin, even though the blank rows'
+probabilities are usually known. Calibration is the gap between the two columns, and that
+gap means something only if both describe the same pairs. If blanks within a bin depend on
+`p`, say a labeler skips the lower-scored pairs of a bin, the labeled pairs still show
+whether scores near theirs come true, while the mean `p` of all sampled rows set against
+the match rate of the labeled ones would show a gap that is not there. It also lets a
+blank row carry no usable `p` at all. A bin without labels has no calibration point:
+both columns are NaN.
+
+A bin with sampled rows but no label at all cannot be estimated, and its weight is not
+redistributed to other bins, whose pairs have different probabilities. Population-wide
+metrics, Brier and intervals are then NaN. The summary names those bins and states the
+share of the sampled weight they hold; bins that do have labels keep their calibration
+rows. Label at least a few pairs in every bin.
+
+Keep blank rows in the file, with their weights: they are what the adjustment is computed
+from, and deleting them returns the old, unadjusted estimate without any sign of it. A
+blank row needs a valid `weight` but not a valid `p`, in Python and in `jev-link evaluate`
+alike. CSV does not preserve unused
+categorical bins: choose a sample size large enough to include every populated bin before
+exporting, and do not delete rows or bins. Once omitted rows or bins have been removed from
+a plain file, the evaluator cannot reconstruct them or verify the sample's coverage.
+
+## Intervals
+
+The 95% intervals use seeded within-bin resampling of labeled rows with their weights,
+including the blank-label factor, and fixed predictions. A replicate draws as many labeled
+rows in a bin as were labeled. With the one weight per bin that `audit_sample` writes, this
+equals rescaling each replicate to its bin's total weight; with weights that vary inside a
+bin, the factor is fixed rather than recomputed per replicate, which keeps fully labeled
+results unchanged. The intervals condition on the observed candidate pool, the selection
+and the number of labels in each bin. They do **not** estimate blocking uncertainty, error
+from unjudged candidates, assignment changes in another dataset, model-call variability or
+labels left blank for reasons related to the truth. They do not apply
 a finite-population correction; a fully labeled census can still have bootstrap intervals.
 A bin with only one label cannot reveal within-bin variability, and undefined bootstrap
-replicates are excluded and reported. Treat sparse-bin intervals cautiously.
+replicates are excluded and reported. Treat sparse-bin intervals cautiously: a bin whose few
+labels show no match contributes no spread at all, so intervals for recall run short when
+true matches are rare in the low bins, with or without blank labels.
+
+## Changes to reported numbers
+
+Estimates from **partially labeled** audits change with the blank-label reweighting above:
+precision, recall, F1, Brier and their intervals, whenever blanks are more frequent in some
+bins than in others. Rerun `evaluate` on the labeled file, with its blank rows, and report
+the new numbers. Estimates from **fully labeled** audits do not change at all; a regression
+test compares them bit for bit with the previous evaluator. Two things are stricter: a row
+with a blank label must carry a valid positive `weight`, and the note for a bin without
+labels now states the weight it holds.
 
 When complete benchmark truth is available, `jlink.score_against_truth(links, truth,
 candidates)` compares final links with the full truth and separately reports blocking

@@ -140,16 +140,42 @@ def _selected(values: pd.Series) -> pd.Series:
     return text.map(mapping).astype(bool)
 
 
+def _blank(values: pd.Series) -> pd.Series:
+    """Rows whose human label is missing or only whitespace."""
+    text = values.astype("string").str.strip()
+    return text.isna() | text.eq("").fillna(False)
+
+
 def _labels(values: pd.Series) -> pd.Series:
     text = values.astype("string").str.strip().str.casefold()
     mapping = {"1": 1.0, "1.0": 1.0, "true": 1.0, "y": 1.0, "yes": 1.0,
                "0": 0.0, "0.0": 0.0, "false": 0.0, "n": 0.0, "no": 0.0}
-    blank = text.isna() | text.eq("").fillna(False)
+    blank = _blank(values)
     invalid = ~blank & ~text.isin(mapping)
     if invalid.any():
         bad = values.loc[invalid].iloc[0]
         raise ValueError(f"column 'is_match' has {bad!r}; use 1/0, True/False, y/n, yes/no, or blank")
     return text.map(mapping).astype(float)
+
+
+_RESTORE = "restore the 'weight' column from the file that audit_sample wrote"
+
+
+def _sampling_weights(frame: pd.DataFrame, keep: pd.Series) -> np.ndarray:
+    """Positive weights for every sampled row; a bin's blank rows carry part of its weight."""
+    try:
+        weights = _numbers(frame, "weight").to_numpy()
+    except ValueError:
+        _numbers(frame.loc[keep], "weight")  # a fault among the labeled rows keeps its usual message
+        blank = pd.to_numeric(frame.loc[~keep, "weight"], errors="coerce").to_numpy(dtype=float, na_value=np.nan)
+        raise ValueError(f"column 'weight' has no usable number in {int((~np.isfinite(blank)).sum()):,} of the "
+                         f"{len(blank):,} rows with a blank label. Every sampled row needs its sampling weight, "
+                         "because the blank rows show how much of their bin the labeled pairs stand for; "
+                         f"{_RESTORE}") from None
+    if (weights <= 0).any():
+        raise ValueError(f"column 'weight' must contain positive sampling weights, but {int((weights <= 0).sum()):,} "
+                         f"rows have zero or less; {_RESTORE}")
+    return weights
 
 
 def _metrics(totals: np.ndarray) -> np.ndarray:
@@ -199,12 +225,13 @@ class Evaluation:
         """Describe the estimand and explain unavailable estimates."""
         estimand = (f"Pair-scoring evaluation at threshold {self.threshold:g}." if self.mode == "threshold"
                     else "Final-link evaluation using saved selected membership; no threshold is reapplied.")
-        parts = [estimand, f"{self.n_labeled:,} labeled pairs; {self.n_unlabeled:,} blank labels dropped."]
+        parts = [estimand, f"{self.n_labeled:,} labeled pairs; {self.n_unlabeled:,} labels left blank."]
         for name in ("precision", "recall", "f1"):
             estimate, low, high = getattr(self, name)
             label = "F1" if name == "f1" else name.capitalize()
             parts.append(f"{label} {_format(estimate)} (95% CI {_format(low)} to {_format(high)}).")
-        parts.append(f"Weighted Brier score {_format(self.brier)}; Brier and calibration assess pair scores.")
+        parts.append(f"Weighted Brier score {_format(self.brier)}; Brier and calibration assess pair scores, "
+                     "over labeled pairs.")
         parts.append("Estimates use sampling weights; 95% intervals use a bootstrap within bins.")
         parts.append("Recall is among judged candidate pairs only; it excludes pairs without a probability "
                      "and true matches lost in blocking.")
@@ -237,9 +264,19 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
     mode="selected" uses the nonmissing selected column and does not reapply threshold.
     Brier and calibration assess pair probabilities in either mode. Recall is limited to
     judged candidate pairs, not all true links; bootstrap intervals condition on that pool.
-    Entirely unlabeled strata make population-wide estimates unavailable. Partial labeling
-    uses the supplied weights for the available judgments; it assumes missing labels do not
-    introduce selection bias. F1 is 2 TP / (predicted links + true matches).
+    F1 is 2 TP / (predicted links + true matches).
+
+    Each calibration row describes a bin's labeled pairs: n counts them, and mean_p and
+    match_rate are weighted means over those same pairs, so the two are comparable even if
+    blanks within the bin depend on p. A blank row's p is never used and may be unusable.
+
+    Blank labels: keep those rows, weights included. Within each bin the labeled pairs are
+    reweighted to the total weight of all the bin's sampled rows, so a bin with more blanks
+    is not underrepresented. This applies to every estimate, to Brier and to the bootstrap,
+    and changes nothing when no label is blank. It assumes that within a bin a blank is
+    unrelated to the truth; hard pairs left blank can still bias the result. A bin with
+    sampled rows but no label cannot be estimated: population-wide estimates are then NaN
+    and the summary states the share of the sampled weight those bins hold.
     """
     if mode not in ("threshold", "selected"):
         raise ValueError("mode must be 'threshold' for pair scores or 'selected' for final links")
@@ -263,12 +300,21 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
               else list(pd.unique(frame["bin"])))
     judged = frame.loc[keep].reset_index(drop=True)
     p = _probabilities(judged, missing=False).to_numpy()
-    weights = _numbers(judged, "weight").to_numpy()
-    if (weights <= 0).any():
-        raise ValueError("column 'weight' must contain positive sampling weights")
-    if n_labeled:
+    sampled = _sampling_weights(frame, keep)
+    if len(sampled):
         # Ratios are invariant to a common scale; avoid overflow with large population weights.
-        weights = weights / weights.max()
+        sampled = sampled / sampled.max()
+    labeled_rows = keep.to_numpy()
+    weights = sampled[labeled_rows]
+    # A bin's sampled rows, labeled or not, stand for its whole population. Its labeled pairs
+    # take over the weight of its blank rows; otherwise bins with more blanks would count for less.
+    codes, names = pd.factorize(frame["bin"])
+    bin_weight = np.bincount(codes, weights=sampled, minlength=len(names))
+    labeled_weight = np.bincount(codes[labeled_rows], weights=weights, minlength=len(names))
+    blanks = np.bincount(codes[~labeled_rows], minlength=len(names))
+    adjusted = (blanks > 0) & (labeled_weight > 0)
+    factors = np.divide(bin_weight, labeled_weight, out=np.ones(len(names)), where=adjusted)
+    weights = weights * factors[codes[labeled_rows]]
     truth = y.loc[keep].to_numpy()
     predicted = p >= threshold if selection is None else selection.loc[keep].to_numpy()
     contributions = weights[:, None] * np.column_stack([predicted * truth, predicted, truth])
@@ -293,20 +339,29 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
     if not n_labeled:
         notes.append("No labeled pairs: all estimates and intervals are NaN.")
     if empty:
-        names = ", ".join(str(value) for value in empty)
-        notes.append(f"No labels in bin(s) {names}: population-wide estimates and intervals are NaN.")
+        listed = ", ".join(str(value) for value in empty)
+        notes.append(f"No labels in bin(s) {listed}: population-wide estimates and intervals are NaN.")
+        shares = {name: bin_weight[i] / bin_weight.sum() for i, name in enumerate(names) if name in empty}
+        if shares:
+            detail = ", ".join(f"{name} {share:.1%}" for name, share in shares.items())
+            notes.append(f"The unlabeled bins hold {sum(shares.values()):.1%} of the sampled weight ({detail}); "
+                         "no labeled pair can stand in for them, so label pairs in every bin.")
+        unsampled = [str(value) for value in empty if value not in shares]
+        if unsampled:
+            notes.append(f"Bin(s) {', '.join(unsampled)} had no sampled rows, so their weight is unknown.")
     if not n_labeled or empty:
         estimates[:] = np.nan
         brier = float("nan")
     else:
         if totals[1] == 0:
-            description = ("No predicted links at this threshold" if mode == "threshold"
-                           else "No selected links")
+            description = ("No predicted links among labeled pairs at this threshold" if mode == "threshold"
+                           else "No selected links among labeled pairs")
             notes.append(f"{description}: precision and its interval are NaN.")
         if totals[2] == 0:
             notes.append("No true matches among labeled pairs: recall and its interval are NaN.")
         if totals[1] + totals[2] == 0:
-            notes.append("No predicted links or true matches: F1 and its interval are NaN.")
+            links = "predicted" if mode == "threshold" else "selected"
+            notes.append(f"No {links} links or true matches among labeled pairs: F1 and its interval are NaN.")
         boot = _bootstrap(contributions, groups, n_boot, seed)
         for index, name in enumerate(("precision", "recall", "F1")):
             finite = np.isfinite(boot[:, index])
@@ -318,9 +373,12 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
         if any(len(group) == 1 for group in groups.values()):
             notes.append("A bin has only one label; its within-bin uncertainty cannot be estimated "
                          "by resampling. Label more pairs for reliable intervals.")
-    if n_unlabeled and n_labeled:
-        notes.append("Available labels retain their sampling weights; "
-                     "selective missing labels can bias estimates.")
+    if adjusted.any() and not empty:
+        detail = ", ".join(f"{name} x{factors[i]:.3g}" for i, name in enumerate(names) if adjusted[i])
+        notes.append("Rows with a blank label were kept as part of the sample: in each bin that has them, the "
+                     f"labeled pairs were reweighted to the bin's full sampling weight ({detail}), so unequal "
+                     "blank rates across bins do not shift the estimates. Labels left blank for reasons "
+                     "related to the truth within a bin can still bias them.")
     metrics = [tuple(float(value) for value in (estimate, *interval))
                for estimate, interval in zip(estimates, intervals)]
     return Evaluation(*metrics, brier, table, n_labeled, n_unlabeled,

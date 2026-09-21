@@ -47,6 +47,18 @@ def read_table(path: str | Path) -> pd.DataFrame:
         raise ValueError(f"cannot read {str(path)!r}: {exc}") from None
 
 
+def stata_value_labels(path: str | Path, column: str) -> dict:
+    """{code: label} for a Stata column, or {} if it has none. `read_table` keeps the codes on purpose."""
+    path = _path(path)
+    if path.suffix.lower() != ".dta":
+        return {}
+    try:
+        with pd.io.stata.StataReader(path) as reader:
+            return {int(code): str(label) for code, label in reader.value_labels().get(column, {}).items()}
+    except Exception as exc:
+        raise ValueError(f"cannot read {str(path)!r}: {exc}") from None
+
+
 def write_table(frame: pd.DataFrame, path: str | Path) -> None:
     """Write without an index; warn once if Stata needs different column names."""
     path = _path(path)

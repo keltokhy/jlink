@@ -23,6 +23,12 @@ exact policy: `exact_shortcut=False` is now the default, with explicit Python/CL
 It adds optional `block.embeddings` and an optional install extra; the base runtime dependency
 set and candidate/score/link column meanings remain unchanged. Historical scores are preserved.
 
+The [blank-label update](docs/evaluation.md#blank-labels) changes what `evaluate` reports
+for partially labeled audits: labeled pairs are reweighted to their bin's full sampling
+weight, so estimates move whenever blanks are more frequent in some bins than in others.
+Fully labeled audits give exactly the numbers they gave before. Rows with a blank label now
+need a valid `weight`.
+
 ## Pipeline and modules
 
 ```
@@ -208,7 +214,9 @@ def score_against_truth(links, truth, candidates=None) -> dict
   side as `a_<label>` and `b_<label>` so the labeler needs nothing else. Shuffled, so bins are
   not labeled in order.
 - `evaluate`: reads `is_match` as 1/0, True/False, y/n or yes/no in any case. Blank rows are
-  dropped and counted. Using `weight`, estimate precision, recall and F1 at `threshold`, each
+  counted and left out, and the labeled rows of their bin take over their weight, so a bin
+  with more blanks still counts in full; a bin with no label makes population-wide estimates
+  NaN. Using `weight`, estimate precision, recall and F1 at `threshold`, each
   with a 95% interval from a stratified bootstrap, plus a weighted Brier score and a
   calibration table (`bin`, `n`, `mean_p`, `match_rate`). Recall here is recall among candidate
   pairs; say so in the summary, because pairs lost in blocking are invisible to it.
