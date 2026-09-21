@@ -143,7 +143,8 @@ rows. Label at least a few pairs in every bin.
 
 Keep blank rows in the file, with their weights: they are what the adjustment is computed
 from, and deleting them returns the old, unadjusted estimate without any sign of it. A
-blank row needs a valid `weight` but not a valid `p`. CSV does not preserve unused
+blank row needs a valid `weight` but not a valid `p`, in Python and in `jev-link evaluate`
+alike. CSV does not preserve unused
 categorical bins: choose a sample size large enough to include every populated bin before
 exporting, and do not delete rows or bins. Once omitted rows or bins have been removed from
 a plain file, the evaluator cannot reconstruct them or verify the sample's coverage.

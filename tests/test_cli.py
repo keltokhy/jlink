@@ -252,6 +252,25 @@ def test_audit_without_sources_and_numeric_errors(downstream, tmp_path, capsys):
                  "with a blank label need theirs too, so restore it from the table `audit` wrote")
 
 
+def test_evaluate_needs_no_probability_on_rows_without_a_label(tmp_path, capsys):
+    from jlink.audit import evaluate
+
+    audit = tmp_path / "audit.csv"
+    frame = pd.DataFrame({"p": [.9, "not scored", ""], "is_match": [1, "", " "], "bin": "all", "weight": [2, 3, 3]})
+    frame.to_csv(audit, index=False)
+    assert evaluate(frame, n_boot=20).precision[0] == 1  # the Python API never read those cells
+    command.cli(["evaluate", str(audit)])
+    out = capsys.readouterr().out
+    assert "Precision 1.0000" in out and "1 labeled pairs; 2 labels left blank." in out
+    # A labeled row still needs its probability, and every row its weight.
+    frame.assign(is_match=[1, 0, ""]).to_csv(audit, index=False)
+    assert_error(["evaluate", str(audit)], capsys, "column 'p' must contain numbers or empty cells")
+    frame.assign(weight=[2, "lost", 3]).to_csv(audit, index=False)
+    assert_error(["evaluate", str(audit)], capsys, "column 'weight' must contain a number in every row")
+    frame.drop(columns="p").to_csv(audit, index=False)
+    assert_error(["evaluate", str(audit)], capsys, "no column 'p'")
+
+
 def test_evaluate_names_stata_bins_without_changing_any_number(tmp_path, capsys):
     from jlink.audit import audit_sample, evaluate
     from jlink.io import write_table
