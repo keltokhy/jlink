@@ -85,7 +85,7 @@ columns literally named `left_id` and `right_id`, whatever the source columns we
 | column | type | meaning |
 |---|---|---|
 | `p` | float | probability the pair is a match; NaN if not judged |
-| `source` | str | `exact` (all `on` fields identical after normalization; no API call), `jev`, `error`, or `unjudged` (budget ran out) |
+| `source` | str | `exact` (only with `exact_shortcut=True`: every `on` field nonempty and identical after normalization; no API call), `jev`, `error`, or `unjudged` (budget ran out) |
 | `error` | str or NA | message when `source == "error"` |
 
 **links**: the chosen pairs, with every `scores` column plus
@@ -155,12 +155,16 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
 ```python
 def judge(candidates, left, right, *, on, entity: str, definition: str = "", left_id=None, right_id=None,
           api=None, model=None, concurrency=32, budget: float | None = 5.0, cache=True,
-          exact_shortcut=True, progress=True, transport=None) -> tuple[pd.DataFrame, Meter]
+          exact_shortcut=False, progress=True, transport=None) -> tuple[pd.DataFrame, Meter]
 ```
 
 One call per pair. The state is `{"record_a": {label: value, ...}, "record_b": {...}}` with
 missing fields dropped. Pairs are judged in descending `sim`, so a budget is spent on the
 likeliest pairs first. Returns the scores table and the cost meter.
+
+By default every pair is judged, equal text included: identical names need not be one entity.
+`exact_shortcut=True` accepts a pair at `p = 1` without a call when every `on` field is
+nonempty on both sides and equal, field by field, after `normalize`.
 
 ## resolve.py
 
