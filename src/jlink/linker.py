@@ -99,8 +99,8 @@ class Linker:
         settings = self._settings(
             {"left_id": left_id, "right_id": right_id, "how": how, "threshold": threshold,
              "min_margin": min_margin, "n_left": len(left), "n_right": len(right)},
-            passes=passes, cands=cands, meter=meter, t0=t0, started_at=started_at, inputs=inputs,
-            budget=budget, max_pairs=max_pairs)
+            passes=passes, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
+            inputs=inputs, budget=budget, max_pairs=max_pairs)
         return Result(links, scores, settings, meter, _left=left, _right=right)
 
     def dedupe(self, frame: pd.DataFrame, *, id: str | None = None, threshold: float = 0.5,
@@ -137,17 +137,19 @@ class Linker:
             {"task": "dedupe", "id": id, "left_id": id, "right_id": id, "linkage": linkage,
              "unproposed": unproposed, "threshold": threshold, "pair_order": "earlier_row_is_record_a_v1",
              "n_records": len(frame), "n_left": len(frame), "n_right": len(frame)},
-            passes=passes, cands=cands, meter=meter, t0=t0, started_at=started_at, inputs=inputs,
-            budget=budget, max_pairs=max_pairs)
+            passes=passes, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
+            inputs=inputs, budget=budget, max_pairs=max_pairs)
         return DedupeResult(clusters, scores, settings, meter, _frame=frame)
 
-    def _settings(self, specific: dict, *, passes, cands, meter, t0, started_at, inputs, budget,
+    def _settings(self, specific: dict, *, passes, cands, scores, meter, t0, started_at, inputs, budget,
                   max_pairs) -> dict:
         """A saved run's settings. `specific` holds IDs, sizes and how pairs became links or clusters."""
+        # Quote the question judge() sent. Rebuilding it here is only a fallback for a replaced judge.
+        asked = scores.attrs.get("question") or question(
+            self.entity or "", self.definition, style=self.style)["instructions"]
         settings = {
             "jlink": __version__, "date": date.today().isoformat(), "entity": self.entity,
-            "definition": self.definition, "style": self.style,
-            "question": question(self.entity or "", self.definition, style=self.style)["instructions"],
+            "definition": self.definition, "style": self.style, "question": asked,
             "on": [[lc, rc] for _, lc, rc in self.fields], **specific,
             "blockers": [b.name for b in passes], "blocker_configs": [blocker_config(b) for b in passes],
             "budget": None if budget is None else float(budget), "model": meter.model,
