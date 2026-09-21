@@ -279,7 +279,7 @@ The script is isolated from the benchmark harness and writes only the requested 
 
 ```bash
 PYTHONPATH=src uv run python docs/experiments/blocking.py firms \
-  --data-root /Volumes/K3/GitHub/jlink/bench/data/nber-firms \
+  --data-root bench/data/nber-firms \
   --output docs/experiments/blocking-firms.json
 PYTHONPATH=src uv run python docs/experiments/blocking.py scale \
   --rows 100000 --groups 50 --output docs/experiments/blocking-scale-100k-grouped.json

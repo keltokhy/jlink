@@ -112,7 +112,7 @@ def render(bundle: dict) -> str:
               "stale hashes and evidence separation. They are not live model results. "
               "Real-company ownership knowledge is not tested by this fixture.", "",
               "## Provenance and remaining experiments", "",
-              "Inputs were read from `/Volumes/K3/GitHub/jlink/bench/data` and `bench/out` without "
+              "Inputs were read from `bench/data` and `bench/out` without "
               "modification. Replays save source hashes, explicit split definitions, scores, links and "
               "unmatched removals. The JSON bundle preserves reports and hashes; per-pair CSVs remain "
               "in the worktree's ignored `bench/out/final-cached`, `final-unmatched`, and `final-rules` "

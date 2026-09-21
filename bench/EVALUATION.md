@@ -14,12 +14,12 @@ requests are needed after installing the optional benchmark dependencies:
 ```sh
 uv sync --group bench
 uv run python -m bench.heldout febrl4 \
-  --data-dir /Volumes/K3/GitHub/jlink/bench/data \
-  --cached-run /Volumes/K3/GitHub/jlink/bench/out/live/febrl4 \
+  --data-dir bench/data \
+  --cached-run bench/out/live/febrl4 \
   --config bench/configs/cached.json --ecm --out bench/out/replay
 uv run python -m bench.heldout febrl4 \
-  --data-dir /Volumes/K3/GitHub/jlink/bench/data \
-  --cached-run /Volumes/K3/GitHub/jlink/bench/out/live/febrl4 \
+  --data-dir bench/data \
+  --cached-run bench/out/live/febrl4 \
   --config bench/configs/febrl-unmatched.json --ecm --out bench/out/unmatched
 uv run python -m bench.rule_sensitivity --out bench/out/rules
 uv run pytest
@@ -30,7 +30,7 @@ The checked-in report is collected from the final run directories with:
 ```sh
 uv run python -m bench.evidence_report \
   --cached-dir bench/out/final-cached --unmatched-dir bench/out/final-unmatched \
-  --rules-dir bench/out/final-rules --legacy-dir /Volumes/K3/GitHub/jlink/bench/out \
+  --rules-dir bench/out/final-rules --legacy-dir bench/out \
   --json bench/evidence/2026-09-18.json --markdown bench/EVIDENCE.md
 ```
 
