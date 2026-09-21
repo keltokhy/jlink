@@ -31,6 +31,10 @@ writes one fixed link with IDs `00123` and `00007`, reads the wrapper's exported
 input, and records arguments so shell quoting and temporary-file cleanup can be
 checked. Its deliberate failure prints a `jlink:` error and exits with status 2.
 
+Both check that `rundir()` / `run_dir =` reaches the command as `--save`, with a folder name that
+contains spaces and an apostrophe. Both also check that `style(rule)` / `style = "rule"` reaches the command without an entity, and
+that a rule style with no definition, a missing entity and an unknown style stop before it.
+
 R checks left data frames, both right data frames and file paths, numeric score
 columns, text IDs, quoted definitions, CLI errors, empty results, unchanged input, and cleanup.
 Stata checks the in-memory values, variable label and dataset characteristic

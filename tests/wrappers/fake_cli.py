@@ -38,7 +38,14 @@ def main():
     assert other.record_id.iloc[0] == "00007"
     assert options["--on"] == ["name", "city=town"]
     assert options["--left-id"] == ["firm_id"] and options["--right-id"] == ["record_id"]
-    assert options["--entity"] == ["firm"]
+    style = options.get("--style", ["identity"])
+    assert style in (["identity"], ["rule"]), style
+    # A rule-style call states the relation in --define and may omit --entity.
+    assert options.get("--entity") == (None if style == ["rule"] else ["firm"]), options
+    assert style == ["identity"] or definition
+    for folder in options.get("--save", []):
+        Path(folder).mkdir(exist_ok=True)
+        (Path(folder) / "settings.json").write_text(json.dumps({"fake": True}), encoding="utf-8")
     with open(options["-o"][0], "w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["left_id", "right_id", "block", "sim", "p", "source", "error", "margin"])

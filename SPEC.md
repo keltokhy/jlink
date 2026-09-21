@@ -29,6 +29,21 @@ weight, so estimates move whenever blanks are more frequent in some bins than in
 Fully labeled audits give exactly the numbers they gave before. Rows with a blank label now
 need a valid `weight`.
 
+The [relation linking update](docs/relation-linking.md) adds an opt-in `style="rule"` question
+whose proposition is the definition itself, makes `entity` optional under that style, and lets an
+`on` item be one-sided: `(left, None)` or `(None, right)`. Identity wording, paired fields and
+every table's columns are unchanged; `fields.parse_on` accepts one-sided items only on request.
+
+The window update adds `block.window`, a pass over dates or numbers described in
+[docs/blocking.md](docs/blocking.md#windows-on-dates-and-numbers), the `window:` and `within:`
+forms of `--block`, `--date-format`, and an optional `dropped_values` entry in a pass's
+blocking diagnostics. No existing pass, column or default changed.
+
+The [dedupe update](docs/dedupe.md) links one table to itself: `block.self_candidates`,
+`jlink.cluster` (`cluster.py`), `Linker.dedupe`, `jlink.dedupe`, `DedupeResult`, and the `dedupe`
+and `cluster` commands. Scores keep the `left_id`/`right_id` columns, with the earlier row as
+`left_id`, so `audit_sample` and `evaluate` apply unchanged. Two-table behavior is unchanged.
+
 ## Pipeline and modules
 
 ```
@@ -65,6 +80,12 @@ left, right ──block──▶ candidates ──judge──▶ scores ──re
 `on` lists the fields shown to the judge and used for similarity. Each item is a column name
 present in both frames, or a `(left_column, right_column)` pair. `fields.parse_on(on)` returns
 `[(label, left_column, right_column), ...]`, where the label is the left column name.
+
+With `parse_on(on, unpaired=True)` an item may also be `(left_column, None)` or
+`(None, right_column)`: a field only one side has, labeled by its own column name, with `None` for
+the absent side. The judge, `candidates` (for `sim`), audit samples and fingerprints accept such
+items; blocking passes do not, because they compare a left column with a right column.
+`fields.side_fields(fields, "left"|"right")` lists `(label, column)` for one side.
 
 `fields.record_text(frame, columns)` returns a `pd.Series` of normalized text: the listed
 columns joined by a space, after `fields.normalize`, which casefolds, strips accents, turns `&`
@@ -119,9 +140,15 @@ def ngrams(*columns: str | tuple[str, str], k: int = 10, n: tuple[int, int] = (2
 def initials(column: str | tuple[str, str], min_len: int = 2, name: str | None = None) -> Blocker
 def within(blocker: Blocker, *columns: str | tuple[str, str], missing: str = "drop",
            name: str | None = None) -> Blocker
+def window(column: str | tuple[str, str], tolerance: float | None = None, *,
+           between: tuple[float, float] | None = None, unit: str | None = None,
+           date_format: str | tuple[str | None, str | None] | None = None,
+           name: str | None = None) -> Blocker
 def candidates(left, right, *, on, blockers: list[Blocker] | None = None, left_id=None, right_id=None,
                max_pairs: int | None = 5_000_000) -> pd.DataFrame
-def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
+def self_candidates(frame, *, on, blockers: list[Blocker] | None = None, id=None,
+                    max_pairs: int | None = 5_000_000) -> pd.DataFrame
+def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame, *, unordered: bool = False) -> float
 ```
 
 - `exact`: pairs whose listed columns are all equal after `normalize`. Whole numbers agree
@@ -139,6 +166,14 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   supporting mapped left/right columns and restoring original positions. N-gram TF-IDF is
   fit within each group. `missing="drop"` omits incomplete keys; `missing="match"` allows
   identical incomplete keys (empty components are equal, not wildcards).
+- `window`: pairs with `low <= left - right <= high`, from `tolerance=t` (`-t` to `t`) or
+  `between=(low, high)`, which may be one-sided. No `unit` means numbers; a `unit` of weeks,
+  days, hours, minutes or seconds means dates, read as ISO 8601 unless `date_format` is given.
+  Date differences use whole nanoseconds within the supplied bounds (ceiling of the lower,
+  floor of the upper); overflowing search endpoints do not broaden the interval.
+  Sort the right values once and binary-search each left value; never compare all pairs.
+  Missing and unreadable values never pair and are counted by `dropped(left, right)`; nothing
+  is guessed. Default name `window:<column>[<low>..<high><unit letter>]`.
 - `initials`: pairs where one side's normalized text, read as one token of at least `min_len`
   letters, equals the initials of the other side's tokens, in either direction ("IBM" and
   "International Business Machines"). Ignore the stop words `and`, `of`, `the`, `for` and
@@ -153,16 +188,26 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
   remain supported. Adding `exact` cannot constrain another pass because passes are unioned.
   `Blocker.to_config()` and `candidates.attrs["blocking"]` expose nested configurations and
   per-pass contributions; see [the schema and ordering contract](docs/blocking.md).
+- `self_candidates`: the same union with one table on both sides, for dedupe. No record is
+  paired with itself; (i, j) and (j, i) are one pair with the earlier row as `left_id`;
+  `max_pairs` counts unordered pairs; `blockers=None` means `[ngrams(*all on fields, k=11)]`
+  because a record is its own nearest neighbor. `on` items must be plain column names.
 - `pairs_completeness`: share of `truth` pairs (columns `left_id`, `right_id`) present in
   `candidates`. This is blocking recall.
 
 ## judge.py (lead)
 
 ```python
-def judge(candidates, left, right, *, on, entity: str, definition: str = "", left_id=None, right_id=None,
+def judge(candidates, left, right, *, on, entity: str | None = None, definition: str = "",
+          style: str = "identity", left_id=None, right_id=None,
           api=None, model=None, concurrency=32, budget: float | None = 5.0, cache=True,
           exact_shortcut=False, progress=True, transport=None) -> tuple[pd.DataFrame, Meter]
 ```
+
+`style="identity"` asks "Record A and record B refer to the same `<entity>`. `<definition>`" and
+needs an entity. `style="rule"` asks "Record A and record B satisfy the following match rule.
+`<definition>`" and needs a definition; the entity is not part of that question. The cache key
+includes the question, so the two styles never share an answer.
 
 One call per pair. The state is `{"record_a": {label: value, ...}, "record_b": {...}}` with
 missing fields dropped. Pairs are judged in descending `sim`, so a budget is spent on the
@@ -192,6 +237,20 @@ Rows with NaN `p` are ignored. `how` is one of:
 Then compute `margin`. When `min_margin` is given, drop links with `margin < min_margin` (NaN margins
 pass). The default is no margin filter: a filter at 0 would silently remove every link that has a
 higher-scoring competitor, which guts `many-to-many`.
+
+## cluster.py
+
+```python
+def cluster(scores: pd.DataFrame, *, ids=None, threshold: float = 0.5, linkage: str = "average",
+            unproposed: str = "nonmatch") -> pd.DataFrame      # id, cluster_id, cluster_size
+```
+
+Rows with NaN `p` are no evidence. `linkage="components"`: connected components of pairs with
+`p >= threshold`. `linkage="average"`: greedy agglomeration, best pair of clusters first, while
+the mean `p` between them is at least `threshold`; with `unproposed="nonmatch"` a pair absent
+from `scores` counts as 0 in that mean, with `"ignore"` only judged pairs count. Exact integer
+arithmetic; ties go to the clusters earliest in `ids`; independent of the row order of
+`scores`; no API calls. `cluster_id` numbers clusters by first appearance in `ids`.
 
 ## audit.py
 
@@ -231,7 +290,8 @@ def score_against_truth(links, truth, candidates=None) -> dict
 
 ```python
 linker = jlink.Linker(entity="firm", definition="...", on=["name", ("city", "town")],
-                      blockers=[jlink.block.ngrams("name", k=10), jlink.block.initials("name")])
+                      blockers=[jlink.block.ngrams("name", k=10), jlink.block.initials("name")],
+                      style="identity")   # or style="rule", with entity optional
 result = linker.link(left, right, left_id="gvkey", right_id="id", how="one-to-one",
                      threshold=0.5, min_margin=None, budget=5.0)
 result.links, result.scores, result.candidates, result.meter, result.settings
@@ -239,7 +299,20 @@ result.relink(how=..., threshold=..., min_margin=...)   # no new API calls
 result.merged(left, right)                             # left and right columns side by side, plus p
 result.audit_sample(n=200), result.report(), result.methods()
 result.save(directory); jlink.load(directory)
+
+deduped = linker.dedupe(frame, id="gvkey", threshold=0.5, linkage="average", unproposed="nonmatch",
+                        budget=5.0)                     # or jlink.dedupe(frame, entity=..., on=..., ...)
+deduped.clusters, deduped.scores, deduped.links, deduped.settings, deduped.meter
+deduped.recluster(threshold=..., linkage=..., unproposed=...)   # no new API calls
+deduped.labeled(frame), deduped.split_pairs(), deduped.audit_sample(n=200)
+deduped.report(), deduped.methods(), deduped.save(directory)     # jlink.load returns a DedupeResult
 ```
+
+Dedupe save/load preserves integer, float and string IDs and full float score precision using
+the existing version 2 `id_kinds` metadata. `cluster` reads probabilities without rounding;
+pass the original `--records` and `--id` to retain numeric ID types, isolated records and
+record order. With the same scores, settings and ID order, reclustering reproduces the
+in-memory clusters exactly with zero model calls.
 
 ## io.py and cli.py
 
@@ -248,19 +321,34 @@ result.save(directory); jlink.load(directory)
 strings to numbers (`dtype=str` for delimited files, then leave conversion to the caller).
 
 ```
-jlink link LEFT RIGHT --on name [--on city=town] --entity firm [--define "..."]
+jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on "=place"]
+           --entity firm [--define "..."] [--style identity|rule]
            [--left-id COL] [--right-id COL] [--block ngrams:name:10] [--block exact:state]
-           [--block initials:name] [--how one-to-one] [--threshold 0.5] [--min-margin M]
-           [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md]
+           [--block initials:name] [--block window:year:1] [--block window:a=b:0..3d]
+           [--block within:state:RULE] [--date-format FORMAT|LEFT=RIGHT]
+           [--how one-to-one] [--threshold 0.5] [--min-margin M]
+           [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md] [--save DIR]
            [--api typesafe|openrouter] [--model ID] [--no-cache] [-j 32]
 jlink estimate LEFT RIGHT --on ...      # blocking only: pair count, cost and time estimate, no API calls
+jlink dedupe TABLE --on name --entity firm [--id COL] [--block ...] [--threshold 0.5]
+           [--linkage average|components] [--unproposed nonmatch|ignore] [--estimate]
+           [-o clusters.csv] [--scores scores.csv] [--links links.csv] [--report report.md] [--save DIR]
+jlink cluster SCORES [--records TABLE --id COL] [--threshold 0.5] [--linkage ...] [--unproposed ...]
+           [-o clusters.csv] [--links links.csv]          # no API calls
 jlink audit SCORES [-n 200] [--left LEFT --right RIGHT --on ...] -o audit.csv
 jlink evaluate LABELED [--threshold 0.5] [--markdown]
 jlink --version
 ```
 
-`--on city=town` means left column `city`, right column `town`. Cost estimate: about 330 input
-tokens per pair at $0.042 per million tokens; time estimate: about 200 pairs a second. Exit
+`--save DIR` rejects a directory equal to an input or output path and reserved run members that
+are not files, before blocking or judging. It writes the folder that `Result.save(DIR)`
+(or `DedupeResult.save`) writes, which is what
+`review create` and `jlink.load` read. `--on city=town` means left column `city`, right column `town`; `--on text=` is a left-only
+field and `--on "=place"` a right-only one (quoted, because zsh expands a leading `=`). `--style rule` requires `--define` and makes `--entity`
+optional. The CLI labels cost and time as short-record scenarios: 330 input tokens per pair
+at $0.042 per million tokens and 200 pairs a second. The API returns these `assumptions` and
+accepts a finite positive `tokens_per_pair` override; it does not infer tokens from record
+length or adjust the short-record throughput assumption. Exit
 status 0 on success, 2 on any error, with a one-line message on stderr prefixed `jlink:`.
 Console scripts `jlink` and `jev-link` are the same program; macOS ships a Java tool at
 `/usr/bin/jlink`, so the docs must mention `jev-link` and `python -m jlink`.
@@ -271,8 +359,8 @@ signatures above.
 ## Stata and R wrappers
 
 Thin shims that write the data in memory to a temporary file, call the command, and read the
-links back. Stata: `jlink using right.dta, on(name city) entity(firm) [define() leftid()
-rightid() how() threshold() budget() saving()]`, with a `.sthlp` help file. R: a single
+links back. Stata: `jlink using right.dta, on(name city) entity(firm) [define() style() leftid()
+rightid() how() threshold() budget() saving() rundir()]`, with a `.sthlp` help file. R: a single
 `jlink()` function in `r/jlink.R` using `system2`, returning a data frame. Find the executable
 as `jev-link` first, then `python3 -m jlink`. State plainly in each file's header whether it
 was run against a real Stata or R on this machine.

@@ -161,8 +161,9 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
 1. **Block.** Comparing every record with every other is wasteful, so jlink first proposes
    candidate pairs on your machine, at no cost. By default each left record is paired with its
    ten nearest right records by character n-grams. Add passes for what n-grams miss:
-   `jlink.block.initials("name")` pairs "IBM" with "International Business Machines", and
-   `jlink.block.exact("state")` pairs everything within a state.
+   `jlink.block.initials("name")` pairs "IBM" with "International Business Machines",
+   `jlink.block.exact("state")` pairs everything within a state, and
+   `jlink.block.window("year", 1)` pairs records whose years differ by at most one.
 2. **Judge.** Each candidate pair goes to Jev with your rule, including equal names: identical
    text need not identify the same entity. If equal compared fields establish identity in your
    data, explicitly enable `Linker(..., exact_shortcut=True)` to accept complete normalized
@@ -181,7 +182,10 @@ linker = jlink.Linker(
     blockers=[jlink.block.ngrams(("conm", "assignee"), k=10), jlink.block.initials(("conm", "assignee"))],
 )
 linker.estimate(compustat, patents, left_id="gvkey", right_id="assignee_id")   # blocking only, no API calls
-# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': 0.6316, 'seconds': 227.8}
+# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': 0.6316, 'seconds': 227.8,
+#  'assumptions': {'tokens_per_pair': 330, 'price_per_million_tokens': 0.042,
+#                  'pairs_per_second': 200, 'token_basis': 'short_records',
+#                  'throughput_basis': 'short_records'}}
 # (the real run on these data cost $0.62 and took 176 seconds)
 
 result = linker.link(compustat, patents, left_id="gvkey", right_id="assignee_id", budget=2.00)
@@ -194,6 +198,65 @@ result.save("linkage/")                                   # links.csv, scores.cs
 budget stops new requests at the observed cost, but calls already in flight can overshoot it.
 Saved runs retain input fingerprints, blocker parameters, and model identities, including
 cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
+
+### Relations, not only identity
+
+By default the question put to Jev is "Record A and record B refer to the same firm", followed
+by your definition. Some linkages are not identity. A news article is not a police incident,
+but it can report one. `style="rule"` makes your definition the whole proposition: "Record A and
+record B satisfy the following match rule. ..." The two tables then rarely share columns, so an
+`on` item may be one-sided: `("text", None)` is shown on the left record only and
+`(None, "neighborhood")` on the right record only.
+
+```python
+published_soon_after = jlink.block.window(          # article 0 to 3 days after the incident,
+    ("published", "occurred"), between=(0, 3), unit="days")           # never before it
+result = jlink.link(
+    articles, incidents, style="rule",
+    definition="Record A is a news article that reports the shooting incident in record B.",
+    on=[("text", None), ("published", None),
+        (None, "occurred"), (None, "neighborhood"), (None, "victim_age_group"), (None, "fatal")],
+    blockers=[jlink.block.within(published_soon_after, "borough")],   # if both tables have one
+    left_id="article_id", right_id="incident_id", how="many-to-one",
+)
+```
+
+This is a sketch of a design, not a result: it has been run against a fake model in the tests
+and never against Jev, so nothing is known yet about how well Jev judges this relation. The
+date logic sits in blocking on purpose. `jlink.block.window` compares dates and numbers exactly
+on your machine, so the rule need not ask Jev to do arithmetic, and only pairs inside the
+window are paid for. `how="many-to-one"` lets several articles report one incident.
+
+`entity` is optional under `style="rule"` because the question no longer names one.
+`result.methods()` then describes a relation defined by your rule and does not say the records
+are the same entity. Identity and rule answers are cached under different questions and never
+mix. One-sided fields are shown to the judge only; a blocking pass needs a column on each side
+and says so if given one. See [relation linking](docs/relation-linking.md) and
+[windows on dates and numbers](docs/blocking.md#windows-on-dates-and-numbers).
+
+### Dedupe: one table against itself
+
+```python
+events = jlink.dedupe(
+    articles, style="rule", on=["text", "published"], id="article_id",
+    definition="Both news articles report the same shooting incident.",
+    blockers=[jlink.block.within(jlink.block.window("published", 3, unit="days"), "borough")],
+)
+events.clusters                          # id, cluster_id, cluster_size: one row per article
+events.labeled()                         # the articles, with cluster_id appended
+looser = events.recluster(threshold=0.4) # no new calls, like relink
+```
+
+`jlink.dedupe` blocks a table against itself, never pairs a record with itself, judges each
+unordered pair once (earlier row as record A), and groups records into clusters. Joining every
+pair above the threshold lets one wrong pair chain two unrelated groups together, so the default
+is average linkage in which every pair between two clusters votes, a pair that blocking never
+proposed counting as a non-match. That resists chaining and can split a true group that
+blocking covered only in part; `unproposed="ignore"` and `linkage="components"` are the other
+two rules, and switching is free. `report()` counts the high-probability pairs the rule left
+apart, and `result.split_pairs()` lists them. [Dedupe](docs/dedupe.md) measures both failure
+modes on synthetic scores, and states what is not known: nothing here measures Jev on a dedupe
+task, or whether it answers (A, B) and (B, A) alike.
 
 ### Optional semantic candidate search
 
@@ -250,11 +313,29 @@ jlink estimate compustat.dta patents.csv --on conm=assignee --on state
 jlink link compustat.dta patents.csv --on conm=assignee --on state --entity firm \
       --define "A parent company and its subsidiary are different firms." \
       --left-id gvkey --right-id assignee_id --block ngrams:conm=assignee:10 --block initials:conm=assignee \
-      -o links.csv --scores scores.csv --report report.md
+      -o links.csv --scores scores.csv --report report.md --save linkage/
 jlink audit scores.csv --links links.csv --left compustat.dta --right patents.csv --on conm=assignee \
       --left-id gvkey --right-id assignee_id -n 200 -o audit.csv
 jlink evaluate audit.csv --mode selected --markdown
 ```
+
+`--save linkage/` writes what `result.save("linkage/")` writes: the links, every candidate score,
+and `settings.json` with the question, blocking and provenance. `jlink review create linkage/ ...`,
+`jlink.load` and a replication package all read that folder, so the review page is reachable
+from the command line alone. Stata's `rundir()` and R's `run_dir =` forward it.
+The save folder must be separate from input and output paths. Existing reserved run members
+must be files; these checks run before blocking or judging.
+
+`jlink dedupe firms.dta --on name --entity firm --id gvkey -o clusters.csv --scores scores.csv`
+groups the records of one file, and `jlink cluster scores.csv --threshold 0.8 -o strict.csv`
+regroups saved scores without API calls.
+
+`--style rule` asks the relation in `--define` and makes `--entity` optional; `--on text=` and
+`--on "=neighborhood"` are the one-sided fields (quote a leading `=`: zsh, the macOS default
+shell, otherwise reads `=word` as a command lookup and stops before jlink runs). Stata's `style(rule)` and R's `style = "rule"`
+forward the same option. `--block window:published=occurred:0..3d` is the date window above,
+`--block window:year:1` a numeric one, and `--block within:borough:RULE` runs any rule inside
+groups; `--date-format` reads dates that are not ISO 8601.
 
 The Stata and R wrappers are single files in this repository, not part of the Python package: copy
 `stata/jlink.ado` and `stata/jlink.sthlp` to your personal ado directory (`sysdir` shows it), and
@@ -287,7 +368,10 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 - The default model ID is an alias for the latest Jev. Pin one with `model=` or `--model`
   (for example `typesafe/jev-1.13` on OpenRouter) and report it; `result.methods()` does.
 - The Stata and R wrappers were run on macOS against Stata 19.5 and R 4.5.1. They do not
-  support Windows yet.
+  support Windows yet, and they call `link` only: dedupe and the review page need the command
+  line or Python.
+- Rule-style relation linking, the window blocker and dedupe are tested against a fake model
+  and synthetic data only. No benchmark in this README covers them.
 
 ## Development
 

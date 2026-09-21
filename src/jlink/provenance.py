@@ -105,8 +105,8 @@ def frame_fingerprint(frame: pd.DataFrame, *, id_column: str | None, columns: li
 def input_fingerprints(left, right, *, fields, left_id, right_id) -> dict:
     result = {}
     for side, frame, id_column, columns in (
-        ("left", left, left_id, [lc for _, lc, _ in fields]),
-        ("right", right, right_id, [rc for _, _, rc in fields]),
+        ("left", left, left_id, [lc for _, lc, _ in fields if lc is not None]),
+        ("right", right, right_id, [rc for _, _, rc in fields if rc is not None]),
     ):
         result[side] = {
             "compared": frame_fingerprint(frame, id_column=id_column, columns=columns, side=side),

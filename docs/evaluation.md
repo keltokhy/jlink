@@ -193,3 +193,12 @@ When complete benchmark truth is available, `jlink.score_against_truth(links, tr
 candidates)` compares final links with the full truth and separately reports blocking
 completeness. Its full-truth recall can be lower than audit recall because their
 denominators differ.
+
+## Dedupe runs
+
+`DedupeResult.audit_sample()` draws the same stratified sample from a dedupe run's scores, with
+`selected` true when the two records share a cluster. `evaluate(labeled, mode="selected")` then
+measures the clusters pair by pair among judged pairs. Records can share a cluster through
+other records without a judged pair of their own; those pairs are outside the sampling
+population, so precision does not cover them. From files, save `dedupe --links` and pass it to
+`audit --links` with the same table as `--left` and `--right`. See [dedupe](dedupe.md).

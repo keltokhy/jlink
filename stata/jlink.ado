@@ -1,16 +1,29 @@
 *! jlink 0.1.0 -- thin POSIX wrapper, requires Stata 14 or later
 * Run on real Stata/SE 19.5 on macOS using an offline fake jev-link. Tested:
 * temp files, quoted definitions, spaces in paths, saving/merge, unchanged data,
-* empty links, command errors, and python3 fallback. Also run once end to end against the real
-* command and the live Jev API on examples/ (2026-09-18). Not tested on Windows.
+* empty links, command errors, python3 fallback, style() with its entity()/define() checks, rundir().
+* Also run once end to end against the real command and the live Jev API on examples/
+* (2026-09-18); style(rule) has only been run against the fake. Not tested on Windows.
 * Rerun: uv run python tests/wrappers/run.py --stata
 program define jlink, rclass
     version 14
-    syntax using/, ON(string) ENTITY(string) [DEFine(string) LEFTid(varname) ///
+    syntax using/, ON(string) [ENTITY(string) DEFine(string) STYle(string) LEFTid(varname) ///
         RIGHTid(string) HOW(string) THReshold(real 0.5) BUDget(real 5) ///
-        SAVing(string) REPLACE MERGE]
+        SAVing(string) REPLACE MERGE RUNdir(string)]
     if "`c(os)'" == "Windows" {
         display as error "jlink: this wrapper currently requires macOS or Unix"
+        exit 198
+    }
+    if !inlist(`"`style'"', "", "identity", "rule") {
+        display as error "jlink: style() must be identity or rule"
+        exit 198
+    }
+    if `"`style'"' == "rule" & `"`define'"' == "" {
+        display as error "jlink: style(rule) asks whether a pair satisfies define(), so define() is required"
+        exit 198
+    }
+    if `"`style'"' != "rule" & `"`entity'"' == "" {
+        display as error "jlink: entity() is required unless style(rule)"
         exit 198
     }
     if `"`how'"' == "" local how "one-to-one"
@@ -106,11 +119,12 @@ void _jlink_script()
         _jlink_quote(st_local("using")) + " -o " + _jlink_quote(output)
     fields = tokens(st_local("on"))
     for (i=1; i<=cols(fields); i++) cmd = cmd + " --on " + _jlink_quote(fields[i])
-    options = ("entity", "define", "how", "threshold", "budget", "leftid", "rightid")
+    options = ("entity", "define", "style", "how", "threshold", "budget", "leftid", "rightid", "rundir")
     for (i=1; i<=cols(options); i++) {
         if (st_local(options[i]) != "") {
             if (options[i] == "leftid") cmd = cmd + " --left-id"
             else if (options[i] == "rightid") cmd = cmd + " --right-id"
+            else if (options[i] == "rundir") cmd = cmd + " --save"
             else cmd = cmd + " --" + options[i]
             cmd = cmd + " " + _jlink_quote(st_local(options[i]))
         }

@@ -25,11 +25,12 @@ def downstream(monkeypatch):
                                    report=lambda: "# Firm linkage\n\nOne link.\n")
 
     class Linker:
-        def __init__(self, *, entity, definition, on, blockers, api=None, model=None, cache=True,
-                     concurrency=32, exact_shortcut=False):
+        def __init__(self, *, entity, definition, on, blockers, style="identity", api=None, model=None,
+                     cache=True, concurrency=32, exact_shortcut=False):
             calls.constructor = dict(entity=entity, definition=definition, on=on, blockers=blockers,
                                      api=api, model=model, cache=cache, concurrency=concurrency,
                                      exact_shortcut=exact_shortcut)
+            calls.style = style
 
         def link(self, left, right, *, left_id=None, right_id=None, how="one-to-one", threshold=0.5,
                  min_margin=None, budget=5.0, progress=True):
@@ -96,7 +97,7 @@ def assert_error(args, capsys, expected):
     assert expected in captured.err
 
 
-@pytest.mark.parametrize("subcommand", [None, "link", "estimate", "audit", "evaluate"])
+@pytest.mark.parametrize("subcommand", [None, "link", "estimate", "dedupe", "cluster", "audit", "evaluate"])
 def test_help(subcommand, capsys):
     with pytest.raises(SystemExit) as exc:
         command.cli(([subcommand] if subcommand else []) + ["--help"])
@@ -159,6 +160,22 @@ def test_semantic_cli_and_explicit_identity_policy(downstream, inputs, capsys):
         ("embeddings", ("name",), {"k": 7, "model": "org/model", "revision": "fixed-commit", "device": "cpu"})]
 
 
+def test_rule_style_and_one_sided_fields_reach_the_linker(downstream, inputs, capsys):
+    command.cli(link_args(inputs))
+    assert downstream.style == "identity"
+    args = ["link", *inputs, "--on", "name", "--on", "city=", "--on", "=town", "--left-id", "id",
+            "--right-id", "rid", "--block", "exact:name"]
+    command.cli([*args, "--style", "rule", "--define", "Record B is the registry entry for record A."])
+    assert downstream.style == "rule" and downstream.constructor["entity"] is None
+    assert downstream.constructor["on"] == ["name", ("city", None), (None, "town")]
+    capsys.readouterr()
+    assert_error([*args, "--style", "rule"], capsys, "--define cannot be empty")
+    assert_error(args, capsys, "--entity must name a kind of record")
+    assert_error([*args, "--entity", "firm", "--style", "relation"], capsys, "--style")
+    # Blocking passes pair a left column with a right column, so they keep the stricter grammar.
+    assert_error(link_args(inputs) + ["--block", "exact:city="], capsys, "accepted forms are")
+
+
 @pytest.mark.parametrize("rule", ["", "random:name", "ngrams:name", "ngrams:name:0", "ngrams:name:-1",
                                   "ngrams:name:1.5", "ngrams:name:nan", "ngrams::10", "exact:name:10",
                                   "exact:=st", "exact:a=b=c", "exact:name+", "initials:name+city",
@@ -184,7 +201,10 @@ def test_missing_columns_and_ids(inputs, capsys):
     assert_error(link_args(inputs) + ["--on", "missing"], capsys, "column 'missing'")
     assert_error(link_args(inputs) + ["--right-id", "wrong"], capsys, "column 'wrong'")
     assert_error(link_args(inputs) + ["--block", "exact:unknown"], capsys, "column 'unknown'")
-    assert_error(link_args(inputs) + ["--on", "city="], capsys, "left_column=right_column")
+    assert_error(link_args(inputs) + ["--on", "="], capsys, "left_column=right_column")
+    assert_error(link_args(inputs) + ["--on", "a=b=c"], capsys, "left_column= or =right_column")
+    assert_error(link_args(inputs) + ["--on", "missing="], capsys, "column 'missing'")
+    assert_error(link_args(inputs) + ["--on", "=missing"], capsys, "column 'missing'")
     left = read_table(inputs[0])
     left["id"] = "00123"
     left.to_csv(inputs[0], index=False)
@@ -196,6 +216,25 @@ def test_output_errors_before_link(downstream, inputs, tmp_path, capsys):
     assert_error(link_args(inputs) + ["-o", inputs[0]], capsys, "separate output file")
     assert_error(link_args(inputs) + ["-o", str(tmp_path / "missing" / "out.csv")], capsys, "out.csv")
     assert not hasattr(downstream, "link")
+
+
+def test_save_folder_is_checked_before_link(downstream, inputs, tmp_path, capsys):
+    taken = tmp_path / "taken.txt"
+    taken.write_text("a file, not a folder")
+    assert_error(link_args(inputs) + ["--save", str(taken)], capsys, "name a new or existing folder")
+    assert_error(link_args(inputs) + ["--save", str(tmp_path / "missing" / "run")], capsys, "inside an existing one")
+    assert_error(link_args(inputs) + ["--save", " "], capsys, "name a new or existing folder")
+    run = tmp_path / "run"
+    assert_error(link_args(inputs) + ["--save", str(run), "-o", str(run / "links.csv")], capsys,
+                 "existing folder")  # -o needs its folder to exist already
+    run.mkdir()
+    assert_error(link_args(inputs) + ["--save", str(run), "--scores", str(run / "scores.csv")], capsys,
+                 "its scores.csv would replace an input or another output")
+    assert not hasattr(downstream, "link")
+    saved = []
+    downstream.result.save = saved.append
+    command.cli(link_args(inputs) + ["--save", str(run), "-o", str(tmp_path / "links.csv")])
+    assert saved == [run] and "links" in capsys.readouterr().err
 
 
 def test_one_line_runtime_error(downstream, inputs, capsys, monkeypatch):
@@ -372,3 +411,11 @@ def test_installed_entrypoints(program):
                             capture_output=True, text=True, check=False)
     assert result.returncode == 2 and result.stderr.startswith("jlink:")
     assert result.stderr.count("\n") == 1 and "absent.csv" in result.stderr
+
+
+def test_cli_estimate_names_the_short_record_scenario(downstream, inputs, capsys):
+    command.cli(["estimate", *map(str, inputs), "--on", "name"])
+    output = capsys.readouterr().out
+    assert "Short-record judging cost scenario:" in output
+    assert "Short-record judging time scenario:" in output
+    assert "330 input tokens" in output and "No API calls" in output

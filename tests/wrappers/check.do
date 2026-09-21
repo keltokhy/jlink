@@ -30,6 +30,22 @@ assert left_id == "00123"
 assert right_id == "00007"
 assert p == .98
 restore
+jlink using `"`right'"', on(name city=town) style(rule) define(`"`rule'"') ///
+    leftid(firm_id) rightid(record_id)
+assert r(N_links) == 1
+capture noisily jlink using `"`right'"', on(name city=town) style(rule) leftid(firm_id) rightid(record_id)
+assert _rc == 198
+capture noisily jlink using `"`right'"', on(name city=town) leftid(firm_id) rightid(record_id)
+assert _rc == 198
+capture noisily jlink using `"`right'"', on(name city=town) entity(firm) style(relation)
+assert _rc == 198
+quietly datasignature
+assert `"`r(datasignature)'"' == `"`original'"'
+local saved `"`c(pwd)'/run folder's files"'
+jlink using `"`right'"', on(name city=town) entity(firm) leftid(firm_id) rightid(record_id) ///
+    rundir(`"`saved'"')
+assert r(N_links) == 1
+confirm file `"`saved'/settings.json"'
 capture noisily jlink using `"`right'"', on(name city=town) entity(firm) define("FAIL") ///
     leftid(firm_id) rightid(record_id)
 assert _rc != 0

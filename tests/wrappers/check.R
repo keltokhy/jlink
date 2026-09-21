@@ -17,6 +17,18 @@ stopifnot(identical(links$left_id, "00123"), identical(left, original))
 problem <- tryCatch(run(right, "FAIL"), error = function(e) conditionMessage(e))
 stopifnot(grepl("jlink: registry.dta: column 'name' is missing", problem, fixed = TRUE),
           identical(left, original))
+relation <- jlink(left, right, on = c("name", "city=town"), define = Sys.getenv("JLINK_TEST_DEFINE"),
+                  style = "rule", left_id = "firm_id", right_id = "record_id")
+stopifnot(identical(relation$left_id, "00123"), identical(left, original))
+for (bad in list(list(style = "rule"), list(style = "relation", entity = "firm"), list())) {
+    problem <- tryCatch(do.call(jlink, c(list(left, right, on = "name"), bad)),
+                        error = function(e) conditionMessage(e))
+    stopifnot(startsWith(problem, "jlink: "))
+}
+saved <- file.path(getwd(), "run folder's files")
+kept <- jlink(left, right, on = c("name", "city=town"), entity = "firm", left_id = "firm_id",
+              right_id = "record_id", run_dir = saved)
+stopifnot(identical(kept$left_id, "00123"), file.exists(file.path(saved, "settings.json")))
 empty <- run(right, "EMPTY")
 stopifnot(nrow(empty) == 0L, identical(names(empty), names(links)), identical(left, original))
 cat("R_WRAPPER_OK\n")

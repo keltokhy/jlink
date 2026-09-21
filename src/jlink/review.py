@@ -219,9 +219,11 @@ class Review:
         _settings(source["settings"])
         fields = source["settings"].get("on", [])
         if not isinstance(fields, list) or any(
-                not isinstance(pair, list) or len(pair) != 2 or not all(isinstance(c, str) for c in pair)
+                not isinstance(pair, list) or len(pair) != 2
+                or not all(c is None or isinstance(c, str) for c in pair) or pair == [None, None]
                 for pair in fields):
-            raise ValueError("review on fields must be a list of [left column, right column] pairs")
+            raise ValueError("review on fields must be a list of [left column, right column] pairs; "
+                             "a one-sided field has null for the side that lacks it")
         close = source["close_margin"]
         if isinstance(close, bool) or not isinstance(close, numbers.Real) or not 0 <= close <= 1:
             raise ValueError("close_margin must be between 0 and 1")
@@ -423,6 +425,9 @@ def create_review(result: "Result", *, left: pd.DataFrame | None = None, right: 
     Only string, integer and finite float IDs are supported, preserving their types exactly.
     Explicit frames override Result's attached frames; loaded Results need both frames.
     """
+    if result.settings.get("task") == "dedupe":
+        raise ValueError("review pages resolve links between two tables and do not handle dedupe clusters "
+                         "yet; label a DedupeResult.audit_sample() instead")
     left = result._left if left is None else left
     right = result._right if right is None else right
     if left is None or right is None:

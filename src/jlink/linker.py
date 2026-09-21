@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import platform
 import time
 from copy import deepcopy
@@ -14,10 +15,11 @@ from pathlib import Path
 import pandas as pd
 
 from . import __version__, audit, block
+from .cluster import LINKAGES, UNPROPOSED, cluster
 from .core import PRICE_PER_MTOK as CLIENT_PRICE_PER_MTOK, Meter
 from .fields import ids, parse_on
-from .judge import EXACT_POLICY, judge, question, validate_budget
-from .provenance import blocker_config, input_fingerprints
+from .judge import EXACT_POLICY, judge, question, validate_budget, validate_question
+from .provenance import blocker_config, frame_fingerprint, input_fingerprints
 from .resolve import resolve
 
 _KEEP = object()  # relink: "leave this setting as it is", distinct from None, which turns the margin off
@@ -32,17 +34,26 @@ class Linker:
         linker = jlink.Linker(entity="firm", on=["name", "state"],
                               definition="A parent company and its subsidiary are different firms.")
         result = linker.link(compustat, patents, left_id="gvkey", right_id="assignee_id")
+
+    ``style="identity"`` (the default) asks whether two records are the same ``entity`` and appends
+    the definition. ``style="rule"`` asks whether the pair satisfies the definition, which may state
+    any relation ("the article reports this incident"); ``entity`` is then optional and not part of
+    the question. An ``on`` item may be one-sided, ``("text", None)`` or ``(None, "precinct")``: it
+    is shown to the judge on that side only and never used to pair columns.
     """
 
-    def __init__(self, entity: str, on, definition: str = "", blockers: list | None = None, *,
-                 api: str | None = None, model: str | None = None, concurrency: int = 32,
-                 cache=True, exact_shortcut: bool = False):
-        if not entity or not entity.strip():
-            raise ValueError('`entity` says what a record is, for example "firm" or "person"; it cannot be empty')
-        self.entity, self.definition, self.on = entity.strip(), (definition or "").strip(), on
-        self.fields = parse_on(on)
+    def __init__(self, entity: str | None = None, on=None, definition: str = "",
+                 blockers: list | None = None, *, style: str = "identity", api: str | None = None,
+                 model: str | None = None, concurrency: int = 32, cache=True, exact_shortcut: bool = False):
+        self.entity, self.definition, self.on = (entity or "").strip() or None, (definition or "").strip(), on
+        validate_question(self.entity, self.definition, style)
+        self.style = style
+        self.fields = parse_on(on, unpaired=True)
         if not isinstance(exact_shortcut, bool):
             raise ValueError("`exact_shortcut` must be a boolean; equal names alone do not establish identity")
+        if exact_shortcut and any(lc is None or rc is None for _, lc, rc in self.fields):
+            raise ValueError("`exact_shortcut` accepts pairs whose fields are all equal, so every `on` field "
+                             "must exist on both sides; remove the one-sided fields or the shortcut")
         self.blockers = blockers
         self.api, self.model, self.concurrency = api, model, concurrency
         self.cache, self.exact_shortcut = cache, exact_shortcut
@@ -52,12 +63,29 @@ class Linker:
         return block.candidates(left, right, on=self.on, blockers=self.blockers, left_id=left_id,
                                 right_id=right_id, max_pairs=max_pairs)
 
-    def estimate(self, left: pd.DataFrame, right: pd.DataFrame, *, left_id=None, right_id=None) -> dict:
-        """Run blocking only and say what judging would cost. No API calls."""
-        pairs = len(self.candidates(left, right, left_id=left_id, right_id=right_id))
-        return {"left": len(left), "right": len(right), "pairs": pairs,
-                "dollars": round(pairs * TOKENS_PER_PAIR * PRICE_PER_MTOK / 1e6, 4),
-                "seconds": round(pairs / PAIRS_PER_SECOND, 1)}
+    def estimate(self, left: pd.DataFrame, right: pd.DataFrame | None = None, *, left_id=None,
+                 right_id=None, tokens_per_pair: float | None = None) -> dict:
+        """Run blocking and return a cost/time scenario with its assumptions. No API calls.
+
+        With one table the estimate is for `dedupe`, and `left_id` names its ID column.
+        By default both scenarios use short-record measurements, without reading field lengths.
+        `tokens_per_pair` overrides the token assumption; throughput remains a short-record scenario.
+        """
+        tokens = TOKENS_PER_PAIR if tokens_per_pair is None else tokens_per_pair
+        if isinstance(tokens, bool) or not isinstance(tokens, (int, float)) or not math.isfinite(tokens) or tokens <= 0:
+            raise ValueError("`tokens_per_pair` must be a finite positive number")
+        if right is None:
+            pairs = len(block.self_candidates(left, on=self.on, blockers=self.blockers, id=left_id))
+            sizes = {"records": len(left)}
+        else:
+            pairs = len(self.candidates(left, right, left_id=left_id, right_id=right_id))
+            sizes = {"left": len(left), "right": len(right)}
+        return sizes | {"pairs": pairs, "dollars": round(pairs * tokens * PRICE_PER_MTOK / 1e6, 4),
+                        "seconds": round(pairs / PAIRS_PER_SECOND, 1),
+                        "assumptions": {"tokens_per_pair": tokens, "price_per_million_tokens": PRICE_PER_MTOK,
+                                        "pairs_per_second": PAIRS_PER_SECOND,
+                                        "token_basis": "short_records" if tokens_per_pair is None else "caller_supplied",
+                                        "throughput_basis": "short_records"}}
 
     def link(self, left: pd.DataFrame, right: pd.DataFrame, *, left_id: str | None = None,
              right_id: str | None = None, how: str = "one-to-one", threshold: float = 0.5,
@@ -68,24 +96,75 @@ class Linker:
         ids(left, left_id, "left"), ids(right, right_id, "right")
         t0 = time.perf_counter()
         started_at = datetime.now(timezone.utc).isoformat()
-        passes = self.blockers if self.blockers is not None else [
-            block.ngrams(*[(lc, rc) for _, lc, rc in self.fields], k=10)]
         cands = self.candidates(left, right, left_id=left_id, right_id=right_id, max_pairs=max_pairs)
+        # Reached only when candidates() accepted the same default, so a paired field exists.
+        passes = self.blockers if self.blockers is not None else [
+            block.ngrams(*[(lc, rc) for _, lc, rc in self.fields if lc is not None and rc is not None], k=10)]
         configs = [blocker_config(b) for b in passes]
         inputs = input_fingerprints(left, right, fields=self.fields, left_id=left_id, right_id=right_id)
         scores, meter = judge(cands, left, right, on=self.on, entity=self.entity, definition=self.definition,
-                              left_id=left_id, right_id=right_id, api=self.api, model=self.model,
+                              style=self.style, left_id=left_id, right_id=right_id, api=self.api, model=self.model,
                               concurrency=self.concurrency, budget=budget, cache=self.cache,
                               exact_shortcut=self.exact_shortcut, progress=progress, transport=transport)
         links = resolve(scores, how=how, threshold=threshold, min_margin=min_margin)
+        settings = self._settings(
+            {"left_id": left_id, "right_id": right_id, "how": how, "threshold": threshold,
+             "min_margin": min_margin, "n_left": len(left), "n_right": len(right)},
+            passes=passes, configs=configs, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
+            inputs=inputs, budget=budget, max_pairs=max_pairs)
+        return Result(links, scores, settings, meter, _left=left, _right=right)
+
+    def dedupe(self, frame: pd.DataFrame, *, id: str | None = None, threshold: float = 0.5,
+               linkage: str = "average", unproposed: str = "nonmatch", budget: float | None = 5.0,
+               max_pairs: int | None = 5_000_000, progress: bool = True, transport=None) -> "DedupeResult":
+        """Link one table to itself and group its records into clusters.
+
+        Each unordered pair of records is a candidate at most once and is judged once, with the
+        record from the earlier row as record A. `linkage="average"` (the default) merges two
+        clusters while the mean probability between them is at least `threshold`, counting pairs
+        that blocking never proposed as non-matches unless `unproposed="ignore"`;
+        `linkage="components"` joins everything reachable through pairs at or above the threshold,
+        so one wrong pair can chain two groups together. See `jlink.cluster`.
+        """
+        _check_clustering(linkage, threshold, unproposed)
+        validate_budget(budget)
+        record_ids = ids(frame, id, "deduplicated")
+        t0 = time.perf_counter()
+        started_at = datetime.now(timezone.utc).isoformat()
+        cands = block.self_candidates(frame, on=self.on, blockers=self.blockers, id=id, max_pairs=max_pairs)
+        passes = self.blockers if self.blockers is not None else [
+            block.ngrams(*[lc for _, lc, _ in self.fields], k=11)]
+        configs = [blocker_config(b) for b in passes]
+        columns = [lc for _, lc, _ in self.fields]
+        inputs = {"records": {
+            "compared": frame_fingerprint(frame, id_column=id, columns=columns, side="deduplicated"),
+            "full": frame_fingerprint(frame, id_column=id, columns=list(frame.columns), side="deduplicated")}}
+        scores, meter = judge(cands, frame, frame, on=self.on, entity=self.entity, definition=self.definition,
+                              style=self.style, left_id=id, right_id=id, api=self.api, model=self.model,
+                              concurrency=self.concurrency, budget=budget, cache=self.cache,
+                              exact_shortcut=self.exact_shortcut, progress=progress, transport=transport)
+        clusters = cluster(scores, ids=record_ids, threshold=threshold, linkage=linkage,
+                           unproposed=unproposed)
+        settings = self._settings(
+            {"task": "dedupe", "id": id, "left_id": id, "right_id": id, "linkage": linkage,
+             "unproposed": unproposed, "threshold": threshold, "pair_order": "earlier_row_is_record_a_v1",
+             "n_records": len(frame), "n_left": len(frame), "n_right": len(frame)},
+            passes=passes, configs=configs, cands=cands, scores=scores, meter=meter, t0=t0, started_at=started_at,
+            inputs=inputs, budget=budget, max_pairs=max_pairs)
+        return DedupeResult(clusters, scores, settings, meter, _frame=frame)
+
+    def _settings(self, specific: dict, *, passes, configs, cands, scores, meter, t0, started_at, inputs, budget,
+                  max_pairs) -> dict:
+        """A saved run's settings. `specific` holds IDs, sizes and how pairs became links or clusters."""
+        # Quote the question judge() sent. Rebuilding it here is only a fallback for a replaced judge.
+        asked = scores.attrs.get("question") or question(
+            self.entity or "", self.definition, style=self.style)["instructions"]
         settings = {
             "jlink": __version__, "date": date.today().isoformat(), "entity": self.entity,
-            "definition": self.definition, "question": question(self.entity, self.definition)["instructions"],
-            "on": [[lc, rc] for _, lc, rc in self.fields], "left_id": left_id, "right_id": right_id,
+            "definition": self.definition, "question": asked,
+            "on": [[lc, rc] for _, lc, rc in self.fields], **specific,
             "blockers": [b.name for b in passes], "blocker_configs": configs,
-            "how": how, "threshold": threshold, "min_margin": min_margin,
-            "budget": None if budget is None else float(budget),
-            "n_left": len(left), "n_right": len(right), "model": meter.model,
+            "budget": None if budget is None else float(budget), "model": meter.model,
             "calls": meter.calls, "cached": meter.cached, "input_tokens": meter.input_tokens,
             "dollars": round(meter.cost, 6), "seconds": round(time.perf_counter() - t0, 1),
             "provenance_version": 1, "started_at": started_at,
@@ -103,15 +182,27 @@ class Linker:
             "runtime": {"python": platform.python_version(), **{p: version(p) for p in (
                 "numpy", "pandas", "scipy", "scikit-learn", "httpx")}},
         }
+        # Missing style already means identity in saved runs. Keep ordinary link settings
+        # compatible with main; rule runs and the new dedupe format name their style explicitly.
+        if self.style != "identity" or specific.get("task") == "dedupe":
+            settings["style"] = self.style
         if "blocking" in cands.attrs:
             settings["blocking"] = deepcopy(cands.attrs["blocking"])
-        return Result(links, scores, settings, meter, _left=left, _right=right)
+        return settings
 
 
-def link(left: pd.DataFrame, right: pd.DataFrame, *, entity: str, on, definition: str = "", blockers=None,
-         exact_shortcut: bool = False, **kwargs) -> "Result":
+def link(left: pd.DataFrame, right: pd.DataFrame, *, entity: str | None = None, on, definition: str = "",
+         blockers=None, style: str = "identity", exact_shortcut: bool = False, **kwargs) -> "Result":
     """One call for the common case. Keyword arguments are those of `Linker.link`."""
-    return Linker(entity, on, definition, blockers, exact_shortcut=exact_shortcut).link(left, right, **kwargs)
+    return Linker(entity, on, definition, blockers, style=style,
+                  exact_shortcut=exact_shortcut).link(left, right, **kwargs)
+
+
+def dedupe(frame: pd.DataFrame, *, entity: str | None = None, on, definition: str = "", blockers=None,
+           style: str = "identity", exact_shortcut: bool = False, **kwargs) -> "DedupeResult":
+    """Find the records in one table that match each other. Keyword arguments are those of `Linker.dedupe`."""
+    return Linker(entity, on, definition, blockers, style=style,
+                  exact_shortcut=exact_shortcut).dedupe(frame, **kwargs)
 
 
 @dataclass
@@ -169,7 +260,9 @@ class Result:
         lines = [
             f"jlink {s['jlink']}, {s['date']}",
             f"Rule: {s['question']}",
-            f"Compared on: {', '.join(lc if lc == rc else f'{lc} = {rc}' for lc, rc in s['on'])}",
+            *(["Question style: rule (the definition states the relation; no entity is named)"]
+              if s.get("style") == "rule" else []),
+            f"Compared on: {_field_list(s['on'], ' = ', '{} (left only)', '{} (right only)')}",
             f"Records: {s['n_left']:,} left, {s['n_right']:,} right",
             f"Candidate pairs: {len(sc):,} ({'; '.join(f'{k}: {v:,}' for k, v in by_block.items())})",
             "Judged: " + ", ".join(f"{by_source.get(k, 0):,} {label}" for k, label in (
@@ -191,7 +284,17 @@ class Result:
     def methods(self) -> str:
         """A paragraph for a data appendix. Edit it; it states only what this run did."""
         s, sc = self.settings, self.scores
-        fields_ = ", ".join(lc if lc == rc else f"{lc} ({rc} in the second source)" for lc, rc in s["on"])
+        fields_ = _field_list(s["on"], None, "{} (first source only)", "{} (second source only)")
+        one_sided = any(lc is None or rc is None for lc, rc in s["on"])
+        shown = (f"the listed fields of each record ({fields_})" if one_sided
+                 else f"the compared fields ({fields_}) of both records")
+        if s.get("style") == "rule":
+            # The proposition is the user's relation, so the paragraph must not claim identity.
+            relation = ("A link here is a relation between two records that a written match rule defines, "
+                        "not a claim that both records describe the same entity. ")
+            asked = "returns a probability that the pair satisfies the rule, put to the model as"
+        else:
+            relation, asked = "", "returns a probability that the following statement is true"
         judged, exact = int((sc["source"] == "jev").sum()), int((sc["source"] == "exact").sum())
         rules = {"one-to-one": "We then chose the set of links with the highest total probability such that no "
                                "record is linked twice",
@@ -209,12 +312,12 @@ class Result:
                               "its fieldwise and missing-value policy was not recorded. ")
         text = (
             f"We linked {s['n_left']:,} records to {s['n_right']:,} records using jlink {s['jlink']}. "
-            f"Candidate pairs were generated by blocking ({'; '.join(s['blockers'])}), which produced "
+            + relation
+            + f"Candidate pairs were generated by blocking ({'; '.join(s['blockers'])}), which produced "
             f"{len(sc):,} pairs. "
             + exact_text
             + f"The {judged:,} model-scored pairs used Jev ({_model_description(s)}) "
-            f"(TypeSafe), which sees the compared fields ({fields_}) of both records and returns a probability "
-            f"that the following statement is true: \"{s['question']}\" "
+            f"(TypeSafe), which sees {shown} and {asked}: \"{s['question']}\" "
             f"{rules[s['how']]}, among pairs with probability of at least {s['threshold']:g}"
             + (f", and dropped links whose probability exceeded that of the best competing pair by less than "
                f"{s['min_margin']:g}" if s["min_margin"] is not None else "")
@@ -248,8 +351,206 @@ class Result:
         return left, right
 
 
-def load(directory: str | Path) -> Result:
-    """Read a result written by `Result.save`. IDs come back as they were: integers, floats or strings."""
+@dataclass
+class DedupeResult:
+    """Clusters of records within one table, with the pair scores they came from.
+
+    `clusters` has one row per record, in table order: `id`, `cluster_id`, `cluster_size`.
+    `scores` has one row per candidate pair; `left_id` is the record from the earlier row, which
+    the judge saw as record A.
+    """
+
+    clusters: pd.DataFrame
+    scores: pd.DataFrame
+    settings: dict
+    meter: Meter = field(default_factory=Meter)
+    _frame: pd.DataFrame | None = field(default=None, repr=False)
+
+    @property
+    def candidates(self) -> pd.DataFrame:
+        return self.scores[["left_id", "right_id", "block", "sim"]]
+
+    @property
+    def links(self) -> pd.DataFrame:
+        """The judged pairs whose two records share a cluster, most probable first.
+
+        Records can share a cluster without a judged pair between them; those pairs are not here.
+        """
+        member = self.clusters.set_index("id")["cluster_id"]
+        together = (member.reindex(self.scores["left_id"]).to_numpy()
+                    == member.reindex(self.scores["right_id"]).to_numpy())
+        kept = self.scores.loc[together & self.scores["p"].notna().to_numpy()]
+        return kept.sort_values("p", ascending=False, kind="stable").reset_index(drop=True)
+
+    def recluster(self, *, threshold: float | None = None, linkage: str | None = None,
+                  unproposed: str | None = None) -> "DedupeResult":
+        """Group the records again under another threshold or rule. No new API calls."""
+        s = dict(self.settings)
+        s["threshold"] = s["threshold"] if threshold is None else threshold
+        s["linkage"], s["unproposed"] = linkage or s["linkage"], unproposed or s["unproposed"]
+        _check_clustering(s["linkage"], s["threshold"], s["unproposed"])
+        clusters = cluster(self.scores, ids=self.clusters["id"], threshold=s["threshold"],
+                           linkage=s["linkage"], unproposed=s["unproposed"])
+        return DedupeResult(clusters, self.scores, s, self.meter, self._frame)
+
+    def split_pairs(self) -> pd.DataFrame:
+        """Judged pairs at or above the threshold whose records ended in different clusters.
+
+        Components never leave any. Under average linkage they are where the rule overrode a
+        single high probability: a wrong pair it resisted, or a true pair of a group that
+        blocking covered too thinly. They are the first pairs to read when checking the clusters.
+        """
+        member = self.clusters.set_index("id")["cluster_id"]
+        apart = (member.reindex(self.scores["left_id"]).to_numpy()
+                 != member.reindex(self.scores["right_id"]).to_numpy())
+        strong = self.scores["p"].ge(self.settings["threshold"]).to_numpy()
+        split = self.scores.loc[apart & strong]
+        return split.sort_values("p", ascending=False, kind="stable").reset_index(drop=True)
+
+    def labeled(self, frame: pd.DataFrame | None = None) -> pd.DataFrame:
+        """The table with `cluster_id` and `cluster_size` appended to every record."""
+        frame = self._table(frame)
+        for column in ("cluster_id", "cluster_size"):
+            if column in frame.columns:
+                raise ValueError(f"the table already has a {column!r} column; rename it before labeling")
+        out = frame.copy()
+        out["cluster_id"] = self.clusters["cluster_id"].to_numpy()
+        out["cluster_size"] = self.clusters["cluster_size"].to_numpy()
+        return out
+
+    def audit_sample(self, n: int = 200, *, seed: int = 0, frame: pd.DataFrame | None = None,
+                     **kwargs) -> pd.DataFrame:
+        """Sample judged pairs for labeling. `selected` means the two records share a cluster.
+
+        `evaluate(..., mode="selected")` then measures the clusters pair by pair, among judged
+        pairs only: records joined through other records, with no judged pair of their own, are
+        outside the sample.
+        """
+        try:
+            frame = self._table(frame)
+        except ValueError:
+            if frame is not None:
+                raise
+        on = [(lc, rc) for lc, rc in self.settings["on"]]
+        column = self.settings["id"]
+        return audit.audit_sample(self.scores, n=n, seed=seed, left=frame, right=frame,
+                                  on=on if frame is not None else None, left_id=column, right_id=column,
+                                  links=self.links, **kwargs)
+
+    def report(self) -> str:
+        s, sc, sizes = self.settings, self.scores, self._sizes()
+        by_source = sc["source"].value_counts()
+        by_block = sc["block"].value_counts()
+        rule = ("connected components of pairs with p" if s["linkage"] == "components"
+                else "mean p of the judged pairs between two clusters" if s["unproposed"] == "ignore"
+                else "mean p between two clusters, unproposed pairs as non-matches,")
+        lines = [
+            f"jlink {s['jlink']}, {s['date']} (dedupe)",
+            f"Rule: {s['question']}",
+            *(["Question style: rule (the definition states the relation; no entity is named)"]
+              if s.get("style") == "rule" else []),
+            f"Compared on: {_field_list(s['on'], ' = ', '{}', '{}')}",
+            f"Records: {s['n_records']:,} in one table",
+            f"Candidate pairs: {len(sc):,} unordered pairs, earlier row as record A "
+            f"({'; '.join(f'{k}: {v:,}' for k, v in by_block.items())})",
+            "Judged: " + ", ".join(f"{by_source.get(k, 0):,} {label}" for k, label in (
+                ("jev", "by Jev"), ("exact", "identical after normalization"), ("error", "failed"),
+                ("unjudged", "left unjudged by the budget")) if by_source.get(k, 0)),
+            f"Clusters: {int((sizes > 1).sum()):,} of two or more records, holding "
+            f"{int(sizes[sizes > 1].sum()):,} records; {int((sizes == 1).sum()):,} records alone "
+            f"({s['linkage']} linkage: {rule} >= {s['threshold']:g})",
+        ]
+        if s["linkage"] == "average":
+            lines.append("Pairs at or above the threshold left in different clusters: "
+                         f"{len(self.split_pairs()):,}")
+        if (sizes > 1).any():
+            lines.append(f"Cluster sizes: largest {int(sizes.max()):,}; {int((sizes == 2).sum()):,} clusters "
+                         f"of exactly two records; {int((sizes > 2).sum()):,} larger")
+        lines.append(f"Model: {_model_description(s)}; {s['calls']:,} calls, {s['cached']:,} from cache, "
+                     f"{s['input_tokens']:,} tokens, ${s['dollars']:.4f}, {s['seconds']:g}s")
+        return "\n".join(lines)
+
+    def methods(self) -> str:
+        """A paragraph for a data appendix. Edit it; it states only what this run did."""
+        s, sc, sizes = self.settings, self.scores, self._sizes()
+        fields_ = _field_list(s["on"], None, "{}", "{}")
+        judged, exact = int((sc["source"] == "jev").sum()), int((sc["source"] == "exact").sum())
+        if s.get("style") == "rule":
+            aim = ("that a written match rule relates to each other; the rule defines a relation between two "
+                   "records and need not mean that they describe the same entity")
+            asked = "returns a probability that the pair satisfies the rule, put to the model as"
+        else:
+            aim = f"that refer to the same {s['entity']}"
+            asked = "returns a probability that the following statement is true"
+        if s["linkage"] == "average":
+            counted = ("The mean was taken over every pair of records between the two groups: a pair that "
+                       "blocking never proposed counted as zero, and a candidate pair that was never judged "
+                       "was left out" if s["unproposed"] == "nonmatch" else
+                       "The mean was taken over the judged pairs between the two groups; pairs that were never "
+                       "proposed or never judged counted neither for nor against a merge")
+            grouping = ("We then grouped records by average-linkage agglomeration: starting from single "
+                        "records, the two groups with the highest mean probability between them were merged, "
+                        f"repeatedly, while that mean was at least {s['threshold']:g}. {counted}")
+        else:
+            grouping = ("We then grouped records into the connected components of the graph whose edges are "
+                        f"the pairs with probability of at least {s['threshold']:g}, so records can share a "
+                        "group through a chain of such pairs")
+        exact_text = ""
+        if exact:
+            exact_text = (f"{exact:,} pairs whose compared fields ({fields_}) were all nonempty and individually "
+                          "identical after normalizing case, accents and punctuation were accepted directly. ")
+        text = (
+            f"We searched {s['n_records']:,} records for groups of records {aim}, using jlink {s['jlink']}. "
+            f"Candidate pairs were generated by blocking the table against itself ({'; '.join(s['blockers'])}); "
+            f"no record was paired with itself and each unordered pair was kept once, which produced "
+            f"{len(sc):,} pairs. "
+            + exact_text
+            + f"The {judged:,} model-scored pairs used Jev ({_model_description(s)}) (TypeSafe), which sees the "
+            f"compared fields ({fields_}) of both records, the record from the earlier row presented first, "
+            f"and {asked}: \"{s['question']}\" Each pair was judged once, in that order. "
+            f"{grouping}. This yielded {int((sizes > 1).sum()):,} groups of two or more records, holding "
+            f"{int(sizes[sizes > 1].sum()):,} of the {s['n_records']:,} records. "
+            "The model's probabilities are stored with the replication files, so these groups can be reproduced "
+            "exactly without calling the model again; repeated calls to the model return nearly but not exactly "
+            "the same probability."
+        )
+        unjudged = int((sc["source"] == "unjudged").sum())
+        if unjudged:
+            text += f" {unjudged:,} candidate pairs were not judged; new calls were prioritized by similarity."
+        return text
+
+    def save(self, directory: str | Path) -> Path:
+        """Write clusters.csv, scores.csv and settings.json. Everything needed to reproduce and recluster."""
+        d = Path(directory)
+        d.mkdir(parents=True, exist_ok=True)
+        self.clusters.to_csv(d / "clusters.csv", index=False)
+        self.scores.to_csv(d / "scores.csv", index=False)
+        kinds = {c: _id_kind(frame[c])
+                 for frame, columns in ((self.scores, ("left_id", "right_id")), (self.clusters, ("id",)))
+                 for c in columns}
+        (d / "settings.json").write_text(json.dumps(
+            self.settings | {"result_format_version": 2, "id_kinds": kinds}, indent=2), encoding="utf-8")
+        return d
+
+    def _sizes(self):
+        return self.clusters.drop_duplicates("cluster_id")["cluster_size"].to_numpy()
+
+    def _table(self, frame):
+        frame = self._frame if frame is None else frame
+        if frame is None:
+            raise ValueError("this result was loaded from disk, so pass the original table")
+        records = pd.Index(ids(frame, self.settings["id"], "deduplicated"))
+        if not records.equals(pd.Index(self.clusters["id"])):
+            raise ValueError("the table's IDs differ from the saved clusters, in value or in order; "
+                             "pass the table that was deduplicated")
+        return frame
+
+
+def load(directory: str | Path) -> "Result | DedupeResult":
+    """Read a result written by `save`. IDs come back as they were: integers, floats or strings.
+
+    A directory written by `DedupeResult.save` comes back as a `DedupeResult`.
+    """
     d = Path(directory)
     settings = json.loads((d / "settings.json").read_text(encoding="utf-8"))
     settings.pop("result_format_version", None)
@@ -264,8 +565,15 @@ def load(directory: str | Path) -> Result:
     na_values = {c: [""] for c in numeric + optional_text}
     scores = pd.read_csv(d / "scores.csv", dtype=dtype, keep_default_na=False, na_values=na_values,
                          float_precision="round_trip")
-    links = pd.read_csv(d / "links.csv", dtype=dtype, keep_default_na=False, na_values=na_values,
-                        float_precision="round_trip")
+    dedupe_run = settings.get("task") == "dedupe"
+    if dedupe_run:
+        links = pd.read_csv(d / "clusters.csv", keep_default_na=False, na_values={},
+                            dtype={"id": _ID_DTYPES.get(kinds.get("id"), str),
+                                   "cluster_id": "int64", "cluster_size": "int64"},
+                            float_precision="round_trip")
+    else:
+        links = pd.read_csv(d / "links.csv", dtype=dtype, keep_default_na=False, na_values=na_values,
+                            float_precision="round_trip")
     if "blocking" in settings:
         scores.attrs["blocking"] = deepcopy(settings["blocking"])
     if "provenance_version" not in settings:
@@ -277,7 +585,7 @@ def load(directory: str | Path) -> Result:
                   provider=settings.get("provider", ""), requested_model=settings.get("request_model", ""),
                   answer_provenance=settings.get("answer_provenance", []),
                   cost_sources=settings.get("cost_sources", {}))
-    return Result(links, scores, settings, meter)
+    return (DedupeResult if dedupe_run else Result)(links, scores, settings, meter)
 
 
 _ID_DTYPES = {"int": "int64", "float": "float64"}
@@ -288,6 +596,19 @@ def _id_kind(ids_: pd.Series) -> str:
     if pd.api.types.is_integer_dtype(ids_):
         return "int"
     return "float" if pd.api.types.is_float_dtype(ids_) else "str"
+
+
+def _field_list(on: list, joiner: str | None, left_only: str, right_only: str) -> str:
+    """Name the fields in saved `on` pairs; a null column marks a field that one side lacks."""
+    names = []
+    for lc, rc in on:
+        if lc is None or rc is None:
+            names.append((left_only if rc is None else right_only).format(lc or rc))
+        elif lc == rc:
+            names.append(lc)
+        else:
+            names.append(f"{lc}{joiner}{rc}" if joiner else f"{lc} ({rc} in the second source)")
+    return ", ".join(names)
 
 
 def _model_description(settings: dict) -> str:
@@ -301,6 +622,15 @@ def _model_description(settings: dict) -> str:
     if unknown:
         description += f"; {unknown:,} answers with unknown model identity"
     return description
+
+
+def _check_clustering(linkage: str, threshold: float, unproposed: str) -> None:
+    if linkage not in LINKAGES:
+        raise ValueError(f"`linkage` must be one of {', '.join(LINKAGES)}; got {linkage!r}")
+    if unproposed not in UNPROPOSED:
+        raise ValueError(f"`unproposed` must be one of {', '.join(UNPROPOSED)}; got {unproposed!r}")
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not 0 <= threshold <= 1:
+        raise ValueError(f"`threshold` is a probability between 0 and 1; got {threshold!r}")
 
 
 def _check_how(how: str, threshold: float) -> None:

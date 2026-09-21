@@ -1,6 +1,8 @@
 # Correctness, budgets, and saved-run provenance
 
-`Result.save(directory)` writes `scores.csv`, `links.csv`, and `settings.json`.
+`Result.save(directory)` writes `scores.csv`, `links.csv`, and `settings.json`. On the command
+line, `link --save DIR` and `dedupe --save DIR` write the same directory; Stata's `rundir()` and
+R's `run_dir =` forward it.
 `jlink.load(directory)` can relink these scores without an API call; pass the original input
 frames to `merged(left, right)`. Saving does not embed those input frames or API credentials.
 
@@ -59,8 +61,10 @@ An entirely exact run also needs no key.
 
 Settings with `provenance_version=1` retain:
 
-- The exact question, definition, field mappings, source ID column names, resolution options,
-  record counts, UTC start/end times, duration, and jlink/Python/dependency versions.
+- The exact question, its `style` (`identity` or `rule`), definition, field mappings, source ID
+  column names, resolution options, record counts, UTC start/end times, duration, and
+  jlink/Python/dependency versions. A one-sided field is saved as `["text", null]` or
+  `[null, "neighborhood"]`. Runs saved before `style` existed omit it and read as identity.
 - Human-readable `blockers` and full structured `blocker_configs`. An omitted blocker list
   records the actual default n-gram parameters; an empty list records no passes.
   When the blocking module supplies `candidates.attrs['blocking']` diagnostics, settings
@@ -73,6 +77,11 @@ Settings with `provenance_version=1` retain:
 - Explicit `requested_api` and `requested_model` arguments (null when omitted), effective
   `provider` and `request_model` after defaults/environment selection, all `resolved_models`,
   `unknown_model_answers`, and grouped `answer_provenance` counts.
+
+A dedupe run writes `clusters.csv` in place of `links.csv`. Its settings add `task: "dedupe"`,
+`id`, `n_records`, `linkage`, `unproposed`, `threshold`, `pair_order` (which record the judge saw
+as record A) and `blocking.unordered`, and fingerprint the one table under `inputs.records`.
+`jlink.load` returns a `DedupeResult` for such a directory; `recluster` reuses its scores.
 
 The input hash format `jlink-input-v1` uses canonical JSON with type tags and field boundaries.
 String `"001"` differs from integer `1`; moving words between fields changes the hash; row
