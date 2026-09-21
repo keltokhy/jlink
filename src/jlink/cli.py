@@ -280,13 +280,15 @@ def _estimate(args: argparse.Namespace) -> None:
           "No API calls.")
 
 
-def _numeric(frame: pd.DataFrame, columns: list[str], path: str) -> None:
+def _numeric(frame: pd.DataFrame, columns: list[str], path: str, *, every_row: str = "") -> None:
+    """Parse numeric columns. `every_row` says how to recover a column that may have no empty cells."""
     check_columns(frame, columns, path)
     for column in columns:
         try:
             frame[column] = pd.to_numeric(frame[column], errors="raise")
         except (ValueError, TypeError):
-            raise ValueError(f"{path!r}: column {column!r} must contain numbers or empty cells") from None
+            allowed = f"a number in every row; {every_row}" if every_row else "numbers or empty cells"
+            raise ValueError(f"{path!r}: column {column!r} must contain {allowed}") from None
 
 
 def _align_ids(scores: pd.DataFrame, frame: pd.DataFrame, column: str | None, side: str) -> None:
@@ -335,7 +337,9 @@ def _audit(args: argparse.Namespace) -> None:
 def _evaluate(args: argparse.Namespace) -> None:
     labeled = read_table(args.labeled)
     check_columns(labeled, ["is_match", "bin"], args.labeled)
-    _numeric(labeled, ["p", "weight"], args.labeled)
+    _numeric(labeled, ["p"], args.labeled)  # a row without a label may lack its probability
+    _numeric(labeled, ["weight"], args.labeled,
+             every_row="rows with a blank label need theirs too, so restore it from the table `audit` wrote")
     from .audit import evaluate
 
     result = evaluate(labeled, threshold=args.threshold, mode=args.mode)

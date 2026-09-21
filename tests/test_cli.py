@@ -244,7 +244,12 @@ def test_audit_without_sources_and_numeric_errors(downstream, tmp_path, capsys):
     assert_error(["audit", str(scores), "--left", "left.csv", "-o", str(audit)], capsys, "together")
     bad = pd.DataFrame({"left_id": ["01"], "right_id": ["02"], "p": ["not a probability"]})
     bad.to_csv(scores, index=False)
-    assert_error(["audit", str(scores), "-o", str(audit)], capsys, "column 'p'")
+    assert_error(["audit", str(scores), "-o", str(audit)], capsys, "column 'p' must contain numbers or empty cells")
+    # Scores may lack a probability; an audit's weights may not, even on rows left unlabeled.
+    labeled = pd.DataFrame({"p": [.9, .1], "is_match": [1, ""], "bin": "all", "weight": [2, "lost"]})
+    labeled.to_csv(audit, index=False)
+    assert_error(["evaluate", str(audit)], capsys, "column 'weight' must contain a number in every row; rows "
+                 "with a blank label need theirs too, so restore it from the table `audit` wrote")
 
 
 def test_audit_aligns_numeric_stata_ids(downstream, tmp_path):
