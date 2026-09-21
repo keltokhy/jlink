@@ -313,7 +313,7 @@ deduped.report(), deduped.methods(), deduped.save(directory)     # jlink.load re
 strings to numbers (`dtype=str` for delimited files, then leave conversion to the caller).
 
 ```
-jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on =place]
+jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on "=place"]
            --entity firm [--define "..."] [--style identity|rule]
            [--left-id COL] [--right-id COL] [--block ngrams:name:10] [--block exact:state]
            [--block initials:name] [--block window:year:1] [--block window:a=b:0..3d]
@@ -333,7 +333,7 @@ jlink --version
 ```
 
 `--on city=town` means left column `city`, right column `town`; `--on text=` is a left-only
-field and `--on =place` a right-only one. `--style rule` requires `--define` and makes `--entity`
+field and `--on "=place"` a right-only one (quoted, because zsh expands a leading `=`). `--style rule` requires `--define` and makes `--entity`
 optional. Cost estimate: about 330 input
 tokens per pair at $0.042 per million tokens; time estimate: about 200 pairs a second. Exit
 status 0 on success, 2 on any error, with a one-line message on stderr prefixed `jlink:`.

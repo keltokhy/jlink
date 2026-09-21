@@ -9,7 +9,7 @@
   `report()` names it and `methods()` describes a relation. Identity remains the default, and
   identity and rule answers never share a cache entry.
 - Let an `on` item be one-sided: `("text", None)` or `(None, "neighborhood")` in Python, `--on text=`
-  or `--on =neighborhood` on the command line. Such a field is shown to the judge on that side
+  or `--on "=neighborhood"` on the command line. Such a field is shown to the judge on that side
   only and enters that side's text for `sim`. Blocking passes and the exact shortcut need paired
   columns and say so. Saved settings, fingerprints, audit samples and review snapshots accept them.
 - Add `jlink.block.window`: candidate pairs whose left value minus right value lies within a

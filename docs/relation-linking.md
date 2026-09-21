@@ -25,7 +25,7 @@ linker = jlink.Linker(
 ```bash
 jev-link link articles.csv incidents.csv --style rule \
     --define "Record A is a news article that reports the shooting incident in record B." \
-    --on text= --on published= --on =occurred --on =neighborhood \
+    --on text= --on published= --on "=occurred" --on "=neighborhood" \
     --left-id article_id --right-id incident_id --how many-to-one \
     --block within:borough:window:published=occurred:0..3d -o links.csv
 ```
@@ -51,7 +51,12 @@ Each `on` item is one of:
 | `"state"` | `--on state` | on both records, labeled `state` |
 | `("conm", "assignee")` | `--on conm=assignee` | on both records, labeled `conm` |
 | `("text", None)` | `--on text=` | on the left record only, labeled `text` |
-| `(None, "neighborhood")` | `--on =neighborhood` | on the right record only, labeled `neighborhood` |
+| `(None, "neighborhood")` | `--on "=neighborhood"` | on the right record only, labeled `neighborhood` |
+
+Quote a right-only field in the shell. zsh, the default on macOS, expands an unquoted word that
+starts with `=` as a command lookup, so `--on =neighborhood` stops with "neighborhood not found"
+before jlink runs. `--on "=neighborhood"` and `--on==neighborhood` are both safe. The Stata and R
+wrappers quote every argument themselves, so `on(text= =neighborhood)` needs nothing extra.
 
 A paired field takes the left column's name on both records. That suits identity, where both
 columns hold the same kind of thing. For a relation the two columns often mean different

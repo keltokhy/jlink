@@ -321,7 +321,8 @@ groups the records of one file, and `jlink cluster scores.csv --threshold 0.8 -o
 regroups saved scores without API calls.
 
 `--style rule` asks the relation in `--define` and makes `--entity` optional; `--on text=` and
-`--on =neighborhood` are the one-sided fields. Stata's `style(rule)` and R's `style = "rule"`
+`--on "=neighborhood"` are the one-sided fields (quote a leading `=`: zsh, the macOS default
+shell, otherwise reads `=word` as a command lookup and stops before jlink runs). Stata's `style(rule)` and R's `style = "rule"`
 forward the same option. `--block window:published=occurred:0..3d` is the date window above,
 `--block window:year:1` a numeric one, and `--block within:borough:RULE` runs any rule inside
 groups; `--date-format` reads dates that are not ISO 8601.

@@ -105,7 +105,8 @@ def _margin(value: str) -> float:
 def _add_fields(parser: argparse.ArgumentParser, *, required: bool = True) -> None:
     parser.add_argument("--on", action="append", required=required, metavar="COL[=COL]",
                         help="field to compare; repeat for more fields (city=town uses different names; "
-                             "text= shows a field only the left records have, =place only the right)")
+                             "text= shows a field only the left records have, \"=place\" only the right; "
+                             "quote a leading = because zsh expands it)")
     parser.add_argument("--left-id", metavar="COL",
                         help="unique left record ID; default: zero-based row number")
     parser.add_argument("--right-id", metavar="COL",
