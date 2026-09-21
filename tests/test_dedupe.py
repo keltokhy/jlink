@@ -446,7 +446,11 @@ def test_cli_round_trip_dedupe_cluster_audit_evaluate(tmp_path, monkeypatch, cap
     assert "7 records, paired with each other; " in captured.out and "No API calls" in captured.out
     assert not fake.bodies
     cli([*base, "--entity", "firm", "--no-cache", "-o", str(clusters), "--scores", str(scores),
-         "--links", str(links), "--report", str(report)])
+         "--links", str(links), "--report", str(report), "--save", str(tmp_path / "run")])
+    saved = jlink.load(tmp_path / "run")
+    assert isinstance(saved, jlink.DedupeResult) and saved.settings["task"] == "dedupe"
+    assert saved.clusters.id.tolist() == ["001", "002", "003", "004", "005", "006", "007"]
+    assert saved.recluster(threshold=0.99).clusters.cluster_size.eq(1).all()
     captured = capsys.readouterr()
     assert captured.out == "" and "2 clusters of two or more records, holding 6" in captured.err
     calls = len(fake.bodies)

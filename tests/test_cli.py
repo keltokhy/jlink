@@ -218,6 +218,25 @@ def test_output_errors_before_link(downstream, inputs, tmp_path, capsys):
     assert not hasattr(downstream, "link")
 
 
+def test_save_folder_is_checked_before_link(downstream, inputs, tmp_path, capsys):
+    taken = tmp_path / "taken.txt"
+    taken.write_text("a file, not a folder")
+    assert_error(link_args(inputs) + ["--save", str(taken)], capsys, "name a new or existing folder")
+    assert_error(link_args(inputs) + ["--save", str(tmp_path / "missing" / "run")], capsys, "inside an existing one")
+    assert_error(link_args(inputs) + ["--save", " "], capsys, "name a new or existing folder")
+    run = tmp_path / "run"
+    assert_error(link_args(inputs) + ["--save", str(run), "-o", str(run / "links.csv")], capsys,
+                 "existing folder")  # -o needs its folder to exist already
+    run.mkdir()
+    assert_error(link_args(inputs) + ["--save", str(run), "--scores", str(run / "scores.csv")], capsys,
+                 "its scores.csv would replace an input or another output")
+    assert not hasattr(downstream, "link")
+    saved = []
+    downstream.result.save = saved.append
+    command.cli(link_args(inputs) + ["--save", str(run), "-o", str(tmp_path / "links.csv")])
+    assert saved == [run] and "links" in capsys.readouterr().err
+
+
 def test_one_line_runtime_error(downstream, inputs, capsys, monkeypatch):
     def broken(*args, **kwargs):
         raise RuntimeError("problem with column 'name'\nmore details")

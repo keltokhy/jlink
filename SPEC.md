@@ -319,12 +319,12 @@ jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on "=place"]
            [--block initials:name] [--block window:year:1] [--block window:a=b:0..3d]
            [--block within:state:RULE] [--date-format FORMAT|LEFT=RIGHT]
            [--how one-to-one] [--threshold 0.5] [--min-margin M]
-           [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md]
+           [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md] [--save DIR]
            [--api typesafe|openrouter] [--model ID] [--no-cache] [-j 32]
 jlink estimate LEFT RIGHT --on ...      # blocking only: pair count, cost and time estimate, no API calls
 jlink dedupe TABLE --on name --entity firm [--id COL] [--block ...] [--threshold 0.5]
            [--linkage average|components] [--unproposed nonmatch|ignore] [--estimate]
-           [-o clusters.csv] [--scores scores.csv] [--links links.csv] [--report report.md]
+           [-o clusters.csv] [--scores scores.csv] [--links links.csv] [--report report.md] [--save DIR]
 jlink cluster SCORES [--records TABLE --id COL] [--threshold 0.5] [--linkage ...] [--unproposed ...]
            [-o clusters.csv] [--links links.csv]          # no API calls
 jlink audit SCORES [-n 200] [--left LEFT --right RIGHT --on ...] -o audit.csv
@@ -332,7 +332,8 @@ jlink evaluate LABELED [--threshold 0.5] [--markdown]
 jlink --version
 ```
 
-`--on city=town` means left column `city`, right column `town`; `--on text=` is a left-only
+`--save DIR` writes the folder that `Result.save(DIR)` (or `DedupeResult.save`) writes, which is what
+`review create` and `jlink.load` read. `--on city=town` means left column `city`, right column `town`; `--on text=` is a left-only
 field and `--on "=place"` a right-only one (quoted, because zsh expands a leading `=`). `--style rule` requires `--define` and makes `--entity`
 optional. Cost estimate: about 330 input
 tokens per pair at $0.042 per million tokens; time estimate: about 200 pairs a second. Exit
@@ -347,7 +348,7 @@ signatures above.
 
 Thin shims that write the data in memory to a temporary file, call the command, and read the
 links back. Stata: `jlink using right.dta, on(name city) entity(firm) [define() style() leftid()
-rightid() how() threshold() budget() saving()]`, with a `.sthlp` help file. R: a single
+rightid() how() threshold() budget() saving() rundir()]`, with a `.sthlp` help file. R: a single
 `jlink()` function in `r/jlink.R` using `system2`, returning a data frame. Find the executable
 as `jev-link` first, then `python3 -m jlink`. State plainly in each file's header whether it
 was run against a real Stata or R on this machine.
