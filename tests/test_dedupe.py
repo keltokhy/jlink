@@ -3,6 +3,7 @@
 import importlib
 import itertools
 import json
+import warnings
 from fractions import Fraction
 
 import numpy as np
@@ -106,6 +107,30 @@ def test_default_pass_leaves_ten_other_neighbors_and_limits_count_unordered_pair
         block.self_candidates(FIRMS, on=[("name", None)], id="rid")
     with pytest.raises(ValueError, match="duplicate IDs"):
         block.self_candidates(FIRMS, on="name", id="year")
+
+
+def test_keyed_pass_on_one_table_warns_only_when_no_record_has_a_key():
+    # One table cannot disagree with itself about how a key is coded, so the two-table warning
+    # ("no value in common between left and right") has no meaning here.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        # Every key different: no record matches another. That is an answer, not a fault.
+        unique = block.self_candidates(FIRMS, on="name", blockers=[block.exact("rid")], id="rid")
+        assert unique.empty and unique.attrs["blocking"]["passes"][0]["proposed_pairs"] == 7  # itself, 7 times
+        grouped = block.self_candidates(FIRMS, on="name", id="rid",
+                                        blockers=[block.within(block.window("year", 0), "rid")])
+        assert grouped.empty
+    blank = FIRMS.assign(state=[None, "", "  ", pd.NA, np.nan, "!!", None])
+    for blocker in (block.exact("state"), block.within(block.ngrams("name"), "state")):
+        with pytest.warns(UserWarning, match="proposed no pairs: none of the 7 records has a complete key") as caught:
+            assert block.self_candidates(blank, on="name", blockers=[blocker], id="rid").empty
+        assert "left" not in str(caught[0].message) and caught[0].filename == __file__
+    # With missing="match", records that all lack the key form one group, as they do for two tables.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        together = block.self_candidates(blank, on="name", id="rid", blockers=[
+            block.within(block.ngrams("name", k=7, min_sim=0), "state", missing="match")])
+    assert len(together) == 21
 
 
 def test_unordered_pairs_completeness():
@@ -298,6 +323,22 @@ def test_reclustering_from_saved_scores_makes_no_calls(tmp_path):
         back.labeled(FIRMS.iloc[::-1])
     with pytest.raises(ValueError, match="`linkage` must be one of"):
         back.recluster(linkage="single")
+
+
+def test_float_ids_survive_a_saved_dedupe_run(tmp_path):
+    # Stata often stores numeric IDs as doubles; main records that kind for link runs, and so does dedupe.
+    table = FIRMS.assign(rid=[1001.0, 1002.0, 1003.5, 2.0 ** 60, 5.0, 6.0, 7.0])
+    result = jlink.dedupe(table, entity="firm", on="name", id="rid", progress=False,
+                          transport=FakeJev(oracle).transport)
+    directory = result.save(tmp_path / "floats")
+    assert json.loads((directory / "settings.json").read_text())["id_kinds"] == {
+        "left_id": "float", "right_id": "float", "id": "float"}
+    back = jlink.load(directory)
+    assert back.clusters["id"].dtype == back.scores["left_id"].dtype == "float64"
+    pd.testing.assert_frame_equal(back.clusters, result.clusters)
+    pd.testing.assert_frame_equal(back.labeled(table), result.labeled())
+    pd.testing.assert_frame_equal(back.recluster(linkage="components").clusters,
+                                  result.recluster(linkage="components").clusters)
 
 
 def test_settings_report_methods_and_cached_rerun(tmp_path):

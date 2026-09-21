@@ -135,6 +135,11 @@ most 8,192 like every built-in pass, so `max_pairs` stops an oversized window af
 batch. No left-by-right comparison is made. Output order is left row order, then right row
 position. Inside `within`, the sort and search run separately in each group.
 
+Inside `within`, group keys follow the rule above: a precinct stored as integer `75` on one side
+and as float `75.0` on the other, because that column has a missing value, is one group. If the
+group keys have no value in common, `candidates` warns as for any `within` pass; a window that
+is merely empty, or that stands alone without keys, does not.
+
 A window is only as selective as the data are sparse. A three-day window over a register with
 four incidents a day proposes about sixteen incidents for each article. Group it with
 `within(...)` on a field that reliably agrees (borough, state), and remember that grouping loses

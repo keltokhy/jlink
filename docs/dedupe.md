@@ -40,6 +40,13 @@ unordered pair is a candidate once and is judged once. `max_pairs` counts unorde
 - Pass diagnostics count `proposed_pairs` before self-pairs and mirror images are removed, and
   `unique_pairs` after. `candidates.attrs["blocking"]["unordered"]` is true.
 - `pairs_completeness(candidates, truth, unordered=True)` treats (a, b) and (b, a) alike.
+- For two tables, `candidates` warns when an `exact` or `within` pass proposes nothing because
+  the two sides share no key. One table cannot disagree with itself, so here a keyed pass warns
+  only when no record has a complete key. Keys that are all different propose no pairs and do
+  not warn: that is an answer, not a fault. `within(..., missing="match")` groups the records
+  that lack the key, as it does for two tables.
+- Saved runs record the ID kind, float IDs included, for `left_id`, `right_id` and the
+  clusters' `id`, so `jlink.load` returns them as they were.
 
 `left_id` is always the record from the earlier row and `right_id` the later one, whichever
 direction a pass proposed. Tables keep the column names `left_id` and `right_id` so that
