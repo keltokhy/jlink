@@ -152,16 +152,23 @@ def _labels(values: pd.Series) -> pd.Series:
     return text.map(mapping).astype(float)
 
 
+_RESTORE = "restore the 'weight' column from the file that audit_sample wrote"
+
+
 def _sampling_weights(frame: pd.DataFrame, keep: pd.Series) -> np.ndarray:
     """Positive weights for every sampled row; a bin's blank rows carry part of its weight."""
     try:
         weights = _numbers(frame, "weight").to_numpy()
     except ValueError:
         _numbers(frame.loc[keep], "weight")  # a fault among the labeled rows keeps its usual message
-        raise ValueError("column 'weight' must hold the sampling weight of every row, including rows with "
-                         "a blank label: they show how much of its bin each labeled pair stands for") from None
+        blank = pd.to_numeric(frame.loc[~keep, "weight"], errors="coerce").to_numpy(dtype=float, na_value=np.nan)
+        raise ValueError(f"column 'weight' has no usable number in {int((~np.isfinite(blank)).sum()):,} of the "
+                         f"{len(blank):,} rows with a blank label. Every sampled row needs its sampling weight, "
+                         "because the blank rows show how much of their bin the labeled pairs stand for; "
+                         f"{_RESTORE}") from None
     if (weights <= 0).any():
-        raise ValueError("column 'weight' must contain positive sampling weights")
+        raise ValueError(f"column 'weight' must contain positive sampling weights, but {int((weights <= 0).sum()):,} "
+                         f"rows have zero or less; {_RESTORE}")
     return weights
 
 
@@ -212,7 +219,7 @@ class Evaluation:
         """Describe the estimand and explain unavailable estimates."""
         estimand = (f"Pair-scoring evaluation at threshold {self.threshold:g}." if self.mode == "threshold"
                     else "Final-link evaluation using saved selected membership; no threshold is reapplied.")
-        parts = [estimand, f"{self.n_labeled:,} labeled pairs; {self.n_unlabeled:,} blank labels dropped."]
+        parts = [estimand, f"{self.n_labeled:,} labeled pairs; {self.n_unlabeled:,} labels left blank."]
         for name in ("precision", "recall", "f1"):
             estimate, low, high = getattr(self, name)
             label = "F1" if name == "f1" else name.capitalize()
@@ -356,10 +363,10 @@ def evaluate(labeled: pd.DataFrame, *, threshold: float = 0.5,
                          "by resampling. Label more pairs for reliable intervals.")
     if adjusted.any() and not empty:
         detail = ", ".join(f"{name} x{factors[i]:.3g}" for i, name in enumerate(names) if adjusted[i])
-        notes.append(f"{n_unlabeled:,} blank labels: labeled pairs were reweighted to their bin's full "
-                     f"sampling weight ({detail}), so unequal blank rates across bins do not shift the "
-                     "estimates. Labels left blank for reasons related to the truth within a bin can still "
-                     "bias them.")
+        notes.append("Rows with a blank label were kept as part of the sample: in each bin that has them, the "
+                     f"labeled pairs were reweighted to the bin's full sampling weight ({detail}), so unequal "
+                     "blank rates across bins do not shift the estimates. Labels left blank for reasons "
+                     "related to the truth within a bin can still bias them.")
     metrics = [tuple(float(value) for value in (estimate, *interval))
                for estimate, interval in zip(estimates, intervals)]
     return Evaluation(*metrics, brier, table, n_labeled, n_unlabeled,

@@ -149,10 +149,12 @@ def test_blank_rows_need_their_weight_but_not_a_probability():
     assert result.precision[0] == 1 and result.n_unlabeled == 1
     # A blank row's weight says how much of the bin its labeled rows stand for.
     for weight in ("not weighted", None, np.nan, np.inf):
-        with pytest.raises(ValueError, match="every row, including rows with a blank label"):
-            evaluate(labeled([.9, "not scored"], [1, ""], [2, weight]), n_boot=10)
+        with pytest.raises(ValueError, match=r"no usable number in 1 of the 2 rows with a blank label\. Every "
+                                             r"sampled row needs.*restore the 'weight' column from the file "
+                                             "that audit_sample wrote"):
+            evaluate(labeled([.9, "not scored", .2], [1, "", ""], [2, weight, 3]), n_boot=10)
     for weight in (0, -1):
-        with pytest.raises(ValueError, match="positive sampling weights"):
+        with pytest.raises(ValueError, match="positive sampling weights, but 1 rows have zero or less; restore"):
             evaluate(labeled([.9, .8], [1, ""], [2, weight]), n_boot=10)
     with pytest.raises(ValueError, match="column 'weight' must contain numbers"):
         evaluate(labeled([.9, .8], [1, ""], ["not weighted", 3]), n_boot=10)
@@ -289,6 +291,22 @@ def test_fully_labeled_audits_give_exactly_the_numbers_they_gave_before_reweight
     assert "reweighted" not in result.summary()
 
 
+def test_summary_wording_with_no_blanks_with_reweighted_blanks_and_with_an_unlabeled_bin():
+    bins = ["high", "high", "low", "low"]
+    complete = evaluate(labeled([.9, .8, .2, .1], [1, 0, 1, 0], bins=bins), n_boot=20).summary()
+    assert "4 labeled pairs; 0 labels left blank." in complete
+    assert "reweighted" not in complete and "blank label were kept" not in complete
+    partial = evaluate(labeled([.9, .8, .2, .1], [1, 0, 1, ""], bins=bins), n_boot=20).summary()
+    assert "3 labeled pairs; 1 labels left blank." in partial
+    assert "Rows with a blank label were kept as part of the sample" in partial and "(low x2)" in partial
+    unlabeled = evaluate(labeled([.9, .8, .2, .1], [1, "", "", ""], bins=bins), n_boot=20).summary()
+    assert "1 labeled pairs; 3 labels left blank." in unlabeled
+    assert "No labels in bin(s) low" in unlabeled and "hold 50.0% of the sampled weight" in unlabeled
+    assert "reweighted" not in unlabeled  # nothing was estimated, so no adjustment is claimed
+    for text in (complete, partial, unlabeled):
+        assert "dropped" not in text  # blank rows are kept; only their labels are missing
+
+
 def test_labeled_pairs_take_over_the_weight_of_their_bins_blank_rows():
     frame = labeled([.9, .8, .3, .2, .1, .25], [1, 0, 1, "", None, 0], [5, 5, 10, 10, 10, 10],
                     ["high", "high", "low", "low", "low", "low"])
@@ -301,8 +319,9 @@ def test_labeled_pairs_take_over_the_weight_of_their_bins_blank_rows():
     table = result.calibration.set_index("bin")  # within a bin the common factor cancels
     assert table.loc["low", "mean_p"] == pytest.approx(.275) and table.loc["low", "match_rate"] == .5
     assert (result.n_labeled, result.n_unlabeled) == (4, 2)
-    assert "2 blank labels: labeled pairs were reweighted to their bin's full sampling weight (low x2)" \
-        in result.summary()
+    text = result.summary()
+    assert "4 labeled pairs; 2 labels left blank." in text and "dropped" not in text
+    assert "labeled pairs were reweighted to the bin's full sampling weight (low x2)" in text
     # Unequal weights inside a bin: the factor is total weight over labeled weight, 60 / 15.
     uneven = labeled([.9, .3, .2, .1], [1, 1, "", ""], [5, 15, 25, 20], ["high", "low", "low", "low"])
     assert evaluate(uneven, n_boot=20).recall[0] == pytest.approx(5 / (5 + 60))
@@ -577,8 +596,8 @@ def test_selected_incomplete_labels_and_empty_strata():
     result = evaluate(frame, mode="selected", n_boot=20)
     assert result.n_labeled == 2 and result.n_unlabeled == 1
     assert result.precision[0] == 1
-    assert "1 blank labels: labeled pairs were reweighted to their bin's full sampling weight (high x2)" \
-        in result.summary()
+    assert "2 labeled pairs; 1 labels left blank." in result.summary()
+    assert "labeled pairs were reweighted to the bin's full sampling weight (high x2)" in result.summary()
     assert "related to the truth within a bin can still bias" in result.summary()
     frame.loc[2, "is_match"] = ""
     result = evaluate(frame, mode="selected", n_boot=20)
