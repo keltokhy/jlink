@@ -66,6 +66,7 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
           progress: bool = True, transport=None) -> tuple[pd.DataFrame, Meter]:
     """Score every candidate pair. Returns the scores table (candidates plus p, source, error) and the meter.
 
+    ``scores.attrs["question"]`` holds the proposition exactly as it was put to the model.
     ``style="rule"`` asks whether the pair satisfies ``definition``, a relation that need not be
     identity; ``entity`` is then not part of the question. One-sided ``on`` fields, ``(left, None)``
     or ``(None, right)``, appear only in that side's record.
@@ -165,6 +166,9 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
     scores["p"], scores["source"], scores["error"] = p, source, error
     scores["model"], scores["provider"], scores["score_origin"] = models, providers, origins
     scores["answered_at"] = answered_at
+    # The one place the proposition is built. Callers quote this text, never a rebuilt copy, so a
+    # report or methods paragraph cannot name a sentence the model did not see.
+    scores.attrs["question"] = ask["instructions"]
     left_over = int((source == "unjudged").sum())
     if left_over:
         warnings.warn(f"the ${budget:.2f} budget ran out with {left_over:,} of {n:,} pairs unjudged; "

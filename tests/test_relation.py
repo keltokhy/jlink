@@ -88,6 +88,37 @@ def test_identity_and_rule_answers_never_share_a_cache_entry():
     assert question("event", RULE)["instructions"] != question("", RULE, style="rule")["instructions"]
 
 
+@pytest.mark.parametrize("style", ["identity", "rule"])
+def test_saved_and_quoted_question_is_the_question_that_was_sent(style, tmp_path, monkeypatch):
+    result, fake = run(style=style)
+    sent = {body["questions"]["match"]["instructions"] for body in fake.bodies}
+    assert sent == {result.settings["question"]} == {result.scores.attrs["question"]}
+    (asked,) = sent
+    assert f'"{asked}"' in result.methods() and f"Rule: {asked}" in result.report()
+    assert jlink.load(result.save(tmp_path / "run")).settings["question"] == asked
+    deduped = linker(style).dedupe  # the same linker's question, on one table
+    with pytest.raises(ValueError, match="one side only"):
+        deduped(ARTICLES)
+    same = FakeJev(oracle)
+    clusters = jlink.dedupe(ARTICLES, entity="article", on="published", definition=RULE, style=style,
+                            blockers=[jlink.block.exact("published")], progress=False,
+                            transport=same.transport)
+    assert {body["questions"]["match"]["instructions"] for body in same.bodies} == {
+        clusters.settings["question"]}
+    assert f'"{clusters.settings["question"]}"' in clusters.methods()
+    # Settings follow what judge() sent even if the two ever diverge: there is one builder.
+    module = importlib.import_module("jlink.linker")
+    real = module.judge
+
+    def reworded(*args, **kwargs):
+        scores, meter = real(*args, **kwargs)
+        scores.attrs["question"] = "A sentence only this judge sent."
+        return scores, meter
+
+    monkeypatch.setattr(module, "judge", reworded)
+    assert run(style=style)[0].settings["question"] == "A sentence only this judge sent."
+
+
 def test_settings_report_and_methods_describe_a_relation(tmp_path):
     result, _ = run()
     s = result.settings
