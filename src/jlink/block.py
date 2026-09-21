@@ -12,7 +12,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from .fields import check_columns, ids, key_text, normalize, parse_on, record_text
+from .fields import check_columns, ids, key_text, normalize, parse_on, record_text, side_fields
 
 # Bound even a fully populated sparse product to about 64 MiB (float64 + int32).
 _CHUNK_ROWS = 256
@@ -105,6 +105,10 @@ def _positive_int(value: object, label: str) -> None:
 
 
 def _pass_fields(columns: tuple, name: str | None, kind: str) -> tuple[list, str]:
+    for item in columns:
+        if isinstance(item, (tuple, list)) and any(c is None for c in item):
+            raise ValueError(f"`{kind}` compares a left column with a right column, so it cannot use the "
+                             f"one-sided field {tuple(item)!r}; one-sided fields are only shown to the judge")
     fields = parse_on(columns)
     if name is None:
         names = [a if a == b else f"{a}={b}" for _, a, b in fields]
@@ -402,18 +406,27 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
 
     ``result.attrs['blocking']`` contains JSON-safe pass configurations and counts.
     ``max_pairs`` limits unique pairs; built-ins stream batches and stop on overflow.
+    One-sided `on` fields, ``(left, None)`` or ``(None, right)``, join that side's text for
+    ``sim``. The default n-gram pass searches the paired fields only.
     """
     try:
-        fields = parse_on(on)
+        fields = parse_on(on, unpaired=True)
     except TypeError as error:
         raise ValueError("`on` must list column names or (left, right) pairs of column names") from error
-    a, b = _columns(left, right, fields)
+    paired = [f for f in fields if f[1] is not None and f[2] is not None]
+    _columns(left, right, paired)
+    a, b = [c for _, c in side_fields(fields, "left")], [c for _, c in side_fields(fields, "right")]
+    check_columns(left, a, "left")
+    check_columns(right, b, "right")
     left_ids, right_ids = ids(left, left_id, "left"), ids(right, right_id, "right")
     if max_pairs is not None and (isinstance(max_pairs, (bool, np.bool_))
                                   or not isinstance(max_pairs, Integral) or max_pairs < 0):
         raise ValueError("`max_pairs` must be a nonnegative integer, or None for no limit")
     if blockers is None:
-        blockers = [ngrams(*[(a, b) for _, a, b in fields], k=10)]
+        if not paired:
+            raise ValueError("the default n-gram pass needs an `on` field that both sides have; every field "
+                             "here is one-sided, so choose the passes yourself with `blockers=`")
+        blockers = [ngrams(*[(lc, rc) for _, lc, rc in paired], k=10)]
     if not isinstance(blockers, list) or any(not isinstance(p, Blocker) for p in blockers):
         raise ValueError("`blockers` must be a list of Blocker passes, or None for the default n-gram pass")
     union = {}

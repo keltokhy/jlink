@@ -59,8 +59,10 @@ An entirely exact run also needs no key.
 
 Settings with `provenance_version=1` retain:
 
-- The exact question, definition, field mappings, source ID column names, resolution options,
-  record counts, UTC start/end times, duration, and jlink/Python/dependency versions.
+- The exact question, its `style` (`identity` or `rule`), definition, field mappings, source ID
+  column names, resolution options, record counts, UTC start/end times, duration, and
+  jlink/Python/dependency versions. A one-sided field is saved as `["text", null]` or
+  `[null, "neighborhood"]`. Runs saved before `style` existed omit it and read as identity.
 - Human-readable `blockers` and full structured `blocker_configs`. An omitted blocker list
   records the actual default n-gram parameters; an empty list records no passes.
   When the blocking module supplies `candidates.attrs['blocking']` diagnostics, settings

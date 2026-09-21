@@ -195,6 +195,32 @@ budget stops new requests at the observed cost, but calls already in flight can 
 Saved runs retain input fingerprints, blocker parameters, and model identities, including
 cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
 
+### Relations, not only identity
+
+By default the question put to Jev is "Record A and record B refer to the same firm", followed
+by your definition. Some linkages are not identity. A news article is not a police incident,
+but it can report one. `style="rule"` makes your definition the whole proposition: "Record A and
+record B satisfy the following match rule. ..." The two tables then rarely share columns, so an
+`on` item may be one-sided: `("text", None)` is shown on the left record only and
+`(None, "neighborhood")` on the right record only.
+
+```python
+result = jlink.link(
+    articles, incidents, style="rule",
+    definition="Record A is a news article that reports the shooting incident in record B.",
+    on=[("text", None), ("published", None),
+        (None, "occurred"), (None, "neighborhood"), (None, "victim_age_group")],
+    blockers=[jlink.block.exact(("published", "occurred"))],   # same day; see docs for date windows
+    left_id="article_id", right_id="incident_id", how="many-to-one",
+)
+```
+
+`entity` is optional under `style="rule"` because the question no longer names one.
+`result.methods()` then describes a relation defined by your rule and does not say the records
+are the same entity. Identity and rule answers are cached under different questions and never
+mix. One-sided fields are shown to the judge only; a blocking pass needs a column on each side
+and says so if given one. See [relation linking](docs/relation-linking.md).
+
 ### Optional semantic candidate search
 
 Install `uv add 'jlink[embeddings]'` (or `uv sync --extra embeddings` in this checkout), then
@@ -255,6 +281,10 @@ jlink audit scores.csv --links links.csv --left compustat.dta --right patents.cs
       --left-id gvkey --right-id assignee_id -n 200 -o audit.csv
 jlink evaluate audit.csv --mode selected --markdown
 ```
+
+`--style rule` asks the relation in `--define` and makes `--entity` optional; `--on text=` and
+`--on =neighborhood` are the one-sided fields. Stata's `style(rule)` and R's `style = "rule"`
+forward the same option.
 
 The Stata and R wrappers are single files in this repository, not part of the Python package: copy
 `stata/jlink.ado` and `stata/jlink.sthlp` to your personal ado directory (`sysdir` shows it), and

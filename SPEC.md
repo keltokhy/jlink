@@ -29,6 +29,11 @@ weight, so estimates move whenever blanks are more frequent in some bins than in
 Fully labeled audits give exactly the numbers they gave before. Rows with a blank label now
 need a valid `weight`.
 
+The [relation linking update](docs/relation-linking.md) adds an opt-in `style="rule"` question
+whose proposition is the definition itself, makes `entity` optional under that style, and lets an
+`on` item be one-sided: `(left, None)` or `(None, right)`. Identity wording, paired fields and
+every table's columns are unchanged; `fields.parse_on` accepts one-sided items only on request.
+
 ## Pipeline and modules
 
 ```
@@ -65,6 +70,12 @@ left, right ──block──▶ candidates ──judge──▶ scores ──re
 `on` lists the fields shown to the judge and used for similarity. Each item is a column name
 present in both frames, or a `(left_column, right_column)` pair. `fields.parse_on(on)` returns
 `[(label, left_column, right_column), ...]`, where the label is the left column name.
+
+With `parse_on(on, unpaired=True)` an item may also be `(left_column, None)` or
+`(None, right_column)`: a field only one side has, labeled by its own column name, with `None` for
+the absent side. The judge, `candidates` (for `sim`), audit samples and fingerprints accept such
+items; blocking passes do not, because they compare a left column with a right column.
+`fields.side_fields(fields, "left"|"right")` lists `(label, column)` for one side.
 
 `fields.record_text(frame, columns)` returns a `pd.Series` of normalized text: the listed
 columns joined by a space, after `fields.normalize`, which casefolds, strips accents, turns `&`
@@ -159,10 +170,16 @@ def pairs_completeness(candidates: pd.DataFrame, truth: pd.DataFrame) -> float
 ## judge.py (lead)
 
 ```python
-def judge(candidates, left, right, *, on, entity: str, definition: str = "", left_id=None, right_id=None,
+def judge(candidates, left, right, *, on, entity: str | None = None, definition: str = "",
+          style: str = "identity", left_id=None, right_id=None,
           api=None, model=None, concurrency=32, budget: float | None = 5.0, cache=True,
           exact_shortcut=False, progress=True, transport=None) -> tuple[pd.DataFrame, Meter]
 ```
+
+`style="identity"` asks "Record A and record B refer to the same `<entity>`. `<definition>`" and
+needs an entity. `style="rule"` asks "Record A and record B satisfy the following match rule.
+`<definition>`" and needs a definition; the entity is not part of that question. The cache key
+includes the question, so the two styles never share an answer.
 
 One call per pair. The state is `{"record_a": {label: value, ...}, "record_b": {...}}` with
 missing fields dropped. Pairs are judged in descending `sim`, so a budget is spent on the
@@ -231,7 +248,8 @@ def score_against_truth(links, truth, candidates=None) -> dict
 
 ```python
 linker = jlink.Linker(entity="firm", definition="...", on=["name", ("city", "town")],
-                      blockers=[jlink.block.ngrams("name", k=10), jlink.block.initials("name")])
+                      blockers=[jlink.block.ngrams("name", k=10), jlink.block.initials("name")],
+                      style="identity")   # or style="rule", with entity optional
 result = linker.link(left, right, left_id="gvkey", right_id="id", how="one-to-one",
                      threshold=0.5, min_margin=None, budget=5.0)
 result.links, result.scores, result.candidates, result.meter, result.settings
@@ -248,7 +266,8 @@ result.save(directory); jlink.load(directory)
 strings to numbers (`dtype=str` for delimited files, then leave conversion to the caller).
 
 ```
-jlink link LEFT RIGHT --on name [--on city=town] --entity firm [--define "..."]
+jlink link LEFT RIGHT --on name [--on city=town] [--on text=] [--on =place]
+           --entity firm [--define "..."] [--style identity|rule]
            [--left-id COL] [--right-id COL] [--block ngrams:name:10] [--block exact:state]
            [--block initials:name] [--how one-to-one] [--threshold 0.5] [--min-margin M]
            [--budget 5] [-o links.csv] [--scores scores.csv] [--report report.md]
@@ -259,7 +278,9 @@ jlink evaluate LABELED [--threshold 0.5] [--markdown]
 jlink --version
 ```
 
-`--on city=town` means left column `city`, right column `town`. Cost estimate: about 330 input
+`--on city=town` means left column `city`, right column `town`; `--on text=` is a left-only
+field and `--on =place` a right-only one. `--style rule` requires `--define` and makes `--entity`
+optional. Cost estimate: about 330 input
 tokens per pair at $0.042 per million tokens; time estimate: about 200 pairs a second. Exit
 status 0 on success, 2 on any error, with a one-line message on stderr prefixed `jlink:`.
 Console scripts `jlink` and `jev-link` are the same program; macOS ships a Java tool at
@@ -271,7 +292,7 @@ signatures above.
 ## Stata and R wrappers
 
 Thin shims that write the data in memory to a temporary file, call the command, and read the
-links back. Stata: `jlink using right.dta, on(name city) entity(firm) [define() leftid()
+links back. Stata: `jlink using right.dta, on(name city) entity(firm) [define() style() leftid()
 rightid() how() threshold() budget() saving()]`, with a `.sthlp` help file. R: a single
 `jlink()` function in `r/jlink.R` using `system2`, returning a data frame. Find the executable
 as `jev-link` first, then `python3 -m jlink`. State plainly in each file's header whether it

@@ -25,11 +25,12 @@ def downstream(monkeypatch):
                                    report=lambda: "# Firm linkage\n\nOne link.\n")
 
     class Linker:
-        def __init__(self, *, entity, definition, on, blockers, api=None, model=None, cache=True,
-                     concurrency=32, exact_shortcut=False):
+        def __init__(self, *, entity, definition, on, blockers, style="identity", api=None, model=None,
+                     cache=True, concurrency=32, exact_shortcut=False):
             calls.constructor = dict(entity=entity, definition=definition, on=on, blockers=blockers,
                                      api=api, model=model, cache=cache, concurrency=concurrency,
                                      exact_shortcut=exact_shortcut)
+            calls.style = style
 
         def link(self, left, right, *, left_id=None, right_id=None, how="one-to-one", threshold=0.5,
                  min_margin=None, budget=5.0, progress=True):
@@ -159,6 +160,22 @@ def test_semantic_cli_and_explicit_identity_policy(downstream, inputs, capsys):
         ("embeddings", ("name",), {"k": 7, "model": "org/model", "revision": "fixed-commit", "device": "cpu"})]
 
 
+def test_rule_style_and_one_sided_fields_reach_the_linker(downstream, inputs, capsys):
+    command.cli(link_args(inputs))
+    assert downstream.style == "identity"
+    args = ["link", *inputs, "--on", "name", "--on", "city=", "--on", "=town", "--left-id", "id",
+            "--right-id", "rid", "--block", "exact:name"]
+    command.cli([*args, "--style", "rule", "--define", "Record B is the registry entry for record A."])
+    assert downstream.style == "rule" and downstream.constructor["entity"] is None
+    assert downstream.constructor["on"] == ["name", ("city", None), (None, "town")]
+    capsys.readouterr()
+    assert_error([*args, "--style", "rule"], capsys, "--define cannot be empty")
+    assert_error(args, capsys, "--entity must name a kind of record")
+    assert_error([*args, "--entity", "firm", "--style", "relation"], capsys, "--style")
+    # Blocking passes pair a left column with a right column, so they keep the stricter grammar.
+    assert_error(link_args(inputs) + ["--block", "exact:city="], capsys, "accepted forms are")
+
+
 @pytest.mark.parametrize("rule", ["", "random:name", "ngrams:name", "ngrams:name:0", "ngrams:name:-1",
                                   "ngrams:name:1.5", "ngrams:name:nan", "ngrams::10", "exact:name:10",
                                   "exact:=st", "exact:a=b=c", "exact:name+", "initials:name+city",
@@ -184,7 +201,10 @@ def test_missing_columns_and_ids(inputs, capsys):
     assert_error(link_args(inputs) + ["--on", "missing"], capsys, "column 'missing'")
     assert_error(link_args(inputs) + ["--right-id", "wrong"], capsys, "column 'wrong'")
     assert_error(link_args(inputs) + ["--block", "exact:unknown"], capsys, "column 'unknown'")
-    assert_error(link_args(inputs) + ["--on", "city="], capsys, "left_column=right_column")
+    assert_error(link_args(inputs) + ["--on", "="], capsys, "left_column=right_column")
+    assert_error(link_args(inputs) + ["--on", "a=b=c"], capsys, "left_column= or =right_column")
+    assert_error(link_args(inputs) + ["--on", "missing="], capsys, "column 'missing'")
+    assert_error(link_args(inputs) + ["--on", "=missing"], capsys, "column 'missing'")
     left = read_table(inputs[0])
     left["id"] = "00123"
     left.to_csv(inputs[0], index=False)

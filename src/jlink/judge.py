@@ -19,10 +19,11 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from .core import Cache, Jev, JevBudgetExceeded, JevError, JevFatal, Meter, resolve_backend
-from .fields import check_columns, clean, ids, normalize, parse_on
+from .fields import check_columns, clean, ids, normalize, parse_on, side_fields
 
 SCORE_COLUMNS = ["p", "source", "error"]
 EXACT_POLICY = "all_fields_nonempty_and_equal_v1"
+STYLES = ("identity", "rule")
 
 
 def validate_budget(budget: float | None) -> None:
@@ -45,28 +46,49 @@ def question(entity: str, definition: str = "", *, style: str = "identity") -> d
     return {"type": "noul", "instructions": text}
 
 
-def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, on, entity: str,
-          definition: str = "", left_id: str | None = None, right_id: str | None = None,
+def validate_question(entity: str | None, definition: str, style: str) -> None:
+    """Identity questions need an entity; rule questions need the definition that states the relation."""
+    if style not in STYLES:
+        raise ValueError(f"`style` must be one of {', '.join(STYLES)}; got {style!r}")
+    if style == "rule":
+        if not definition or not definition.strip():
+            raise ValueError('`style="rule"` asks whether two records satisfy your `definition`, '
+                             "so the definition cannot be empty")
+    elif not entity or not entity.strip():
+        raise ValueError('`entity` says what a record is, for example "firm" or "person"; it cannot be empty')
+
+
+def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, on,
+          entity: str | None = None, definition: str = "", style: str = "identity",
+          left_id: str | None = None, right_id: str | None = None,
           api: str | None = None, model: str | None = None, concurrency: int = 32,
           budget: float | None = 5.0, cache: bool | str | Path | Cache = True, exact_shortcut: bool = False,
           progress: bool = True, transport=None) -> tuple[pd.DataFrame, Meter]:
-    """Score every candidate pair. Returns the scores table (candidates plus p, source, error) and the meter."""
+    """Score every candidate pair. Returns the scores table (candidates plus p, source, error) and the meter.
+
+    ``style="rule"`` asks whether the pair satisfies ``definition``, a relation that need not be
+    identity; ``entity`` is then not part of the question. One-sided ``on`` fields, ``(left, None)``
+    or ``(None, right)``, appear only in that side's record.
+    """
     validate_budget(budget)
     if not isinstance(exact_shortcut, (bool, np.bool_)):
         raise ValueError("`exact_shortcut` must be a boolean; enable only when equal fields establish identity")
     if isinstance(concurrency, (bool, np.bool_)) or not isinstance(concurrency, Integral) or concurrency < 1:
         raise ValueError("`concurrency` must be a positive integer")
-    if not entity or not entity.strip():
-        raise ValueError('`entity` says what a record is, for example "firm" or "person"; it cannot be empty')
+    validate_question(entity, definition, style)
     for column in ("left_id", "right_id", "sim"):
         if column not in candidates.columns:
             raise ValueError(f"candidates must have a {column!r} column; build them with jlink.block.candidates")
-    fields = parse_on(on)
-    check_columns(left, [lc for _, lc, _ in fields], "left")
-    check_columns(right, [rc for _, _, rc in fields], "right")
+    fields = parse_on(on, unpaired=True)
+    shown_left, shown_right = side_fields(fields, "left"), side_fields(fields, "right")
+    if exact_shortcut and any(lc is None or rc is None for _, lc, rc in fields):
+        raise ValueError("`exact_shortcut` accepts pairs whose fields are all equal, so every `on` field "
+                         "must exist on both sides; remove the one-sided fields or the shortcut")
+    check_columns(left, [c for _, c in shown_left], "left")
+    check_columns(right, [c for _, c in shown_right], "right")
 
-    a = _records(left, ids(left, left_id, "left"), [(label, lc) for label, lc, _ in fields])
-    b = _records(right, ids(right, right_id, "right"), [(label, rc) for label, _, rc in fields])
+    a = _records(left, ids(left, left_id, "left"), shown_left)
+    b = _records(right, ids(right, right_id, "right"), shown_right)
     for side, known, column in (("left", a, "left_id"), ("right", b, "right_id")):
         unknown = ~candidates[column].isin(known.index)
         if unknown.any():
@@ -92,7 +114,7 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
     store = cache if isinstance(cache, Cache) else Cache(Path(cache)) if isinstance(cache, (str, Path)) \
         else Cache() if cache else None
     jev = Jev(key, backend, model=model, concurrency=concurrency, cache=store, transport=transport)
-    ask = question(entity, definition)
+    ask = question(entity or "", definition, style=style)
 
     async def work() -> None:
         sem = asyncio.Semaphore(concurrency)

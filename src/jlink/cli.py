@@ -23,10 +23,16 @@ class _Parser(argparse.ArgumentParser):
         raise ValueError(message)
 
 
-def _column(value: str) -> str | tuple[str, str]:
+def _column(value: str, *, unpaired: bool = False) -> str | tuple[str | None, str | None]:
+    """name, left=right, or for --on only: left= (left records only) and =right (right records only)."""
     parts = value.split("=")
-    if len(parts) not in (1, 2) or any(not part.strip() for part in parts):
-        raise ValueError(f"column {value!r}: use name or left_column=right_column")
+    blank = [not part.strip() for part in parts]
+    if len(parts) == 2 and unpaired and sum(blank) == 1:
+        return (None, parts[1]) if blank[0] else (parts[0], None)
+    if len(parts) not in (1, 2) or any(blank):
+        forms = ("name, left_column=right_column, left_column= or =right_column" if unpaired
+                 else "name or left_column=right_column")
+        raise ValueError(f"column {value!r}: use {forms}")
     return parts[0] if len(parts) == 1 else (parts[0], parts[1])
 
 
@@ -79,7 +85,8 @@ def _margin(value: str) -> float:
 
 def _add_fields(parser: argparse.ArgumentParser, *, required: bool = True) -> None:
     parser.add_argument("--on", action="append", required=required, metavar="COL[=COL]",
-                        help="field to compare; repeat for more fields (city=town uses different names)")
+                        help="field to compare; repeat for more fields (city=town uses different names; "
+                             "text= shows a field only the left records have, =place only the right)")
     parser.add_argument("--left-id", metavar="COL",
                         help="unique left record ID; default: zero-based row number")
     parser.add_argument("--right-id", metavar="COL",
@@ -118,9 +125,13 @@ def _parser() -> argparse.ArgumentParser:
                '--right-id id -o links.csv',
     )
     _add_pair_inputs(link)
-    link.add_argument("--entity", required=True, help="kind of record, for example firm, person or product")
+    link.add_argument("--entity", help="kind of record, for example firm, person or product; "
+                                       "required unless --style rule")
     link.add_argument("--define", dest="definition", default="", metavar="TEXT",
                       help="your match rule in plain English (default: no additional rule)")
+    link.add_argument("--style", choices=("identity", "rule"), default="identity",
+                      help="identity asks whether both records are the same --entity; rule asks whether "
+                           "the pair satisfies --define, which may state any relation (default: identity)")
     link.add_argument("--how", choices=_HOW, default="one-to-one",
                       help="one-to-one: unique on both sides; many-to-one: one right per left; "
                            "one-to-many: one left per right; many-to-many: all qualifying pairs "
@@ -189,10 +200,10 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _fields(args: argparse.Namespace, left: pd.DataFrame, right: pd.DataFrame) -> list:
-    on = [_column(item) for item in args.on]
-    for _, a, b in parse_on(on):
-        check_columns(left, [a], args.left)
-        check_columns(right, [b], args.right)
+    on = [_column(item, unpaired=True) for item in args.on]
+    for _, a, b in parse_on(on, unpaired=True):
+        check_columns(left, [a] if a is not None else [], args.left)
+        check_columns(right, [b] if b is not None else [], args.right)
     ids(left, args.left_id, args.left)
     ids(right, args.right_id, args.right)
     return on
@@ -242,14 +253,16 @@ def _outputs(inputs: list[str], tables: list[str | None], report: str | None = N
 
 def _link(args: argparse.Namespace) -> None:
     _outputs([args.left, args.right], [args.output, args.scores], args.report)
-    if not args.entity.strip():
-        raise ValueError("--entity must name a kind of record, such as firm")
+    if args.style == "rule" and not args.definition.strip():
+        raise ValueError("--style rule asks whether a pair satisfies --define, so --define cannot be empty")
+    if args.style == "identity" and not (args.entity or "").strip():
+        raise ValueError("--entity must name a kind of record, such as firm (only --style rule can omit it)")
     left, right, on, blockers = _inputs(args)
     from .linker import Linker
 
     linker = Linker(entity=args.entity, definition=args.definition, on=on, blockers=blockers,
-                    api=args.api, model=args.model, cache=not args.no_cache, concurrency=args.concurrency,
-                    exact_shortcut=args.exact_shortcut)
+                    style=args.style, api=args.api, model=args.model, cache=not args.no_cache,
+                    concurrency=args.concurrency, exact_shortcut=args.exact_shortcut)
     result = linker.link(left, right, left_id=args.left_id, right_id=args.right_id, how=args.how,
                          threshold=args.threshold, min_margin=args.min_margin, budget=args.budget,
                          progress=sys.stderr.isatty())  # no progress bar in Stata logs, R output or pipes

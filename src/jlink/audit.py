@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .fields import check_columns, ids, parse_on
+from .fields import check_columns, ids, parse_on, side_fields
 from .resolve import _columns, _number, _numbers, _pairs, _probabilities
 
 
@@ -34,10 +34,11 @@ def _allocation(sizes: np.ndarray, n: int) -> np.ndarray:
 
 def _fields(sample: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, on,
             left_id: str | None, right_id: str | None) -> list[str]:
-    fields = parse_on(on)
-    labels = [label for label, _, _ in fields]
-    if len(set(labels)) != len(labels):
-        raise ValueError("on must give each field a different left column name")
+    fields = parse_on(on, unpaired=True)
+    for side in ("left", "right"):
+        labels = [label for label, _ in side_fields(fields, side)]
+        if len(set(labels)) != len(labels):
+            raise ValueError("on must give each field a different left column name")
     positions = []
     for frame, column, side in ((left, left_id, "left"), (right, right_id, "right")):
         _columns(frame, [], f"the {side} data")
@@ -50,11 +51,14 @@ def _fields(sample: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, on,
         positions.append(indexer)
     columns = []
     for label, a, b in fields:
-        check_columns(left, [a], "left")
-        check_columns(right, [b], "right")
-        sample[f"a_{label}"] = left[a].iloc[positions[0]].reset_index(drop=True)
-        sample[f"b_{label}"] = right[b].iloc[positions[1]].reset_index(drop=True)
-        columns.extend([f"a_{label}", f"b_{label}"])
+        # A one-sided field has no counterpart to show beside it.
+        for prefix, frame, column, side, position in (("a", left, a, "left", positions[0]),
+                                                      ("b", right, b, "right", positions[1])):
+            if column is None:
+                continue
+            check_columns(frame, [column], side)
+            sample[f"{prefix}_{label}"] = frame[column].iloc[position].reset_index(drop=True)
+            columns.append(f"{prefix}_{label}")
     return columns
 
 
