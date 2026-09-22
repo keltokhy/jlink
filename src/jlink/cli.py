@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import __version__
+from .core import PROVIDERS
 from .fields import check_columns, ids, parse_on
 from .io import FORMATS, read_table, stata_value_labels, write_table
 
@@ -145,7 +146,7 @@ def _add_judging(parser: argparse.ArgumentParser) -> None:
                         help="save the whole run in a folder, as Result.save() does: the links or clusters, "
                              "scores.csv and settings.json with full provenance. `review create`, "
                              "jlink.load and a replication package read this folder")
-    parser.add_argument("--api", choices=("typesafe", "openrouter"),
+    parser.add_argument("--api", choices=tuple(PROVIDERS),
                         help="API provider (default: configured provider)")
     parser.add_argument("--model", metavar="ID", help="model identifier (default: provider's Jev model)")
     parser.add_argument("--no-cache", action="store_true", help="do not reuse or save cached judgments")

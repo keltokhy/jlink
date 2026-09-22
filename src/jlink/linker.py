@@ -177,7 +177,7 @@ class Linker:
             "normalization": "jlink.fields.normalize_v1", "concurrency": int(self.concurrency),
             "cache_enabled": bool(self.cache), "max_pairs": None if max_pairs is None else int(max_pairs),
             "budget_policy": "stop_new_requests_at_observed_cost_v1",
-            "cost_sources": meter.cost_sources, "estimated_price_per_million_tokens": Settings.from_env().price_per_mtok,
+            "cost_sources": meter.cost_sources, "estimated_price_per_million_tokens": Settings.from_env().list_price,
             "retries": meter.retries, "cost": meter.cost,
             "runtime": {"python": platform.python_version(), **{p: version(p) for p in (
                 "numpy", "pandas", "scipy", "scikit-learn", "httpx")}},
