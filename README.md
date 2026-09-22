@@ -44,7 +44,8 @@ jlink is built for the way applied economists link data:
 jlink sends the fields you list in `on`, for each candidate pair, to an outside API (TypeSafe
 or OpenRouter). Do not use it on confidential or restricted-use data, such as Census RDC
 files, identified administrative records or anything under a data use agreement, unless that
-agreement allows it. Only the `on` fields leave your machine; blocking runs locally.
+agreement allows it. Only the `on` fields leave your machine; blocking runs locally. With a
+local server (`--api laya` or `--api diffusiongemma`, below) nothing leaves the machine at all.
 
 ## Install
 
@@ -63,6 +64,17 @@ You need a key for one of two APIs. With keys for both, jlink uses TypeSafe's.
 | OpenRouter | `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
 
 A key can also live in `~/.config/jev/typesafe.key` or `~/.config/jev/openrouter.key`.
+
+### Local servers (experimental)
+
+`--api diffusiongemma` and `--api laya`, or `JEV_API=laya` for the Python, Stata and R entry
+points, send the same pair questions to a System One server on your own machine, an
+[OpenJev](https://github.com/razorback16/openjev) or [laya-mlx](https://github.com/mizorewww/laya-mlx)
+process that you run separately. They are never chosen automatically, need no key, and count as $0
+in the cost meter and a saved run's settings unless `JEV_PRICE_PER_MTOK` is set. A run records the
+provider and model that answered, so results from a local model are attributed like any other.
+The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md)
+and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guides explain the setup; keep concurrency low while a local model warms up.
 
 ## Try it
 
@@ -378,10 +390,10 @@ links <- jlink(compustat, patents, on = c("conm=assignee", "state"), entity = "f
 uv sync --group bench && uv run pytest   # offline, no key; Stata and R tests skip if absent
 ```
 
-`SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` is the
-Jev client (two backends, retries, cache, cost meter), historically shared with
-[jgrep](https://github.com/keltokhy/jgrep), which is grep with a description in place of a
-pattern. jlink's additive cache/provenance extensions are documented in
+`SPEC.md` is the design contract the modules were built against. `src/jlink/core.py` names the
+providers jlink offers; the client, retries, answer cache and cost meter are the shared
+[`jevkit-runtime`](https://github.com/keltokhy/jevkit-core), which [jgrep](https://github.com/keltokhy/jgrep)
+and the other JevKit tools use too. jlink's provenance records are documented in
 [run provenance](docs/run-provenance.md#backward-compatibility-and-unknown-provenance).
 
 MIT license. The benchmark datasets keep their own terms; see `bench/FIRM_DATA.md`.
