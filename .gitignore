@@ -7,3 +7,8 @@ bench/out/
 .env
 .DS_Store
 *.key
+
+# Local experiment records and launch materials
+/bench/*EVIDENCE.md
+/bench/evidence/
+/launch-assets/
