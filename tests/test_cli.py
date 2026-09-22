@@ -1,6 +1,7 @@
 """CLI contract tests: all downstream computation is replaced by offline stand-ins."""
 
 import importlib
+import jlink
 import subprocess
 import sys
 from types import ModuleType, SimpleNamespace
@@ -112,7 +113,7 @@ def test_version(capsys):
     with pytest.raises(SystemExit) as exc:
         command.cli(["--version"])
     assert exc.value.code == 0
-    assert capsys.readouterr().out.strip() == "jlink 0.1.0"
+    assert capsys.readouterr().out.strip() == f"jlink {jlink.__version__}"
 
 
 def test_stdout_and_summary(downstream, inputs, capsys):
@@ -406,7 +407,7 @@ def test_selected_cli_rejects_invalid_flags(tmp_path, capsys):
 @pytest.mark.parametrize("program", [[sys.executable, "-m", "jlink"], ["jev-link"], ["jlink"]])
 def test_installed_entrypoints(program):
     result = subprocess.run([*program, "--version"], capture_output=True, text=True, check=False)
-    assert result.returncode == 0 and result.stdout.strip() == "jlink 0.1.0"
+    assert result.returncode == 0 and result.stdout.strip() == f"jlink {jlink.__version__}"
     result = subprocess.run([*program, "estimate", "absent.csv", "right.csv", "--on", "name"],
                             capture_output=True, text=True, check=False)
     assert result.returncode == 2 and result.stderr.startswith("jlink:")

@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+- Move transport, configuration, the answer cache and metering to the shared `jevkit-runtime` 0.2.
+  Answers are keyed by provider, endpoint and model, so an answer from one provider is never reused
+  for another; the cache written by earlier versions is reset on first use and re-asked. Saved runs
+  from earlier versions still load.
 
 - Keep ordinary identity link settings compatible with main by omitting the implicit identity
   style; saved runs with an explicit identity style remain readable.
