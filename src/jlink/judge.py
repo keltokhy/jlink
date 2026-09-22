@@ -111,10 +111,10 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
     todo = np.flatnonzero(source == "unjudged")
     todo = todo[np.argsort(-scores["sim"].to_numpy()[todo], kind="stable")]
     record_a, record_b = a["record"].to_dict(), b["record"].to_dict()
-    backend, key = resolve_backend(api, require_key=bool(len(todo)) and budget != 0)
+    backend = resolve_backend(api, model=model, require_key=bool(len(todo)) and budget != 0)
     store = cache if isinstance(cache, Cache) else Cache(Path(cache)) if isinstance(cache, (str, Path)) \
         else Cache() if cache else None
-    jev = Jev(key, backend, model=model, concurrency=concurrency, cache=store, transport=transport)
+    jev = Jev(backend, concurrency=concurrency, store=store, transport=transport)
     ask = question(entity or "", definition, style=style)
 
     async def work() -> None:

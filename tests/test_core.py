@@ -1,61 +1,37 @@
-"""Offline compatibility and provenance checks for the shared Jev client interfaces."""
+"""Offline checks of jlink's use of the shared client: the store, provenance, and cache-only budgets."""
 
 import asyncio
-import json
-import sqlite3
 
 import httpx
 import pytest
 
 from fakes import FakeJev
-from jlink.core import Cache, Jev, JevBudgetExceeded
+from jlink.core import PROVIDERS, Backend, Cache, Jev, JevBudgetExceeded
 
 QUESTION = {"match": {"type": "noul", "instructions": "Same firm?"}}
 STATE = {"name": "Acme"}
 
 
-def test_cache_reads_legacy_schema_and_keeps_answer_interface(tmp_path):
-    path = tmp_path / "old.sqlite"
-    with sqlite3.connect(path) as db:
-        db.execute("CREATE TABLE answers (key TEXT PRIMARY KEY, answer TEXT NOT NULL, at REAL NOT NULL) WITHOUT ROWID")
-        db.execute("INSERT INTO answers VALUES (?, ?, ?)", ("old", json.dumps({"noul": 0.7}), 1.0))
-    cache = Cache(path)
-    assert cache.get("old") == {"noul": 0.7}
-    assert cache.get_entry("old") == ({"noul": 0.7}, {})
-    cache.put("new", {"noul": 0.8}, metadata={"resolved_model": "jev-1"})
+def backend(name="openrouter", model="jev-alias", key="test"):
+    return Backend(name, PROVIDERS[name].url, model, key=key)
+
+
+def test_store_keeps_each_answer_with_its_origin(tmp_path):
+    cache = Cache(tmp_path / "answers.sqlite")
+    cache.put("new", {"noul": 0.8}, {"resolved_model": "jev-1"})
     assert cache.get("new") == {"noul": 0.8}
-    assert cache.db.execute("SELECT answer FROM answers WHERE key='new'").fetchone()[0] == '{"noul": 0.8}'
-    cache.db.close()
+    assert cache.entry("new").metadata == {"resolved_model": "jev-1"}
+    cache.put("new", {"noul": 0.1})
+    assert cache.entry("new").metadata is None
+    cache.close()
 
 
-def test_old_writers_cannot_leave_stale_model_metadata(tmp_path):
+def test_unattributed_cache_hit_does_not_invent_a_model_or_provider(tmp_path):
     cache = Cache(tmp_path / "answers.sqlite")
-    cache.put("key", {"noul": 0.8}, metadata={"resolved_model": "jev-1"})
-    cache.db.execute("UPDATE answers SET at=at+1, answer=? WHERE key='key'", (json.dumps({"noul": 0.9}),))
-    assert cache.get_entry("key") == ({"noul": 0.9}, {})
-    cache.put("key", {"noul": 0.1})
-    assert cache.get_entry("key") == ({"noul": 0.1}, {})
-    cache.db.close()
-
-
-def test_cache_answer_and_metadata_replace_atomically(tmp_path):
-    cache = Cache(tmp_path / "answers.sqlite")
-    cache.put("key", {"noul": 0.8}, metadata={"resolved_model": "jev-1"})
-    # A failed metadata write must not leave a newer answer paired with older/absent provenance.
-    cache.db.execute("CREATE TRIGGER reject_metadata BEFORE INSERT ON answer_metadata "
-                     "BEGIN SELECT RAISE(ABORT, 'metadata rejected'); END")
-    with pytest.raises(sqlite3.IntegrityError, match="metadata rejected"):
-        cache.put("key", {"noul": 0.9}, metadata={"resolved_model": "jev-2"})
-    assert cache.get_entry("key") == ({"noul": 0.8}, {"resolved_model": "jev-1"})
-    cache.db.close()
-
-
-def test_legacy_cache_hit_does_not_invent_actual_model_or_provider(tmp_path):
-    cache = Cache(tmp_path / "answers.sqlite")
-    cache.put(Cache.key("requested-alias", STATE, QUESTION["match"]), {"noul": 0.7})
+    jev = Jev(backend(key=""), store=cache, transport=FakeJev().transport)
+    cache.put(jev.key(STATE, QUESTION["match"]), {"noul": 0.7})
 
     async def check():
-        jev = Jev("", model="requested-alias", cache=cache, transport=FakeJev().transport)
         provenance = {}
         answer = await jev.ask(STATE, QUESTION, allow_paid=False, provenance=provenance)
         assert answer == {"match": {"noul": 0.7}}
@@ -65,15 +41,15 @@ def test_legacy_cache_hit_does_not_invent_actual_model_or_provider(tmp_path):
         await jev.close()
 
     asyncio.run(check())
-    cache.db.close()
+    cache.close()
 
 
-def test_no_reported_model_stays_unknown_even_with_an_explicit_request(tmp_path):
+def test_no_reported_model_stays_unknown_even_with_an_explicit_request():
     def handler(request):
         return httpx.Response(200, json={"answers": {"match": {"noul": 0.8}}, "usage": {"input_tokens": 100}})
 
     async def check():
-        jev = Jev("test", model="pinned-request", transport=httpx.MockTransport(handler))
+        jev = Jev(backend(model="pinned-request"), transport=httpx.MockTransport(handler))
         await jev.ask(STATE, QUESTION)
         assert jev.meter.model == "" and jev.meter.unknown_model_answers == 1
         assert jev.meter.requested_model == "pinned-request"
@@ -87,7 +63,7 @@ def test_cache_only_request_miss_never_calls_the_transport():
     fake = FakeJev()
 
     async def check():
-        jev = Jev("", transport=fake.transport)
+        jev = Jev(backend(key=""), transport=fake.transport)
         with pytest.raises(JevBudgetExceeded):
             await jev.ask(STATE, QUESTION, allow_paid=False)
         assert not fake.bodies
@@ -107,7 +83,7 @@ def test_cache_only_can_share_existing_flight_and_keeps_original_ask_shape():
             await release.wait()
             return fake(request)
 
-        jev = Jev("test", model="jev-1", transport=httpx.MockTransport(handler))
+        jev = Jev(backend(model="jev-1"), transport=httpx.MockTransport(handler))
         first = asyncio.create_task(jev.ask(STATE, QUESTION))
         await entered.wait()
         provenance = {}
@@ -123,33 +99,36 @@ def test_cache_only_can_share_existing_flight_and_keeps_original_ask_shape():
     asyncio.run(check())
 
 
-def test_cache_provenance_retains_origin_provider_across_backends(tmp_path):
+def test_provenance_names_the_provider_that_answered_and_answers_stay_with_it(tmp_path):
     cache = Cache(tmp_path / "answers.sqlite")
 
     async def check():
-        first = Jev("test", "typesafe", model="shared-name", cache=cache, transport=FakeJev().transport)
+        first = Jev(backend("typesafe", "shared-name"), store=cache, transport=FakeJev().transport)
         await first.ask(STATE, QUESTION)
         await first.close()
-        second = Jev("", "openrouter", model="shared-name", cache=cache, transport=FakeJev().transport)
+        again = Jev(backend("typesafe", "shared-name", key=""), store=cache, transport=FakeJev().transport)
         provenance = {}
-        await second.ask(STATE, QUESTION, allow_paid=False, provenance=provenance)
-        assert second.meter.provider == "openrouter"  # current backend selection
-        assert provenance["match"]["provider"] == "typesafe"  # actual answer origin
-        assert second.meter.calls == 0
-        await second.close()
+        await again.ask(STATE, QUESTION, allow_paid=False, provenance=provenance)
+        assert provenance["match"]["provider"] == "typesafe" and again.meter.calls == 0
+        await again.close()
+        other = Jev(backend("openrouter", "shared-name", key=""), store=cache, transport=FakeJev().transport)
+        with pytest.raises(JevBudgetExceeded):  # another provider's answer is not this provider's answer
+            await other.ask(STATE, QUESTION, allow_paid=False)
+        assert other.meter.provider == "openrouter"
+        await other.close()
 
     asyncio.run(check())
-    cache.db.close()
+    cache.close()
 
 
 def test_multi_question_client_keeps_cached_and_fresh_answers_separate(tmp_path):
     cache = Cache(tmp_path / "answers.sqlite")
-    cache.put(Cache.key("jev-1", STATE, QUESTION["match"]), {"noul": 0.7})
-    questions = QUESTION | {"other": {"type": "noul", "instructions": "Same state?"}}
     fake = FakeJev()
+    jev = Jev(backend(model="jev-1"), store=cache, transport=fake.transport)
+    cache.put(jev.key(STATE, QUESTION["match"]), {"noul": 0.7})
+    questions = QUESTION | {"other": {"type": "noul", "instructions": "Same state?"}}
 
     async def check():
-        jev = Jev("test", model="jev-1", cache=cache, transport=fake.transport)
         provenance = {}
         answer = await jev.ask(STATE, questions, provenance=provenance)
         assert answer == {"match": {"noul": 0.7}, "other": {"type": "noul", "noul": 0.5}}
@@ -163,4 +142,4 @@ def test_multi_question_client_keeps_cached_and_fresh_answers_separate(tmp_path)
         await jev.close()
 
     asyncio.run(check())
-    cache.db.close()
+    cache.close()
