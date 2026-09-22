@@ -16,7 +16,7 @@ import pandas as pd
 
 from . import __version__, audit, block
 from .cluster import LINKAGES, UNPROPOSED, cluster
-from .core import Meter, Settings
+from jevkit_runtime import Meter, Settings
 from .fields import ids, parse_on
 from .judge import EXACT_POLICY, judge, question, validate_budget, validate_question
 from .provenance import blocker_config, frame_fingerprint, input_fingerprints

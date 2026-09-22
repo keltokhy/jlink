@@ -10,7 +10,8 @@ import pytest
 
 import jlink
 from fakes import FakeJev
-from jlink.core import PROVIDERS, Backend, Cache, answer_key
+from jevkit_runtime import AnswerStore, Backend, answer_key
+from jlink.core import PROVIDERS
 from jlink.judge import question
 from jlink.provenance import blocker_config, frame_fingerprint
 
@@ -77,7 +78,7 @@ def test_mixed_model_versions_are_not_collapsed_to_last_answer(tmp_path):
 
 
 def test_legacy_cache_does_not_get_the_current_requested_identity():
-    store = Cache()
+    store = AnswerStore()
     state = {"record_a": {"name": "Alpha"}, "record_b": {"name": "Alpha LLC"}}
     current = Backend("openrouter", PROVIDERS["openrouter"].url, "jev-alias")
     store.put(answer_key(current, state, question("firm")), {"type": "noul", "noul": 0.7})

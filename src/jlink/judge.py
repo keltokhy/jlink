@@ -18,7 +18,8 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-from .core import Cache, Jev, JevBudgetExceeded, JevError, JevFatal, Meter, resolve_backend
+from jevkit_runtime import AnswerStore, Client, JevBudgetExceeded, JevError, JevFatal, Meter, resolve
+from .core import PROVIDERS
 from .fields import check_columns, clean, ids, normalize, parse_on, side_fields
 
 SCORE_COLUMNS = ["p", "source", "error"]
@@ -62,7 +63,7 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
           entity: str | None = None, definition: str = "", style: str = "identity",
           left_id: str | None = None, right_id: str | None = None,
           api: str | None = None, model: str | None = None, concurrency: int = 32,
-          budget: float | None = 5.0, cache: bool | str | Path | Cache = True, exact_shortcut: bool = False,
+          budget: float | None = 5.0, cache: bool | str | Path | AnswerStore = True, exact_shortcut: bool = False,
           progress: bool = True, transport=None) -> tuple[pd.DataFrame, Meter]:
     """Score every candidate pair. Returns the scores table (candidates plus p, source, error) and the meter.
 
@@ -111,10 +112,10 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
     todo = np.flatnonzero(source == "unjudged")
     todo = todo[np.argsort(-scores["sim"].to_numpy()[todo], kind="stable")]
     record_a, record_b = a["record"].to_dict(), b["record"].to_dict()
-    backend = resolve_backend(api, model=model, require_key=bool(len(todo)) and budget != 0)
-    store = cache if isinstance(cache, Cache) else Cache(Path(cache)) if isinstance(cache, (str, Path)) \
-        else Cache() if cache else None
-    jev = Jev(backend, concurrency=concurrency, store=store, transport=transport)
+    backend = resolve(PROVIDERS, api, model=model, require_key=bool(len(todo)) and budget != 0)
+    store = cache if isinstance(cache, AnswerStore) else AnswerStore(Path(cache)) if isinstance(cache, (str, Path)) \
+        else AnswerStore() if cache else None
+    jev = Client(backend, concurrency=concurrency, store=store, transport=transport)
     ask = question(entity or "", definition, style=style)
 
     async def work() -> None:
@@ -126,11 +127,9 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
         async def one(i: int) -> None:
             try:
                 state = {"record_a": record_a[left_ids[i]], "record_b": record_b[right_ids[i]]}
-                provenance = {}
-                answer = await jev.ask(state, {"match": ask}, provenance=provenance,
-                                       allow_paid=budget is None or jev.meter.cost < budget)
+                answer = await jev.ask(state, {"match": ask}, allow_paid=budget is None or jev.meter.cost < budget)
                 p[i], source[i] = float(answer["match"]["noul"]), "jev"
-                meta = provenance["match"]
+                meta = answer.origins["match"]
                 models[i], providers[i] = meta.get("resolved_model") or pd.NA, meta.get("provider") or pd.NA
                 origins[i], answered_at[i] = meta["source"], meta.get("answered_at", np.nan)
             except JevBudgetExceeded:

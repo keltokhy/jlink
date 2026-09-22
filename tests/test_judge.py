@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from fakes import FakeJev
-from jlink.core import JevFatal
+from jevkit_runtime import JevFatal
 from jlink.judge import judge, question
 
 LEFT = pd.DataFrame({"gvkey": ["a1", "a2", "a3"],

@@ -389,7 +389,7 @@ MIT license. The benchmark datasets keep their own terms; see `bench/FIRM_DATA.m
 ## Shared JevKit development
 
 This tool uses [`jevkit-runtime`](https://github.com/keltokhy/jevkit-core), imported
-as `jevkit_core`. Clone that repository beside this one as `../jevkit-core`, then
+as `jevkit_runtime`. Clone that repository beside this one as `../jevkit-core`, then
 run `uv sync`. Core Python edits apply on the next invocation of this tool;
 restart long-lived Python processes after editing.
 
