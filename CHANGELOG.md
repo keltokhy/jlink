@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
+- The tool itself is unchanged from 0.3.0; this release brings its README on PyPI up to date.
+  README links point to GitHub, so they also work on PyPI.
 - Add `docs/benchmarks/local-models-2026-09-22.md` and its frozen JSON, which compare DiffusionGemma,
   Laya and LinkTransformer with Jev on 300-record samples of the benchmarks; the README summarizes it.
 - `bench/live.py` takes `--api`, `--model`, `--timeout` and other flags for local runs and will not

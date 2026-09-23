@@ -81,7 +81,7 @@ and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guide
 setup; keep concurrency low while a local model warms up.
 
 [On a local server](#on-a-local-server) compares both with Jev on the five benchmarks, and the
-[local-model results](docs/benchmarks/local-models-2026-09-22.md) have the full record.
+[local-model results](https://github.com/keltokhy/jlink/blob/main/docs/benchmarks/local-models-2026-09-22.md) have the full record.
 
 ## Try it
 
@@ -143,7 +143,7 @@ What the table says:
   pass proposed 67% of known links, and jlink found 93% of the true links it proposed. The 67% is
   measured blocking recall, not a ceiling for name-based methods, though ownership links such as
   "Homogeneous Metals Inc" to "United Technologies Corp" can be difficult to retrieve from names.
-  [Candidate search](docs/blocking.md) describes reverse search, larger `k` and their pair-count
+  [Candidate search](https://github.com/keltokhy/jlink/blob/main/docs/blocking.md) describes reverse search, larger `k` and their pair-count
   cost. A sliver of the error is the benchmark's: 11 Compustat names appear under two IDs, which
   accounts for 14 of jlink's 331 false links.
 - **Amazon to Google is hard for everyone**, because listings differ in version and edition
@@ -168,7 +168,7 @@ beyond that size a reliable shared field such as state or year can restrict the 
 `jlink.block.within(jlink.block.ngrams("name"), "state")` searches separately inside each group.
 A separate `exact("state")` pass is different: it adds pairs to the union and does not split the
 existing search. Grouping can lose matches when group values disagree or are missing; see
-[grouping, reverse search, and pair limits](docs/blocking.md).
+[grouping, reverse search, and pair limits](https://github.com/keltokhy/jlink/blob/main/docs/blocking.md).
 
 Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`, then
 `uv run python bench/live.py nber-firms --budget 1.00`. Baselines and data provenance are in
@@ -178,7 +178,7 @@ Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`,
 
 On 2026-09-22 the two [local servers](#local-servers-experimental), on an Apple M3 Ultra, judged
 the candidate pairs of 300 left records from each benchmark, the same pairs Jev judged in the full
-runs above. The [local-model results](docs/benchmarks/local-models-2026-09-22.md) have every
+runs above. The [local-model results](https://github.com/keltokhy/jlink/blob/main/docs/benchmarks/local-models-2026-09-22.md) have every
 number, dataset by dataset.
 
 | F1, 300 left records | Jev 1.13 (OpenRouter) | DiffusionGemma (`openjev-0.1`, local) | Laya (`laya-421m`, local) | LinkTransformer, zero-shot (local) |
@@ -307,7 +307,7 @@ result.save("linkage/")                                   # links.csv, scores.cs
 `budget=0` allows cache hits and explicitly enabled exact shortcuts only; `budget=None` is
 unlimited. A positive budget stops new requests at the observed cost, but calls already in
 flight can overshoot it. Saved runs retain input fingerprints, blocker parameters, and model
-identities, including cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
+identities, including cached answers. See [budget semantics and run provenance](https://github.com/keltokhy/jlink/blob/main/docs/run-provenance.md).
 
 ### Relations, not only identity
 
@@ -341,8 +341,8 @@ window are paid for. `how="many-to-one"` lets several articles report one incide
 `result.methods()` then describes a relation defined by your rule and does not say the records
 are the same entity. Identity and rule answers are cached under different questions and never
 mix. One-sided fields are shown to the judge only; a blocking pass needs a column on each side
-and says so if given one. See [relation linking](docs/relation-linking.md) and
-[windows on dates and numbers](docs/blocking.md#windows-on-dates-and-numbers).
+and says so if given one. See [relation linking](https://github.com/keltokhy/jlink/blob/main/docs/relation-linking.md) and
+[windows on dates and numbers](https://github.com/keltokhy/jlink/blob/main/docs/blocking.md#windows-on-dates-and-numbers).
 
 ### Dedupe: one table against itself
 
@@ -364,7 +364,7 @@ is average linkage in which every pair between two clusters votes, a pair that b
 proposed counting as a non-match. That resists chaining and can split a true group that
 blocking covered only in part; `unproposed="ignore"` and `linkage="components"` are the other
 two rules, and switching is free. `report()` counts the high-probability pairs the rule left
-apart, and `result.split_pairs()` lists them. [Dedupe](docs/dedupe.md) measures both failure
+apart, and `result.split_pairs()` lists them. [Dedupe](https://github.com/keltokhy/jlink/blob/main/docs/dedupe.md) measures both failure
 modes on synthetic scores, and states what is not known: nothing here measures Jev on a dedupe
 task, or whether it answers (A, B) and (B, A) alike.
 
@@ -386,7 +386,7 @@ linker = jlink.Linker("firm", [("conm", "assignee")], definition="...", blockers
 The embedding model runs locally; its weights download on first use. The union can recover
 aliases that character similarity misses, at the cost of more candidate pairs. This is an
 optional retrieval method, not a claim that any particular encoder beats other systems.
-See [semantic retrieval and benchmark instructions](docs/hybrid-linkage.md).
+See [semantic retrieval and benchmark instructions](https://github.com/keltokhy/jlink/blob/main/docs/hybrid-linkage.md).
 
 ## Checking the links
 
@@ -409,11 +409,11 @@ assess pair scores. You may leave labels blank, but keep those rows in the file:
 pairs of each probability bin are reweighted to stand for the whole bin, so skipping most of
 the unlikely pairs does not inflate recall. Blanks that fall on the hard pairs within a bin
 can still bias the result, and a bin with no label at all leaves the estimates undefined. See
-[evaluation modes and limitations](docs/evaluation.md) for blank labels, bootstrap assumptions
+[evaluation modes and limitations](https://github.com/keltokhy/jlink/blob/main/docs/evaluation.md) for blank labels, bootstrap assumptions
 and the exported table contract.
 
 For a local side-by-side review page with accept/reject/unsure decisions, durable history,
-and offline recomputation, see [Local human review](docs/review.md). Start with
+and offline recomputation, see [Local human review](https://github.com/keltokhy/jlink/blob/main/docs/review.md). Start with
 `jlink.create_review(result).write_html("review.html")` or `jev-link review --help`.
 
 ## Command line, Stata and R
@@ -494,7 +494,7 @@ uv sync --group bench && uv run pytest   # offline, no key; Stata and R tests sk
 providers jlink offers; the client, retries, answer cache and cost meter are the shared
 [`jevkit-runtime`](https://github.com/keltokhy/jevkit-core), which [jgrep](https://github.com/keltokhy/jgrep)
 and the other JevKit tools use too. jlink's provenance records are documented in
-[run provenance](docs/run-provenance.md#backward-compatibility-and-unknown-provenance).
+[run provenance](https://github.com/keltokhy/jlink/blob/main/docs/run-provenance.md#backward-compatibility-and-unknown-provenance).
 
 MIT license. The benchmark datasets keep their own terms; see `bench/FIRM_DATA.md`.
 
@@ -512,7 +512,7 @@ standalone source checkout. Existing published versions of this tool are
 unaffected by this source migration.
 
 From the core checkout, `python scripts/dev.py setup`, `check`, and `wheel-check` set up and
-validate all five consumers in separate environments. CI checks out core tag `v0.3.0`. Prompts,
+validate all five consumers in separate environments. CI checks out core tag `v0.3.1`. Prompts,
 question construction, and budget policies remain in this repository; answer identity, the
 answer store, transport, and metering are the runtime's. Runtime 0.2 keys and stores answers
 differently from 0.1, so a cache written by an earlier version is re-asked once after upgrading.
