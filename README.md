@@ -25,9 +25,9 @@ from its parent. A research assistant can do both, slowly. jlink asks
 [Jev](https://docs.typesafe.ai), a decision model from TypeSafe, the question a research
 assistant would answer: given these two records and this rule, are they the same firm? Jev
 returns a probability in about a fifth of a second for about a thousandth of a cent. In the
-benchmarks below, 146,119 candidate pairs cost $2.49 in total, at about 250 pairs a second.
-
-jlink is built for the way applied economists link data:
+benchmarks below, 171,354 pairs cost $2.95 in total, at about 250 pairs a second. With no
+labels, jlink beats LinkTransformer's zero-shot models on eleven of twelve standard benchmarks
+and its fine-tuned ones on most of the product data ([below](#against-linktransformer)).
 
 - **The rule is part of the method.** You state what counts as a match, and that sentence goes
   in your appendix. Change the sentence and you change the linkage.
@@ -166,6 +166,70 @@ see [grouping, reverse search, and pair limits](docs/blocking.md).
 Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`, then
 `uv run python bench/live.py nber-firms --budget 1.00`. Baselines and data provenance are in
 `bench/BASELINES.md` and `bench/FIRM_DATA.md`.
+
+
+### Against LinkTransformer
+
+[LinkTransformer](https://github.com/dell-research-harvard/linktransformer) (Arora and Dell) is
+the embedding linker economists reach for: it encodes each record with a sentence transformer,
+links nearest neighbours by cosine similarity, runs locally and costs nothing per pair. On
+2026-09-20 jlink was compared with it three ways. jlink used its default threshold of 0.5
+everywhere and saw no labels; LinkTransformer ran locally, pretrained and fine-tuned.
+
+**With no labels, jlink beats LinkTransformer's zero-shot models on eleven of the twelve
+DeepMatcher benchmarks** and is level on the twelfth (Beer, where 14 matches make one pair worth
+three points of F1). These are the 25,235 labelled test pairs behind Table A-5 of the
+LinkTransformer paper ([arXiv:2309.00789](https://arxiv.org/abs/2309.00789)), each judged once at
+0.5 with a one- or two-sentence rule, for $0.46. Fine-tuned on each benchmark's training
+labels, LinkTransformer pulls ahead on eight rows, by up to seven points; jlink stays ahead on
+four, three of them product data, where it also beats Ditto, a fine-tuned language-model
+matcher. F1 in percent; the published columns are as printed in the paper, and bold marks where
+jlink beats the fine-tuned LinkTransformer.
+
+| DeepMatcher test set | jlink, no labels | LinkTransformer, zero-shot | LinkTransformer, fine-tuned | Ditto, fine-tuned |
+|---|---:|---:|---:|---:|
+| Products: Abt-Buy | **91.5** | 28.8 | 84.0 | 88.9 |
+| Products: Walmart-Amazon | **89.5** | 45.0 | 73.8 | 85.8 |
+| Products: Walmart-Amazon, dirty | **85.4** | 45.0 | 71.0 | 82.6 |
+| Songs: iTunes-Amazon, dirty | **92.0** | 68.8 | 84.0 | 92.9 |
+| Software: Amazon-Google | 68.6 | 47.1 | 74.0 | 74.1 |
+| Songs: iTunes-Amazon | 82.6 | 60.6 | 90.0 | 92.3 |
+| Beers: BeerAdvo-RateBeer | 83.3 | 83.4 | 90.3 | 84.6 |
+| Restaurants: Fodors-Zagats | 97.7 | 75.0 | 98.0 | 98.1 |
+| Publications: DBLP-ACM | 96.1 | 95.0 | 98.0 | 99.0 |
+| Publications: DBLP-ACM, dirty | 95.2 | 89.8 | 98.0 | 98.9 |
+| Publications: DBLP-Scholar | 90.6 | 80.0 | 92.0 | 95.6 |
+| Publications: DBLP-Scholar, dirty | 89.3 | 87.5 | 92.6 | 95.4 |
+
+The publication rows are pairwise classification: every pair is judged alone, two versions of
+one paper look like a match, and jlink's precision there is 0.83 to 0.93. Linked end to end with
+one-to-one assignment, the same judgments score 0.9965 on DBLP to ACM (above).
+
+**On firm names, jlink beats LinkTransformer's purpose-built company model.** On the NBER to
+Compustat split, each method was allowed the 2,537 links jlink made and scored on listed matches
+recovered: jlink 2,034, LinkTransformer's Wikidata company model 1,960, LinkTransformer
+fine-tuned on the development labels 1,931, character TF-IDF 1,889. The lead holds on the
+records outside jlink's rule-wording pilot (1,912 against 1,841). The product splits are the
+closer contest. With development labels to fine-tune on and a threshold tuned on them,
+LinkTransformer edges past jlink on Abt to Buy (0.954 against 0.942 with one-to-one assignment,
+where character TF-IDF also reaches 0.951) and on Amazon to Google (0.736 against 0.721), and on
+FEBRL4 typos it reaches 0.999 where jlink stops at 0.960, as the string baseline above already
+does.
+
+**Only jlink changes its answer when the definition changes.** Two small fixtures, hand-labelled
+from public filings by this repository's author (HP, IBM and Kyndryl, Meta, Kellogg, Kraft,
+Alphabet and others), ask the same pairs under four definitions: legal entity, corporate group at
+the record dates, physical site, operating business. jlink answered 30 of 33 and 39 of 40 test
+decisions correctly. A similarity score is one number per pair whatever the definition, so no
+threshold on any score can exceed 23 of 33 and 30 of 40. LinkTransformer's company model and
+`all-mpnet-base-v2`, with a threshold chosen on development pairs, reached 18 and 23. Pairs
+within one corporate family are correlated, so the gap is the finding, not the decimals.
+
+These are public benchmarks that Jev, like LinkTransformer's encoders, may have met in training,
+and each comparison is one split with one seed, so differences of a point or two are noise.
+Reproduce it with `uv run --group bench python -m bench.deepmatcher_pairs --live --budget 0.60`
+(the Table A-5 pairs) and `bench/lt_compare.py` with `bench/linktransformer_scores.py` (the
+splits). LinkTransformer is GPL-3.0 and runs in its own environment; jlink never imports it.
 
 ## How it works
 
