@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add `docs/benchmarks/local-models-2026-09-22.md` and its frozen JSON, which compare DiffusionGemma,
+  Laya and LinkTransformer with Jev on 300-record samples of the benchmarks; the README summarizes it.
+- `bench/live.py` takes `--api`, `--model`, `--timeout` and other flags for local runs and will not
+  overwrite a result; `bench/local_models.py` puts Jev's saved scores beside each local run, and
+  `bench/lt_sample.py` runs LinkTransformer on the same samples in its own environment.
+
 ## 0.3.0
 
 - Add `--api diffusiongemma` and `--api laya` for System One servers running on your own machine,

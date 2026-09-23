@@ -29,6 +29,8 @@ benchmarks below, 171,354 pairs cost $2.95 in total, at about 250 pairs a second
 labels, jlink beats LinkTransformer's zero-shot models on eleven of twelve standard benchmarks
 and its fine-tuned ones on most of the product data ([below](#against-linktransformer)).
 
+jlink is built for the way applied economists link data:
+
 - **The rule is part of the method.** You state what counts as a match, and that sentence goes
   in your appendix. Change the sentence and you change the linkage.
 - **Every pair gets a probability**, so you can set a threshold, require a margin over the
@@ -67,14 +69,19 @@ A key can also live in `~/.config/jev/typesafe.key` or `~/.config/jev/openrouter
 
 ### Local servers (experimental)
 
-`--api diffusiongemma` and `--api laya`, or `JEV_API=laya` for the Python, Stata and R entry
-points, send the same pair questions to a System One server on your own machine, an
+`--api diffusiongemma` and `--api laya`, or `JEV_API` set to either name for the Python, Stata
+and R entry points, send the same pair questions to a System One server on your own machine, an
 [OpenJev](https://github.com/razorback16/openjev) or [laya-mlx](https://github.com/mizorewww/laya-mlx)
 process that you run separately. They are never chosen automatically, need no key, and count as $0
-in the cost meter and a saved run's settings unless `JEV_PRICE_PER_MTOK` is set. A run records the
-provider and model that answered, so results from a local model are attributed like any other.
-The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md)
-and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guides explain the setup; keep concurrency low while a local model warms up.
+in the cost meter and a saved run's settings unless `JEV_PRICE_PER_MTOK` is set. The report still
+counts a local model's answers "by Jev" and `scores.csv` marks them `source=jev`; the report's
+`Model:` line, the `model` and `provider` columns of `scores.csv` and `settings.json` name the
+model that answered. The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md)
+and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guides explain the
+setup; keep concurrency low while a local model warms up.
+
+[On a local server](#on-a-local-server) compares both with Jev on the five benchmarks, and the
+[local-model results](docs/benchmarks/local-models-2026-09-22.md) have the full record.
 
 ## Try it
 
@@ -133,11 +140,12 @@ What the table says:
   made no false links (precision 1.00) but was too cautious at 0.5; at a threshold of 0.3 its
   F1 is 0.98.
 - **The firm run was limited by its candidate search.** The default forward top-10 n-gram
-  pass proposed 67% of known links; this is measured blocking recall, not a ceiling for
-  name-based methods. Ownership links such as "Homogeneous Metals Inc" to "United Technologies
-  Corp" can be difficult to retrieve from names. jlink found 93% of the proposed true links.
-  [Candidate search](docs/blocking.md) describes reverse search, larger `k` and their pair-count cost. (A sliver of its error is the benchmark's: 11 Compustat names appear
-  under two IDs, which accounts for 14 of jlink's 331 false links.)
+  pass proposed 67% of known links, and jlink found 93% of the true links it proposed. The 67% is
+  measured blocking recall, not a ceiling for name-based methods, though ownership links such as
+  "Homogeneous Metals Inc" to "United Technologies Corp" can be difficult to retrieve from names.
+  [Candidate search](docs/blocking.md) describes reverse search, larger `k` and their pair-count
+  cost. A sliver of the error is the benchmark's: 11 Compustat names appear under two IDs, which
+  accounts for 14 of jlink's 331 false links.
 - **Amazon to Google is hard for everyone**, because listings differ in version and edition
   details that the records often omit.
 
@@ -149,24 +157,49 @@ CPY, Ltd, GmbH, N V). A subsidiary or division counts as its parent company."*
 **Are the probabilities calibrated?** Roughly, and it depends on the data. On the firm
 benchmark, pairs scored above 0.8 were true matches 95 to 98% of the time and pairs scored
 below 0.2 were true 0.1% of the time, but the 0.5 to 0.8 band was overconfident (mean 0.64,
-true 39% of the time). On FEBRL4 Jev was
-underconfident: pairs in the 0.2 to 0.5 band were true matches 66% of the time. Treat `p` as a
-strong ranking and check the middle band with an audit sample before using it as a literal
-probability.
+true 39% of the time). On FEBRL4 Jev was underconfident: pairs in the 0.2 to 0.5 band were true
+matches 66% of the time. Treat `p` as a strong ranking and check the middle band with an audit
+sample before using it as a literal probability.
 
 **Speed.** The firm run judged 45,567 pairs in 176 seconds (259 pairs a second, 64 calls in
 flight, median latency 214 ms, one retry). Blocking 100,000 by 100,000 records takes about four
-minutes and 1 GB on an M3 Ultra; blocking time grows roughly with the square of the data, so
-beyond that size, a reliable shared field such as state or year can restrict the search with
-`jlink.block.within(jlink.block.ngrams("name"), "state")`. This searches separately inside
-matching groups. Adding a separate `exact("state")` pass unions more pairs and does not split
-the existing search. Grouping can lose matches when group values disagree or are missing;
-see [grouping, reverse search, and pair limits](docs/blocking.md).
+minutes and 1 GB on an M3 Ultra. Blocking time grows roughly with the square of the data, so
+beyond that size a reliable shared field such as state or year can restrict the search:
+`jlink.block.within(jlink.block.ngrams("name"), "state")` searches separately inside each group.
+A separate `exact("state")` pass is different: it adds pairs to the union and does not split the
+existing search. Grouping can lose matches when group values disagree or are missing; see
+[grouping, reverse search, and pair limits](docs/blocking.md).
 
 Reproduce everything: `uv sync --group bench`, `uv run python bench/prepare.py`, then
 `uv run python bench/live.py nber-firms --budget 1.00`. Baselines and data provenance are in
 `bench/BASELINES.md` and `bench/FIRM_DATA.md`.
 
+### On a local server
+
+On 2026-09-22 the two [local servers](#local-servers-experimental), on an Apple M3 Ultra, judged
+the candidate pairs of 300 left records from each benchmark, the same pairs Jev judged in the full
+runs above. The [local-model results](docs/benchmarks/local-models-2026-09-22.md) have every
+number, dataset by dataset.
+
+| F1, 300 left records | Jev 1.13 (OpenRouter) | DiffusionGemma (`openjev-0.1`, local) | Laya (`laya-421m`, local) | LinkTransformer, zero-shot (local) |
+|---|---:|---:|---:|---:|
+| Firms: NBER patent assignees to Compustat | 0.71 | 0.69 | 0.22 | 0.67 |
+| Publications: DBLP to ACM | 0.99 | 0.98 | 0.69 | 0.97 |
+| Products: Abt to Buy | 0.94 | 0.91 | 0.18 | 0.32 |
+| Software: Amazon to Google | 0.67 | 0.65 | 0.16 | 0.40 |
+| People: FEBRL4, synthetic typos | 0.97 | 0.84 | 0.69 | 0.91 |
+| Wall-clock for all five, API cost | | 82 min, $0 | 6 min, $0 | 7 s, $0 |
+
+DiffusionGemma comes within 0.03 of Jev's F1 on firms, publications, products and software and
+decides 94 to 99% of candidate pairs the way Jev does, at 14 to 18 minutes for each 3,000 pairs.
+On FEBRL4 it is stricter about typos: at precision 1.0 its recall is 0.72, against Jev's 0.93.
+Laya puts 90 to 93% of the candidate pairs for firms, products and software at 0.5 or above and is
+not a substitute for Jev in record linkage. LinkTransformer's pretrained models, with a threshold
+tuned on labels, match DiffusionGemma within 0.03 on firms and publications, beat it on FEBRL4 and
+fall far behind on the two product sets, where a cosine cutoff keeps many near-duplicates.
+Fine-tuned on labels, it links FEBRL4 perfectly and still trails Jev on the other four under the
+same link rules ([Against LinkTransformer](#against-linktransformer)). Jev remains the default;
+DiffusionGemma is the option when records may not leave your machine.
 
 ### Against LinkTransformer
 
@@ -242,14 +275,16 @@ splits). LinkTransformer is GPL-3.0 and runs in its own environment; jlink never
 2. **Judge.** Each candidate pair goes to Jev with your rule, including equal names: identical
    text need not identify the same entity. If equal compared fields establish identity in your
    data, explicitly enable `Linker(..., exact_shortcut=True)` to accept complete normalized
-   equalities without a call. Likelier pairs are judged first; cached scores remain available after the budget runs out.
+   equalities without a call. Likelier pairs are judged first; cached scores remain available
+   after the budget runs out.
 3. **Resolve.** Choose links from the probabilities: `one-to-one` (the default; the best
    overall assignment with no record used twice), `many-to-one`, `one-to-many` or
    `many-to-many`, with a probability threshold and an optional margin over the runner-up.
    `result.relink(...)` tries other rules without paying again.
 4. **Audit.** `result.audit_sample(200)` draws pairs across the probability range, links and
    non-links alike, with both records side by side. Label them in a spreadsheet, then
-   `jlink.evaluate(labeled, mode="selected")` evaluates the delivered links and pair-score calibration.
+   `jlink.evaluate(labeled, mode="selected")` evaluates the delivered links and pair-score
+   calibration.
 
 ```python
 linker = jlink.Linker(
@@ -269,10 +304,10 @@ panel = strict.merged()                                   # both tables side by 
 result.save("linkage/")                                   # links.csv, scores.csv, settings.json
 ```
 
-`budget=0` allows cache hits and explicitly enabled exact shortcuts only; `budget=None` is unlimited. A positive
-budget stops new requests at the observed cost, but calls already in flight can overshoot it.
-Saved runs retain input fingerprints, blocker parameters, and model identities, including
-cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
+`budget=0` allows cache hits and explicitly enabled exact shortcuts only; `budget=None` is
+unlimited. A positive budget stops new requests at the observed cost, but calls already in
+flight can overshoot it. Saved runs retain input fingerprints, blocker parameters, and model
+identities, including cached answers. See [budget semantics and run provenance](docs/run-provenance.md).
 
 ### Relations, not only identity
 
@@ -397,9 +432,9 @@ jlink evaluate audit.csv --mode selected --markdown
 `--save linkage/` writes what `result.save("linkage/")` writes: the links, every candidate score,
 and `settings.json` with the question, blocking and provenance. `jlink review create linkage/ ...`,
 `jlink.load` and a replication package all read that folder, so the review page is reachable
-from the command line alone. Stata's `rundir()` and R's `run_dir =` forward it.
-The save folder must be separate from input and output paths. Existing reserved run members
-must be files; these checks run before blocking or judging.
+from the command line alone. Stata's `rundir()` and R's `run_dir =` forward it. The save folder
+must be separate from input and output paths, and existing reserved run members must be files;
+both are checked before blocking or judging.
 
 `jlink dedupe firms.dta --on name --entity firm --id gvkey -o clusters.csv --scores scores.csv`
 groups the records of one file, and `jlink cluster scores.csv --threshold 0.8 -o strict.csv`
@@ -407,10 +442,11 @@ regroups saved scores without API calls.
 
 `--style rule` asks the relation in `--define` and makes `--entity` optional; `--on text=` and
 `--on "=neighborhood"` are the one-sided fields (quote a leading `=`: zsh, the macOS default
-shell, otherwise reads `=word` as a command lookup and stops before jlink runs). Stata's `style(rule)` and R's `style = "rule"`
-forward the same option. `--block window:published=occurred:0..3d` is the date window above,
-`--block window:year:1` a numeric one, and `--block within:borough:RULE` runs any rule inside
-groups; `--date-format` reads dates that are not ISO 8601.
+shell, otherwise reads `=word` as a command lookup and stops before jlink runs). Stata's
+`style(rule)` and R's `style = "rule"` forward the same option.
+`--block window:published=occurred:0..3d` is the date window above, `--block window:year:1` a
+numeric one, and `--block within:borough:RULE` runs any rule inside groups; `--date-format`
+reads dates that are not ISO 8601.
 
 The Stata and R wrappers are single files in this repository, not part of the Python package: copy
 `stata/jlink.ado` and `stata/jlink.sthlp` to your personal ado directory (`sysdir` shows it), and
@@ -475,9 +511,8 @@ Use the sibling checkout for shared development, or `uv sync --no-sources` for a
 standalone source checkout. Existing published versions of this tool are
 unaffected by this source migration.
 
-From the core checkout, `python scripts/dev.py setup`, `check`, and `wheel-check`
-set up and validate all five consumers in separate environments.
-CI checks out core tag `v0.3.0`. Prompts, question construction, and budget policies
-remain in this repository; answer identity, the answer store, transport, and metering
-are the runtime's. Runtime 0.2 keys and stores answers differently from 0.1, so a cache
-written by an earlier version is re-asked once after upgrading.
+From the core checkout, `python scripts/dev.py setup`, `check`, and `wheel-check` set up and
+validate all five consumers in separate environments. CI checks out core tag `v0.3.0`. Prompts,
+question construction, and budget policies remain in this repository; answer identity, the
+answer store, transport, and metering are the runtime's. Runtime 0.2 keys and stores answers
+differently from 0.1, so a cache written by an earlier version is re-asked once after upgrading.

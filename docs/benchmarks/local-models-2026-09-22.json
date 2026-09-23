@@ -1,0 +1,4764 @@
+{
+ "date": "2026-09-22",
+ "tool": "jlink",
+ "jlink": "0.3.0",
+ "machine": "Apple M3 Ultra, 96 GiB unified memory; one benchmark on one model at a time",
+ "servers": {
+  "diffusiongemma": {
+   "api": "diffusiongemma",
+   "model": "openjev-0.1",
+   "url": "http://127.0.0.1:8080/v1/systemone",
+   "server": "OpenJev, commit e04794a",
+   "weights": "mlx-community/diffusiongemma-26B-A4B-it-4bit, revision a7a8140"
+  },
+  "laya": {
+   "api": "laya",
+   "model": "laya-421m",
+   "url": "http://127.0.0.1:8081/v1/systemone",
+   "server": "jevkit-core scripts/laya_server.py; laya-mlx commit fc1df62",
+   "weights": "aac6fef/laya-mlx, revision 0476785",
+   "context": "512 tokens including the question; longer states are refused with HTTP 422"
+  }
+ },
+ "conditions": {
+  "concurrency": [
+   4
+  ],
+  "deadline_seconds": {
+   "diffusiongemma": [
+    300.0
+   ],
+   "laya": [
+    120.0
+   ]
+  },
+  "samples": {
+   "nber-firms/diffusiongemma": 300,
+   "nber-firms/laya": 300,
+   "abt-buy/diffusiongemma": 300,
+   "abt-buy/laya": 300,
+   "dblp-acm/diffusiongemma": 300,
+   "dblp-acm/laya": 300,
+   "amazon-google/diffusiongemma": 300,
+   "amazon-google/laya": 300,
+   "febrl4/diffusiongemma": 300,
+   "febrl4/laya": 300
+  },
+  "order": "every DiffusionGemma run, then every Laya run, one at a time; the other server stayed loaded but idle during each run and no other benchmark process was running",
+  "budget": "--budget 0.01 as a tripwire (local calls metered at $0; every run reported $0.0000)",
+  "timezone": "America/New_York"
+ },
+ "method": "live.py --sample N (left records drawn with random_state=0, truth kept for them) --block-all-left (n-gram TF-IDF blocking, k=10, fitted on every left record, so the pairs are the full run's) --exact-shortcut (as jlink 0.1.0 always did), threshold 0.5, the final rules in bench/live.py, an empty answer cache per run. The Jev column is the 2026-09-18 full run (jlink 0.1.0, Jev 1.13) restricted to the same left records and resolved again with the same code; Jev was not called again. Wall-clock seconds include blocking and resolution.",
+ "runs": [
+  {
+   "dataset": "nber-firms",
+   "tag": "diffusiongemma-s300",
+   "model": "diffusiongemma",
+   "resolved_models": [
+    "openjev-0.1"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 300,
+   "how": "many-to-one",
+   "rule": {
+    "entity": "firm",
+    "how": "many-to-one",
+    "definition": "Ignore legal-form suffixes (Inc, Corp, Co, CPY, Ltd, GmbH, N V). A subsidiary or division counts as its parent company."
+   },
+   "pairs": {
+    "local": 2981,
+    "jev": 2981,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.8182,
+     "recall": 0.6,
+     "f1": 0.6923,
+     "tp": 180,
+     "fp": 40,
+     "fn": 120,
+     "pairs_completeness": 0.6433
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.95,
+     "links": 184.0,
+     "precision": 0.9348,
+     "recall": 0.5733,
+     "f1": 0.7107
+    },
+    "check_at_0.5": {
+     "precision": 0.8182,
+     "recall": 0.6,
+     "f1": 0.6923,
+     "tp": 180,
+     "fp": 40,
+     "fn": 120,
+     "pairs_completeness": 0.6433
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 250,
+      "precision": 0.724,
+      "recall": 0.6033,
+      "f1": 0.6582
+     },
+     {
+      "threshold": 0.2,
+      "links": 238,
+      "precision": 0.7605,
+      "recall": 0.6033,
+      "f1": 0.6729
+     },
+     {
+      "threshold": 0.3,
+      "links": 234,
+      "precision": 0.7735,
+      "recall": 0.6033,
+      "f1": 0.6779
+     },
+     {
+      "threshold": 0.4,
+      "links": 227,
+      "precision": 0.793,
+      "recall": 0.6,
+      "f1": 0.6831
+     },
+     {
+      "threshold": 0.5,
+      "links": 220,
+      "precision": 0.8182,
+      "recall": 0.6,
+      "f1": 0.6923
+     },
+     {
+      "threshold": 0.6,
+      "links": 214,
+      "precision": 0.8411,
+      "recall": 0.6,
+      "f1": 0.7004
+     },
+     {
+      "threshold": 0.7,
+      "links": 209,
+      "precision": 0.8612,
+      "recall": 0.6,
+      "f1": 0.7073
+     },
+     {
+      "threshold": 0.8,
+      "links": 208,
+      "precision": 0.8654,
+      "recall": 0.6,
+      "f1": 0.7087
+     },
+     {
+      "threshold": 0.9,
+      "links": 197,
+      "precision": 0.8883,
+      "recall": 0.5833,
+      "f1": 0.7042
+     },
+     {
+      "threshold": 0.95,
+      "links": 184,
+      "precision": 0.9348,
+      "recall": 0.5733,
+      "f1": 0.7107
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 2265,
+      "mean_p": 0.008,
+      "match_rate": 0.002
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 253,
+      "mean_p": 0.097,
+      "match_rate": 0.012
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 113,
+      "mean_p": 0.342,
+      "match_rate": 0.018
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 71,
+      "mean_p": 0.641,
+      "match_rate": 0.0
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 63,
+      "mean_p": 0.888,
+      "match_rate": 0.127
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 184,
+      "mean_p": 0.994,
+      "match_rate": 0.783
+     }
+    ],
+    "sources": {
+     "jev": 2949,
+     "exact": 32
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": null,
+    "calls": 2935,
+    "cached": 14,
+    "retries": 0,
+    "input_tokens": 426542,
+    "dollars": 0.0,
+    "seconds": 831.9,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 300.0,
+    "started_at": "2026-09-22T22:36:17-04:00",
+    "finished_at": "2026-09-22T22:50:09-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=834.0s start=2026-09-22T22:36:15-0400",
+    "raw": {
+     "dir": "bench/out/live/nber-firms-diffusiongemma-s300",
+     "result": "bench/out/live/nber-firms-diffusiongemma-s300/result.json",
+     "scores": "bench/out/live/nber-firms-diffusiongemma-s300/scores.csv",
+     "links": "bench/out/live/nber-firms-diffusiongemma-s300/links.csv",
+     "settings": "bench/out/live/nber-firms-diffusiongemma-s300/settings.json",
+     "log": "bench/out/live/nber-firms-diffusiongemma-s300.log",
+     "compare": "bench/out/live/nber-firms-diffusiongemma-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/nber-firms",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/nber-firms/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/nber-firms/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/nber-firms/result.json",
+     "pairs": 45567,
+     "at_0.5": {
+      "precision": 0.8956,
+      "recall": 0.6188,
+      "f1": 0.7319,
+      "tp": 2841,
+      "fp": 331,
+      "fn": 1750,
+      "pairs_completeness": 0.6667
+     },
+     "dollars": 0.6243,
+     "seconds": 175.8
+    },
+    "at_0.5": {
+     "precision": 0.8738,
+     "recall": 0.6,
+     "f1": 0.7115,
+     "tp": 180,
+     "fp": 26,
+     "fn": 120,
+     "pairs_completeness": 0.6433
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.6,
+     "links": 188.0,
+     "precision": 0.9309,
+     "recall": 0.5833,
+     "f1": 0.7172
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 291,
+      "precision": 0.6323,
+      "recall": 0.6133,
+      "f1": 0.6227
+     },
+     {
+      "threshold": 0.2,
+      "links": 267,
+      "precision": 0.6854,
+      "recall": 0.61,
+      "f1": 0.6455
+     },
+     {
+      "threshold": 0.3,
+      "links": 247,
+      "precision": 0.7409,
+      "recall": 0.61,
+      "f1": 0.6691
+     },
+     {
+      "threshold": 0.4,
+      "links": 224,
+      "precision": 0.8125,
+      "recall": 0.6067,
+      "f1": 0.6947
+     },
+     {
+      "threshold": 0.5,
+      "links": 206,
+      "precision": 0.8738,
+      "recall": 0.6,
+      "f1": 0.7115
+     },
+     {
+      "threshold": 0.6,
+      "links": 188,
+      "precision": 0.9309,
+      "recall": 0.5833,
+      "f1": 0.7172
+     },
+     {
+      "threshold": 0.7,
+      "links": 169,
+      "precision": 0.9586,
+      "recall": 0.54,
+      "f1": 0.6908
+     },
+     {
+      "threshold": 0.8,
+      "links": 154,
+      "precision": 0.9805,
+      "recall": 0.5033,
+      "f1": 0.6652
+     },
+     {
+      "threshold": 0.9,
+      "links": 116,
+      "precision": 0.9914,
+      "recall": 0.3833,
+      "f1": 0.5529
+     },
+     {
+      "threshold": 0.95,
+      "links": 81,
+      "precision": 1.0,
+      "recall": 0.27,
+      "f1": 0.4252
+     }
+    ],
+    "sources": {
+     "jev": 2949,
+     "exact": 32
+    },
+    "full_run_links_restricted": {
+     "precision": 0.8738,
+     "recall": 0.6,
+     "f1": 0.7115,
+     "tp": 180,
+     "fp": 26,
+     "fn": 120
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 2981,
+    "decision_agreement": 0.9393,
+    "cohen_kappa": 0.6698,
+    "both_yes": 214,
+    "local_yes_jev_no": 136,
+    "local_no_jev_yes": 45,
+    "both_no": 2586,
+    "spearman_p": 0.573,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 184,
+    "links_local_only": 36,
+    "links_jev_only": 22,
+    "links_jaccard": 0.7603
+   }
+  },
+  {
+   "dataset": "nber-firms",
+   "tag": "laya-s300",
+   "model": "laya",
+   "resolved_models": [
+    "laya-421m"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 300,
+   "how": "many-to-one",
+   "rule": {
+    "entity": "firm",
+    "how": "many-to-one",
+    "definition": "Ignore legal-form suffixes (Inc, Corp, Co, CPY, Ltd, GmbH, N V). A subsidiary or division counts as its parent company."
+   },
+   "pairs": {
+    "local": 2981,
+    "jev": 2981,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.2233,
+     "recall": 0.2233,
+     "f1": 0.2233,
+     "tp": 67,
+     "fp": 233,
+     "fn": 233,
+     "pairs_completeness": 0.6433
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.95,
+     "links": 93.0,
+     "precision": 0.4946,
+     "recall": 0.1533,
+     "f1": 0.2341
+    },
+    "check_at_0.5": {
+     "precision": 0.2233,
+     "recall": 0.2233,
+     "f1": 0.2233,
+     "tp": 67,
+     "fp": 233,
+     "fn": 233,
+     "pairs_completeness": 0.6433
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 300,
+      "precision": 0.2233,
+      "recall": 0.2233,
+      "f1": 0.2233
+     },
+     {
+      "threshold": 0.2,
+      "links": 300,
+      "precision": 0.2233,
+      "recall": 0.2233,
+      "f1": 0.2233
+     },
+     {
+      "threshold": 0.3,
+      "links": 300,
+      "precision": 0.2233,
+      "recall": 0.2233,
+      "f1": 0.2233
+     },
+     {
+      "threshold": 0.4,
+      "links": 300,
+      "precision": 0.2233,
+      "recall": 0.2233,
+      "f1": 0.2233
+     },
+     {
+      "threshold": 0.5,
+      "links": 300,
+      "precision": 0.2233,
+      "recall": 0.2233,
+      "f1": 0.2233
+     },
+     {
+      "threshold": 0.6,
+      "links": 299,
+      "precision": 0.2241,
+      "recall": 0.2233,
+      "f1": 0.2237
+     },
+     {
+      "threshold": 0.7,
+      "links": 298,
+      "precision": 0.2248,
+      "recall": 0.2233,
+      "f1": 0.2241
+     },
+     {
+      "threshold": 0.8,
+      "links": 296,
+      "precision": 0.2264,
+      "recall": 0.2233,
+      "f1": 0.2248
+     },
+     {
+      "threshold": 0.9,
+      "links": 242,
+      "precision": 0.2603,
+      "recall": 0.21,
+      "f1": 0.2325
+     },
+     {
+      "threshold": 0.95,
+      "links": 93,
+      "precision": 0.4946,
+      "recall": 0.1533,
+      "f1": 0.2341
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 40,
+      "mean_p": 0.157,
+      "match_rate": 0.0
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 262,
+      "mean_p": 0.354,
+      "match_rate": 0.05
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 572,
+      "mean_p": 0.701,
+      "match_rate": 0.037
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 1958,
+      "mean_p": 0.884,
+      "match_rate": 0.056
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 117,
+      "mean_p": 0.96,
+      "match_rate": 0.145
+     }
+    ],
+    "sources": {
+     "jev": 2949,
+     "exact": 32
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": {
+     "path": "laya-audit.jsonl",
+     "before": {
+      "lines": 11362,
+      "ok": 9781,
+      "context_rejected": 1581
+     },
+     "after": {
+      "lines": 14297,
+      "ok": 12716,
+      "context_rejected": 1581
+     },
+     "lines": 2935,
+     "ok": 2935,
+     "context_rejected": 0
+    },
+    "calls": 2935,
+    "cached": 14,
+    "retries": 0,
+    "input_tokens": 314759,
+    "dollars": 0.0,
+    "seconds": 65.9,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 120.0,
+    "started_at": "2026-09-22T23:59:30-04:00",
+    "finished_at": "2026-09-23T00:00:36-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=67.7s start=2026-09-22T23:59:29-0400 end=2026-09-23T00:00:37-0400",
+    "raw": {
+     "dir": "bench/out/live/nber-firms-laya-s300",
+     "result": "bench/out/live/nber-firms-laya-s300/result.json",
+     "scores": "bench/out/live/nber-firms-laya-s300/scores.csv",
+     "links": "bench/out/live/nber-firms-laya-s300/links.csv",
+     "settings": "bench/out/live/nber-firms-laya-s300/settings.json",
+     "log": "bench/out/live/nber-firms-laya-s300.log",
+     "compare": "bench/out/live/nber-firms-laya-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/nber-firms",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/nber-firms/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/nber-firms/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/nber-firms/result.json",
+     "pairs": 45567,
+     "at_0.5": {
+      "precision": 0.8956,
+      "recall": 0.6188,
+      "f1": 0.7319,
+      "tp": 2841,
+      "fp": 331,
+      "fn": 1750,
+      "pairs_completeness": 0.6667
+     },
+     "dollars": 0.6243,
+     "seconds": 175.8
+    },
+    "at_0.5": {
+     "precision": 0.8738,
+     "recall": 0.6,
+     "f1": 0.7115,
+     "tp": 180,
+     "fp": 26,
+     "fn": 120,
+     "pairs_completeness": 0.6433
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.6,
+     "links": 188.0,
+     "precision": 0.9309,
+     "recall": 0.5833,
+     "f1": 0.7172
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 291,
+      "precision": 0.6323,
+      "recall": 0.6133,
+      "f1": 0.6227
+     },
+     {
+      "threshold": 0.2,
+      "links": 267,
+      "precision": 0.6854,
+      "recall": 0.61,
+      "f1": 0.6455
+     },
+     {
+      "threshold": 0.3,
+      "links": 247,
+      "precision": 0.7409,
+      "recall": 0.61,
+      "f1": 0.6691
+     },
+     {
+      "threshold": 0.4,
+      "links": 224,
+      "precision": 0.8125,
+      "recall": 0.6067,
+      "f1": 0.6947
+     },
+     {
+      "threshold": 0.5,
+      "links": 206,
+      "precision": 0.8738,
+      "recall": 0.6,
+      "f1": 0.7115
+     },
+     {
+      "threshold": 0.6,
+      "links": 188,
+      "precision": 0.9309,
+      "recall": 0.5833,
+      "f1": 0.7172
+     },
+     {
+      "threshold": 0.7,
+      "links": 169,
+      "precision": 0.9586,
+      "recall": 0.54,
+      "f1": 0.6908
+     },
+     {
+      "threshold": 0.8,
+      "links": 154,
+      "precision": 0.9805,
+      "recall": 0.5033,
+      "f1": 0.6652
+     },
+     {
+      "threshold": 0.9,
+      "links": 116,
+      "precision": 0.9914,
+      "recall": 0.3833,
+      "f1": 0.5529
+     },
+     {
+      "threshold": 0.95,
+      "links": 81,
+      "precision": 1.0,
+      "recall": 0.27,
+      "f1": 0.4252
+     }
+    ],
+    "sources": {
+     "jev": 2949,
+     "exact": 32
+    },
+    "full_run_links_restricted": {
+     "precision": 0.8738,
+     "recall": 0.6,
+     "f1": 0.7115,
+     "tp": 180,
+     "fp": 26,
+     "fn": 120
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 2981,
+    "decision_agreement": 0.1721,
+    "cohen_kappa": 0.0018,
+    "both_yes": 235,
+    "local_yes_jev_no": 2444,
+    "local_no_jev_yes": 24,
+    "both_no": 278,
+    "spearman_p": -0.024,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 69,
+    "links_local_only": 231,
+    "links_jev_only": 137,
+    "links_jaccard": 0.1579
+   }
+  },
+  {
+   "dataset": "abt-buy",
+   "tag": "diffusiongemma-s300",
+   "model": "diffusiongemma",
+   "resolved_models": [
+    "openjev-0.1"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 306,
+   "how": "many-to-many",
+   "rule": {
+    "entity": "product",
+    "how": "many-to-many",
+    "definition": "Two listings match when they offer the same product model. The same product line in a different size, color, capacity, software version or license bundle is not a match."
+   },
+   "pairs": {
+    "local": 3000,
+    "jev": 3000,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.8815,
+     "recall": 0.9477,
+     "f1": 0.9134,
+     "tp": 290,
+     "fp": 39,
+     "fn": 16,
+     "pairs_completeness": 0.9869
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.9,
+     "links": 301.0,
+     "precision": 0.9435,
+     "recall": 0.9281,
+     "f1": 0.9357
+    },
+    "check_at_0.5": {
+     "precision": 0.8815,
+     "recall": 0.9477,
+     "f1": 0.9134,
+     "tp": 290,
+     "fp": 39,
+     "fn": 16,
+     "pairs_completeness": 0.9869
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 393,
+      "precision": 0.7481,
+      "recall": 0.9608,
+      "f1": 0.8412
+     },
+     {
+      "threshold": 0.2,
+      "links": 355,
+      "precision": 0.8254,
+      "recall": 0.9575,
+      "f1": 0.8865
+     },
+     {
+      "threshold": 0.3,
+      "links": 345,
+      "precision": 0.8493,
+      "recall": 0.9575,
+      "f1": 0.9002
+     },
+     {
+      "threshold": 0.4,
+      "links": 332,
+      "precision": 0.8765,
+      "recall": 0.951,
+      "f1": 0.9122
+     },
+     {
+      "threshold": 0.5,
+      "links": 329,
+      "precision": 0.8815,
+      "recall": 0.9477,
+      "f1": 0.9134
+     },
+     {
+      "threshold": 0.6,
+      "links": 323,
+      "precision": 0.8947,
+      "recall": 0.9444,
+      "f1": 0.9189
+     },
+     {
+      "threshold": 0.7,
+      "links": 320,
+      "precision": 0.9031,
+      "recall": 0.9444,
+      "f1": 0.9233
+     },
+     {
+      "threshold": 0.8,
+      "links": 311,
+      "precision": 0.9196,
+      "recall": 0.9346,
+      "f1": 0.9271
+     },
+     {
+      "threshold": 0.9,
+      "links": 301,
+      "precision": 0.9435,
+      "recall": 0.9281,
+      "f1": 0.9357
+     },
+     {
+      "threshold": 0.95,
+      "links": 295,
+      "precision": 0.9525,
+      "recall": 0.9183,
+      "f1": 0.9351
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 2559,
+      "mean_p": 0.002,
+      "match_rate": 0.002
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 86,
+      "mean_p": 0.101,
+      "match_rate": 0.035
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 26,
+      "mean_p": 0.31,
+      "match_rate": 0.115
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 18,
+      "mean_p": 0.668,
+      "match_rate": 0.222
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 16,
+      "mean_p": 0.884,
+      "match_rate": 0.312
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 295,
+      "mean_p": 0.997,
+      "match_rate": 0.953
+     }
+    ],
+    "sources": {
+     "jev": 3000
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": null,
+    "calls": 2973,
+    "cached": 27,
+    "retries": 0,
+    "input_tokens": 850128,
+    "dollars": 0.0,
+    "seconds": 1098.7,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 300.0,
+    "started_at": "2026-09-22T22:50:23-04:00",
+    "finished_at": "2026-09-22T23:08:42-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=1100.3s start=2026-09-22T22:50:22-0400 end=2026-09-22T23:08:42-0400",
+    "raw": {
+     "dir": "bench/out/live/abt-buy-diffusiongemma-s300",
+     "result": "bench/out/live/abt-buy-diffusiongemma-s300/result.json",
+     "scores": "bench/out/live/abt-buy-diffusiongemma-s300/scores.csv",
+     "links": "bench/out/live/abt-buy-diffusiongemma-s300/links.csv",
+     "settings": "bench/out/live/abt-buy-diffusiongemma-s300/settings.json",
+     "log": "bench/out/live/abt-buy-diffusiongemma-s300.log",
+     "compare": "bench/out/live/abt-buy-diffusiongemma-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/abt-buy",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/abt-buy/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/abt-buy/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/abt-buy/result.json",
+     "pairs": 10796,
+     "at_0.5": {
+      "precision": 0.9004,
+      "recall": 0.9307,
+      "f1": 0.9153,
+      "tp": 1021,
+      "fp": 113,
+      "fn": 76,
+      "pairs_completeness": 0.9872
+     },
+     "dollars": 0.2221,
+     "seconds": 57.8
+    },
+    "at_0.5": {
+     "precision": 0.9381,
+     "recall": 0.9412,
+     "f1": 0.9396,
+     "tp": 288,
+     "fp": 19,
+     "fn": 18,
+     "pairs_completeness": 0.9869
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.4,
+     "links": 314.0,
+     "precision": 0.9299,
+     "recall": 0.9542,
+     "f1": 0.9419
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 401,
+      "precision": 0.7456,
+      "recall": 0.9771,
+      "f1": 0.8458
+     },
+     {
+      "threshold": 0.2,
+      "links": 357,
+      "precision": 0.8319,
+      "recall": 0.9706,
+      "f1": 0.8959
+     },
+     {
+      "threshold": 0.3,
+      "links": 331,
+      "precision": 0.8973,
+      "recall": 0.9706,
+      "f1": 0.9325
+     },
+     {
+      "threshold": 0.4,
+      "links": 314,
+      "precision": 0.9299,
+      "recall": 0.9542,
+      "f1": 0.9419
+     },
+     {
+      "threshold": 0.5,
+      "links": 307,
+      "precision": 0.9381,
+      "recall": 0.9412,
+      "f1": 0.9396
+     },
+     {
+      "threshold": 0.6,
+      "links": 292,
+      "precision": 0.9486,
+      "recall": 0.9052,
+      "f1": 0.9264
+     },
+     {
+      "threshold": 0.7,
+      "links": 280,
+      "precision": 0.9643,
+      "recall": 0.8824,
+      "f1": 0.9215
+     },
+     {
+      "threshold": 0.8,
+      "links": 254,
+      "precision": 0.9803,
+      "recall": 0.8137,
+      "f1": 0.8893
+     },
+     {
+      "threshold": 0.9,
+      "links": 202,
+      "precision": 1.0,
+      "recall": 0.6601,
+      "f1": 0.7953
+     },
+     {
+      "threshold": 0.95,
+      "links": 119,
+      "precision": 1.0,
+      "recall": 0.3889,
+      "f1": 0.56
+     }
+    ],
+    "sources": {
+     "jev": 3000
+    },
+    "full_run_links_restricted": {
+     "precision": 0.9381,
+     "recall": 0.9412,
+     "f1": 0.9396,
+     "tp": 288,
+     "fp": 19,
+     "fn": 18
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 3000,
+    "decision_agreement": 0.9813,
+    "cohen_kappa": 0.9015,
+    "both_yes": 290,
+    "local_yes_jev_no": 39,
+    "local_no_jev_yes": 17,
+    "both_no": 2654,
+    "spearman_p": 0.6857,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 290,
+    "links_local_only": 39,
+    "links_jev_only": 17,
+    "links_jaccard": 0.8382
+   }
+  },
+  {
+   "dataset": "abt-buy",
+   "tag": "laya-s300",
+   "model": "laya",
+   "resolved_models": [
+    "laya-421m"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 306,
+   "how": "many-to-many",
+   "rule": {
+    "entity": "product",
+    "how": "many-to-many",
+    "definition": "Two listings match when they offer the same product model. The same product line in a different size, color, capacity, software version or license bundle is not a match."
+   },
+   "pairs": {
+    "local": 3000,
+    "jev": 3000,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.1019,
+     "recall": 0.9085,
+     "f1": 0.1833,
+     "tp": 278,
+     "fp": 2450,
+     "fn": 28,
+     "pairs_completeness": 0.9869
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.3,
+     "links": 2870.0,
+     "precision": 0.1024,
+     "recall": 0.9608,
+     "f1": 0.1851
+    },
+    "check_at_0.5": {
+     "precision": 0.1019,
+     "recall": 0.9085,
+     "f1": 0.1833,
+     "tp": 278,
+     "fp": 2450,
+     "fn": 28,
+     "pairs_completeness": 0.9869
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 2976,
+      "precision": 0.1005,
+      "recall": 0.9771,
+      "f1": 0.1822
+     },
+     {
+      "threshold": 0.2,
+      "links": 2926,
+      "precision": 0.1012,
+      "recall": 0.9673,
+      "f1": 0.1832
+     },
+     {
+      "threshold": 0.3,
+      "links": 2870,
+      "precision": 0.1024,
+      "recall": 0.9608,
+      "f1": 0.1851
+     },
+     {
+      "threshold": 0.4,
+      "links": 2807,
+      "precision": 0.1019,
+      "recall": 0.9346,
+      "f1": 0.1837
+     },
+     {
+      "threshold": 0.5,
+      "links": 2728,
+      "precision": 0.1019,
+      "recall": 0.9085,
+      "f1": 0.1833
+     },
+     {
+      "threshold": 0.6,
+      "links": 2599,
+      "precision": 0.1023,
+      "recall": 0.8693,
+      "f1": 0.1831
+     },
+     {
+      "threshold": 0.7,
+      "links": 2333,
+      "precision": 0.0969,
+      "recall": 0.7386,
+      "f1": 0.1713
+     },
+     {
+      "threshold": 0.8,
+      "links": 1844,
+      "precision": 0.09,
+      "recall": 0.5425,
+      "f1": 0.1544
+     },
+     {
+      "threshold": 0.9,
+      "links": 774,
+      "precision": 0.0788,
+      "recall": 0.1993,
+      "f1": 0.113
+     },
+     {
+      "threshold": 0.95,
+      "links": 215,
+      "precision": 0.0791,
+      "recall": 0.0556,
+      "f1": 0.0653
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 14,
+      "mean_p": 0.016,
+      "match_rate": 0.143
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 60,
+      "mean_p": 0.135,
+      "match_rate": 0.067
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 198,
+      "mean_p": 0.364,
+      "match_rate": 0.091
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 884,
+      "mean_p": 0.696,
+      "match_rate": 0.127
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 1629,
+      "mean_p": 0.877,
+      "match_rate": 0.091
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 215,
+      "mean_p": 0.971,
+      "match_rate": 0.079
+     }
+    ],
+    "sources": {
+     "jev": 3000
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": {
+     "path": "laya-audit.jsonl",
+     "before": {
+      "lines": 14297,
+      "ok": 12716,
+      "context_rejected": 1581
+     },
+     "after": {
+      "lines": 17270,
+      "ok": 15689,
+      "context_rejected": 1581
+     },
+     "lines": 2973,
+     "ok": 2973,
+     "context_rejected": 0
+    },
+    "calls": 2973,
+    "cached": 27,
+    "retries": 0,
+    "input_tokens": 699078,
+    "dollars": 0.0,
+    "seconds": 158.7,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 120.0,
+    "started_at": "2026-09-23T00:00:45-04:00",
+    "finished_at": "2026-09-23T00:03:23-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=160.3s start=2026-09-23T00:00:43-0400 end=2026-09-23T00:03:24-0400",
+    "raw": {
+     "dir": "bench/out/live/abt-buy-laya-s300",
+     "result": "bench/out/live/abt-buy-laya-s300/result.json",
+     "scores": "bench/out/live/abt-buy-laya-s300/scores.csv",
+     "links": "bench/out/live/abt-buy-laya-s300/links.csv",
+     "settings": "bench/out/live/abt-buy-laya-s300/settings.json",
+     "log": "bench/out/live/abt-buy-laya-s300.log",
+     "compare": "bench/out/live/abt-buy-laya-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/abt-buy",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/abt-buy/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/abt-buy/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/abt-buy/result.json",
+     "pairs": 10796,
+     "at_0.5": {
+      "precision": 0.9004,
+      "recall": 0.9307,
+      "f1": 0.9153,
+      "tp": 1021,
+      "fp": 113,
+      "fn": 76,
+      "pairs_completeness": 0.9872
+     },
+     "dollars": 0.2221,
+     "seconds": 57.8
+    },
+    "at_0.5": {
+     "precision": 0.9381,
+     "recall": 0.9412,
+     "f1": 0.9396,
+     "tp": 288,
+     "fp": 19,
+     "fn": 18,
+     "pairs_completeness": 0.9869
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.4,
+     "links": 314.0,
+     "precision": 0.9299,
+     "recall": 0.9542,
+     "f1": 0.9419
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 401,
+      "precision": 0.7456,
+      "recall": 0.9771,
+      "f1": 0.8458
+     },
+     {
+      "threshold": 0.2,
+      "links": 357,
+      "precision": 0.8319,
+      "recall": 0.9706,
+      "f1": 0.8959
+     },
+     {
+      "threshold": 0.3,
+      "links": 331,
+      "precision": 0.8973,
+      "recall": 0.9706,
+      "f1": 0.9325
+     },
+     {
+      "threshold": 0.4,
+      "links": 314,
+      "precision": 0.9299,
+      "recall": 0.9542,
+      "f1": 0.9419
+     },
+     {
+      "threshold": 0.5,
+      "links": 307,
+      "precision": 0.9381,
+      "recall": 0.9412,
+      "f1": 0.9396
+     },
+     {
+      "threshold": 0.6,
+      "links": 292,
+      "precision": 0.9486,
+      "recall": 0.9052,
+      "f1": 0.9264
+     },
+     {
+      "threshold": 0.7,
+      "links": 280,
+      "precision": 0.9643,
+      "recall": 0.8824,
+      "f1": 0.9215
+     },
+     {
+      "threshold": 0.8,
+      "links": 254,
+      "precision": 0.9803,
+      "recall": 0.8137,
+      "f1": 0.8893
+     },
+     {
+      "threshold": 0.9,
+      "links": 202,
+      "precision": 1.0,
+      "recall": 0.6601,
+      "f1": 0.7953
+     },
+     {
+      "threshold": 0.95,
+      "links": 119,
+      "precision": 1.0,
+      "recall": 0.3889,
+      "f1": 0.56
+     }
+    ],
+    "sources": {
+     "jev": 3000
+    },
+    "full_run_links_restricted": {
+     "precision": 0.9381,
+     "recall": 0.9412,
+     "f1": 0.9396,
+     "tp": 288,
+     "fp": 19,
+     "fn": 18
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 3000,
+    "decision_agreement": 0.177,
+    "cohen_kappa": 0.0031,
+    "both_yes": 283,
+    "local_yes_jev_no": 2445,
+    "local_no_jev_yes": 24,
+    "both_no": 248,
+    "spearman_p": -0.0873,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 283,
+    "links_local_only": 2445,
+    "links_jev_only": 24,
+    "links_jaccard": 0.1028
+   }
+  },
+  {
+   "dataset": "dblp-acm",
+   "tag": "diffusiongemma-s300",
+   "model": "diffusiongemma",
+   "resolved_models": [
+    "openjev-0.1"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 262,
+   "how": "one-to-one",
+   "rule": {
+    "entity": "publication",
+    "how": "one-to-one",
+    "definition": "The same paper listed in two bibliographic databases. Author lists may be abbreviated and venue names may differ. A different paper by the same authors is not a match."
+   },
+   "pairs": {
+    "local": 3000,
+    "jev": 3000,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.9698,
+     "recall": 0.9809,
+     "f1": 0.9753,
+     "tp": 257,
+     "fp": 8,
+     "fn": 5,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.9,
+     "links": 261.0,
+     "precision": 0.9808,
+     "recall": 0.9771,
+     "f1": 0.979
+    },
+    "check_at_0.5": {
+     "precision": 0.9698,
+     "recall": 0.9809,
+     "f1": 0.9753,
+     "tp": 257,
+     "fp": 8,
+     "fn": 5,
+     "pairs_completeness": 1.0
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 267,
+      "precision": 0.9663,
+      "recall": 0.9847,
+      "f1": 0.9754
+     },
+     {
+      "threshold": 0.2,
+      "links": 267,
+      "precision": 0.9663,
+      "recall": 0.9847,
+      "f1": 0.9754
+     },
+     {
+      "threshold": 0.3,
+      "links": 266,
+      "precision": 0.9699,
+      "recall": 0.9847,
+      "f1": 0.9773
+     },
+     {
+      "threshold": 0.4,
+      "links": 265,
+      "precision": 0.9698,
+      "recall": 0.9809,
+      "f1": 0.9753
+     },
+     {
+      "threshold": 0.5,
+      "links": 265,
+      "precision": 0.9698,
+      "recall": 0.9809,
+      "f1": 0.9753
+     },
+     {
+      "threshold": 0.6,
+      "links": 264,
+      "precision": 0.9697,
+      "recall": 0.9771,
+      "f1": 0.9734
+     },
+     {
+      "threshold": 0.7,
+      "links": 264,
+      "precision": 0.9697,
+      "recall": 0.9771,
+      "f1": 0.9734
+     },
+     {
+      "threshold": 0.8,
+      "links": 264,
+      "precision": 0.9697,
+      "recall": 0.9771,
+      "f1": 0.9734
+     },
+     {
+      "threshold": 0.9,
+      "links": 261,
+      "precision": 0.9808,
+      "recall": 0.9771,
+      "f1": 0.979
+     },
+     {
+      "threshold": 0.95,
+      "links": 260,
+      "precision": 0.9808,
+      "recall": 0.9733,
+      "f1": 0.977
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 2669,
+      "mean_p": 0.001,
+      "match_rate": 0.0
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 30,
+      "mean_p": 0.091,
+      "match_rate": 0.033
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 17,
+      "mean_p": 0.306,
+      "match_rate": 0.059
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 8,
+      "mean_p": 0.688,
+      "match_rate": 0.125
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 8,
+      "mean_p": 0.874,
+      "match_rate": 0.125
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 199,
+      "mean_p": 0.998,
+      "match_rate": 0.945
+     }
+    ],
+    "sources": {
+     "jev": 2931,
+     "exact": 69
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": null,
+    "calls": 2912,
+    "cached": 19,
+    "retries": 0,
+    "input_tokens": 620517,
+    "dollars": 0.0,
+    "seconds": 1034.3,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 300.0,
+    "started_at": "2026-09-22T23:08:53-04:00",
+    "finished_at": "2026-09-22T23:26:07-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=1036.2s start=2026-09-22T23:08:51-0400 end=2026-09-22T23:26:08-0400",
+    "raw": {
+     "dir": "bench/out/live/dblp-acm-diffusiongemma-s300",
+     "result": "bench/out/live/dblp-acm-diffusiongemma-s300/result.json",
+     "scores": "bench/out/live/dblp-acm-diffusiongemma-s300/scores.csv",
+     "links": "bench/out/live/dblp-acm-diffusiongemma-s300/links.csv",
+     "settings": "bench/out/live/dblp-acm-diffusiongemma-s300/settings.json",
+     "log": "bench/out/live/dblp-acm-diffusiongemma-s300.log",
+     "compare": "bench/out/live/dblp-acm-diffusiongemma-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/dblp-acm",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/dblp-acm/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/dblp-acm/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/dblp-acm/result.json",
+     "pairs": 26146,
+     "at_0.5": {
+      "precision": 0.9933,
+      "recall": 0.9978,
+      "f1": 0.9955,
+      "tp": 2219,
+      "fp": 15,
+      "fn": 5,
+      "pairs_completeness": 0.9996
+     },
+     "dollars": 0.4522,
+     "seconds": 111.6
+    },
+    "at_0.5": {
+     "precision": 0.9813,
+     "recall": 1.0,
+     "f1": 0.9905,
+     "tp": 262,
+     "fp": 5,
+     "fn": 0,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.7,
+     "links": 262.0,
+     "precision": 0.9962,
+     "recall": 0.9962,
+     "f1": 0.9962
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 279,
+      "precision": 0.9391,
+      "recall": 1.0,
+      "f1": 0.9686
+     },
+     {
+      "threshold": 0.2,
+      "links": 274,
+      "precision": 0.9562,
+      "recall": 1.0,
+      "f1": 0.9776
+     },
+     {
+      "threshold": 0.3,
+      "links": 271,
+      "precision": 0.9668,
+      "recall": 1.0,
+      "f1": 0.9831
+     },
+     {
+      "threshold": 0.4,
+      "links": 269,
+      "precision": 0.974,
+      "recall": 1.0,
+      "f1": 0.9868
+     },
+     {
+      "threshold": 0.5,
+      "links": 267,
+      "precision": 0.9813,
+      "recall": 1.0,
+      "f1": 0.9905
+     },
+     {
+      "threshold": 0.6,
+      "links": 264,
+      "precision": 0.9886,
+      "recall": 0.9962,
+      "f1": 0.9924
+     },
+     {
+      "threshold": 0.7,
+      "links": 262,
+      "precision": 0.9962,
+      "recall": 0.9962,
+      "f1": 0.9962
+     },
+     {
+      "threshold": 0.8,
+      "links": 260,
+      "precision": 1.0,
+      "recall": 0.9924,
+      "f1": 0.9962
+     },
+     {
+      "threshold": 0.9,
+      "links": 254,
+      "precision": 1.0,
+      "recall": 0.9695,
+      "f1": 0.9845
+     },
+     {
+      "threshold": 0.95,
+      "links": 246,
+      "precision": 1.0,
+      "recall": 0.9389,
+      "f1": 0.9685
+     }
+    ],
+    "sources": {
+     "jev": 2931,
+     "exact": 69
+    },
+    "full_run_links_restricted": {
+     "precision": 0.9962,
+     "recall": 1.0,
+     "f1": 0.9981,
+     "tp": 262,
+     "fp": 1,
+     "fn": 0
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 3000,
+    "decision_agreement": 0.9923,
+    "cohen_kappa": 0.9551,
+    "both_yes": 271,
+    "local_yes_jev_no": 13,
+    "local_no_jev_yes": 10,
+    "both_no": 2706,
+    "spearman_p": 0.5161,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 260,
+    "links_local_only": 5,
+    "links_jev_only": 7,
+    "links_jaccard": 0.9559
+   }
+  },
+  {
+   "dataset": "dblp-acm",
+   "tag": "laya-s300",
+   "model": "laya",
+   "resolved_models": [
+    "laya-421m"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 262,
+   "how": "one-to-one",
+   "rule": {
+    "entity": "publication",
+    "how": "one-to-one",
+    "definition": "The same paper listed in two bibliographic databases. Author lists may be abbreviated and venue names may differ. A different paper by the same authors is not a match."
+   },
+   "pairs": {
+    "local": 3000,
+    "jev": 3000,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.6532,
+     "recall": 0.7405,
+     "f1": 0.6941,
+     "tp": 194,
+     "fp": 103,
+     "fn": 68,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.9,
+     "links": 237.0,
+     "precision": 0.7553,
+     "recall": 0.6832,
+     "f1": 0.7174
+    },
+    "check_at_0.5": {
+     "precision": 0.6532,
+     "recall": 0.7405,
+     "f1": 0.6941,
+     "tp": 194,
+     "fp": 103,
+     "fn": 68,
+     "pairs_completeness": 1.0
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 300,
+      "precision": 0.6467,
+      "recall": 0.7405,
+      "f1": 0.6904
+     },
+     {
+      "threshold": 0.2,
+      "links": 300,
+      "precision": 0.6467,
+      "recall": 0.7405,
+      "f1": 0.6904
+     },
+     {
+      "threshold": 0.3,
+      "links": 300,
+      "precision": 0.6467,
+      "recall": 0.7405,
+      "f1": 0.6904
+     },
+     {
+      "threshold": 0.4,
+      "links": 298,
+      "precision": 0.651,
+      "recall": 0.7405,
+      "f1": 0.6929
+     },
+     {
+      "threshold": 0.5,
+      "links": 297,
+      "precision": 0.6532,
+      "recall": 0.7405,
+      "f1": 0.6941
+     },
+     {
+      "threshold": 0.6,
+      "links": 296,
+      "precision": 0.6554,
+      "recall": 0.7405,
+      "f1": 0.6953
+     },
+     {
+      "threshold": 0.7,
+      "links": 293,
+      "precision": 0.6655,
+      "recall": 0.7443,
+      "f1": 0.7027
+     },
+     {
+      "threshold": 0.8,
+      "links": 286,
+      "precision": 0.6748,
+      "recall": 0.7366,
+      "f1": 0.7044
+     },
+     {
+      "threshold": 0.9,
+      "links": 237,
+      "precision": 0.7553,
+      "recall": 0.6832,
+      "f1": 0.7174
+     },
+     {
+      "threshold": 0.95,
+      "links": 153,
+      "precision": 0.9085,
+      "recall": 0.5305,
+      "f1": 0.6699
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 309,
+      "mean_p": 0.031,
+      "match_rate": 0.0
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 849,
+      "mean_p": 0.096,
+      "match_rate": 0.0
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 233,
+      "mean_p": 0.336,
+      "match_rate": 0.017
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 478,
+      "mean_p": 0.69,
+      "match_rate": 0.036
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 944,
+      "mean_p": 0.875,
+      "match_rate": 0.106
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 118,
+      "mean_p": 0.971,
+      "match_rate": 0.61
+     }
+    ],
+    "sources": {
+     "jev": 2931,
+     "exact": 69
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": {
+     "path": "laya-audit.jsonl",
+     "before": {
+      "lines": 17270,
+      "ok": 15689,
+      "context_rejected": 1581
+     },
+     "after": {
+      "lines": 20182,
+      "ok": 18601,
+      "context_rejected": 1581
+     },
+     "lines": 2912,
+     "ok": 2912,
+     "context_rejected": 0
+    },
+    "calls": 2912,
+    "cached": 19,
+    "retries": 0,
+    "input_tokens": 496832,
+    "dollars": 0.0,
+    "seconds": 48.6,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 120.0,
+    "started_at": "2026-09-23T00:03:33-04:00",
+    "finished_at": "2026-09-23T00:04:22-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=51.7s start=2026-09-23T00:03:30-0400 end=2026-09-23T00:04:22-0400",
+    "raw": {
+     "dir": "bench/out/live/dblp-acm-laya-s300",
+     "result": "bench/out/live/dblp-acm-laya-s300/result.json",
+     "scores": "bench/out/live/dblp-acm-laya-s300/scores.csv",
+     "links": "bench/out/live/dblp-acm-laya-s300/links.csv",
+     "settings": "bench/out/live/dblp-acm-laya-s300/settings.json",
+     "log": "bench/out/live/dblp-acm-laya-s300.log",
+     "compare": "bench/out/live/dblp-acm-laya-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/dblp-acm",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/dblp-acm/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/dblp-acm/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/dblp-acm/result.json",
+     "pairs": 26146,
+     "at_0.5": {
+      "precision": 0.9933,
+      "recall": 0.9978,
+      "f1": 0.9955,
+      "tp": 2219,
+      "fp": 15,
+      "fn": 5,
+      "pairs_completeness": 0.9996
+     },
+     "dollars": 0.4522,
+     "seconds": 111.6
+    },
+    "at_0.5": {
+     "precision": 0.9813,
+     "recall": 1.0,
+     "f1": 0.9905,
+     "tp": 262,
+     "fp": 5,
+     "fn": 0,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.7,
+     "links": 262.0,
+     "precision": 0.9962,
+     "recall": 0.9962,
+     "f1": 0.9962
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 279,
+      "precision": 0.9391,
+      "recall": 1.0,
+      "f1": 0.9686
+     },
+     {
+      "threshold": 0.2,
+      "links": 274,
+      "precision": 0.9562,
+      "recall": 1.0,
+      "f1": 0.9776
+     },
+     {
+      "threshold": 0.3,
+      "links": 271,
+      "precision": 0.9668,
+      "recall": 1.0,
+      "f1": 0.9831
+     },
+     {
+      "threshold": 0.4,
+      "links": 269,
+      "precision": 0.974,
+      "recall": 1.0,
+      "f1": 0.9868
+     },
+     {
+      "threshold": 0.5,
+      "links": 267,
+      "precision": 0.9813,
+      "recall": 1.0,
+      "f1": 0.9905
+     },
+     {
+      "threshold": 0.6,
+      "links": 264,
+      "precision": 0.9886,
+      "recall": 0.9962,
+      "f1": 0.9924
+     },
+     {
+      "threshold": 0.7,
+      "links": 262,
+      "precision": 0.9962,
+      "recall": 0.9962,
+      "f1": 0.9962
+     },
+     {
+      "threshold": 0.8,
+      "links": 260,
+      "precision": 1.0,
+      "recall": 0.9924,
+      "f1": 0.9962
+     },
+     {
+      "threshold": 0.9,
+      "links": 254,
+      "precision": 1.0,
+      "recall": 0.9695,
+      "f1": 0.9845
+     },
+     {
+      "threshold": 0.95,
+      "links": 246,
+      "precision": 1.0,
+      "recall": 0.9389,
+      "f1": 0.9685
+     }
+    ],
+    "sources": {
+     "jev": 2931,
+     "exact": 69
+    },
+    "full_run_links_restricted": {
+     "precision": 0.9962,
+     "recall": 1.0,
+     "f1": 0.9981,
+     "tp": 262,
+     "fp": 1,
+     "fn": 0
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 3000,
+    "decision_agreement": 0.5527,
+    "cohen_kappa": 0.1552,
+    "both_yes": 274,
+    "local_yes_jev_no": 1335,
+    "local_no_jev_yes": 7,
+    "both_no": 1384,
+    "spearman_p": 0.2582,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 198,
+    "links_local_only": 99,
+    "links_jev_only": 69,
+    "links_jaccard": 0.541
+   }
+  },
+  {
+   "dataset": "amazon-google",
+   "tag": "diffusiongemma-s300",
+   "model": "diffusiongemma",
+   "resolved_models": [
+    "openjev-0.1"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 285,
+   "how": "many-to-many",
+   "rule": {
+    "entity": "product",
+    "how": "many-to-many",
+    "definition": "Two listings match when they offer the same software product and edition. A different version, platform, license type or bundle is not a match."
+   },
+   "pairs": {
+    "local": 2997,
+    "jev": 2997,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.5399,
+     "recall": 0.807,
+     "f1": 0.647,
+     "tp": 230,
+     "fp": 196,
+     "fn": 55,
+     "pairs_completeness": 0.9754
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.3,
+     "links": 457.0,
+     "precision": 0.5295,
+     "recall": 0.8491,
+     "f1": 0.6523
+    },
+    "check_at_0.5": {
+     "precision": 0.5399,
+     "recall": 0.807,
+     "f1": 0.647,
+     "tp": 230,
+     "fp": 196,
+     "fn": 55,
+     "pairs_completeness": 0.9754
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 528,
+      "precision": 0.4905,
+      "recall": 0.9088,
+      "f1": 0.6371
+     },
+     {
+      "threshold": 0.2,
+      "links": 488,
+      "precision": 0.5143,
+      "recall": 0.8807,
+      "f1": 0.6494
+     },
+     {
+      "threshold": 0.3,
+      "links": 457,
+      "precision": 0.5295,
+      "recall": 0.8491,
+      "f1": 0.6523
+     },
+     {
+      "threshold": 0.4,
+      "links": 438,
+      "precision": 0.5365,
+      "recall": 0.8246,
+      "f1": 0.6501
+     },
+     {
+      "threshold": 0.5,
+      "links": 426,
+      "precision": 0.5399,
+      "recall": 0.807,
+      "f1": 0.647
+     },
+     {
+      "threshold": 0.6,
+      "links": 411,
+      "precision": 0.545,
+      "recall": 0.786,
+      "f1": 0.6437
+     },
+     {
+      "threshold": 0.7,
+      "links": 393,
+      "precision": 0.5573,
+      "recall": 0.7684,
+      "f1": 0.646
+     },
+     {
+      "threshold": 0.8,
+      "links": 377,
+      "precision": 0.5623,
+      "recall": 0.7439,
+      "f1": 0.6405
+     },
+     {
+      "threshold": 0.9,
+      "links": 351,
+      "precision": 0.567,
+      "recall": 0.6982,
+      "f1": 0.6258
+     },
+     {
+      "threshold": 0.95,
+      "links": 314,
+      "precision": 0.5924,
+      "recall": 0.6526,
+      "f1": 0.621
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 2406,
+      "mean_p": 0.003,
+      "match_rate": 0.006
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 103,
+      "mean_p": 0.095,
+      "match_rate": 0.117
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 62,
+      "mean_p": 0.323,
+      "match_rate": 0.339
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 49,
+      "mean_p": 0.651,
+      "match_rate": 0.367
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 63,
+      "mean_p": 0.893,
+      "match_rate": 0.413
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 314,
+      "mean_p": 0.991,
+      "match_rate": 0.592
+     }
+    ],
+    "sources": {
+     "jev": 2997
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": null,
+    "calls": 2904,
+    "cached": 93,
+    "retries": 0,
+    "input_tokens": 528474,
+    "dollars": 0.0,
+    "seconds": 927.1,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 300.0,
+    "started_at": "2026-09-22T23:26:11-04:00",
+    "finished_at": "2026-09-22T23:41:38-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=928.9s start=2026-09-22T23:26:10-0400 end=2026-09-22T23:41:39-0400",
+    "raw": {
+     "dir": "bench/out/live/amazon-google-diffusiongemma-s300",
+     "result": "bench/out/live/amazon-google-diffusiongemma-s300/result.json",
+     "scores": "bench/out/live/amazon-google-diffusiongemma-s300/scores.csv",
+     "links": "bench/out/live/amazon-google-diffusiongemma-s300/links.csv",
+     "settings": "bench/out/live/amazon-google-diffusiongemma-s300/settings.json",
+     "log": "bench/out/live/amazon-google-diffusiongemma-s300.log",
+     "compare": "bench/out/live/amazon-google-diffusiongemma-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/amazon-google",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/amazon-google/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/amazon-google/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/amazon-google/result.json",
+     "pairs": 13610,
+     "at_0.5": {
+      "precision": 0.6033,
+      "recall": 0.7392,
+      "f1": 0.6644,
+      "tp": 961,
+      "fp": 632,
+      "fn": 339,
+      "pairs_completeness": 0.9677
+     },
+     "dollars": 0.2172,
+     "seconds": 60.0
+    },
+    "at_0.5": {
+     "precision": 0.5984,
+     "recall": 0.7684,
+     "f1": 0.6728,
+     "tp": 219,
+     "fp": 147,
+     "fn": 66,
+     "pairs_completeness": 0.9754
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.5,
+     "links": 366.0,
+     "precision": 0.5984,
+     "recall": 0.7684,
+     "f1": 0.6728
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 839,
+      "precision": 0.3266,
+      "recall": 0.9614,
+      "f1": 0.4875
+     },
+     {
+      "threshold": 0.2,
+      "links": 621,
+      "precision": 0.4332,
+      "recall": 0.9439,
+      "f1": 0.5938
+     },
+     {
+      "threshold": 0.3,
+      "links": 509,
+      "precision": 0.499,
+      "recall": 0.8912,
+      "f1": 0.6398
+     },
+     {
+      "threshold": 0.4,
+      "links": 438,
+      "precision": 0.5548,
+      "recall": 0.8526,
+      "f1": 0.6722
+     },
+     {
+      "threshold": 0.5,
+      "links": 366,
+      "precision": 0.5984,
+      "recall": 0.7684,
+      "f1": 0.6728
+     },
+     {
+      "threshold": 0.6,
+      "links": 289,
+      "precision": 0.6298,
+      "recall": 0.6386,
+      "f1": 0.6341
+     },
+     {
+      "threshold": 0.7,
+      "links": 221,
+      "precision": 0.638,
+      "recall": 0.4947,
+      "f1": 0.5573
+     },
+     {
+      "threshold": 0.8,
+      "links": 136,
+      "precision": 0.6912,
+      "recall": 0.3298,
+      "f1": 0.4466
+     },
+     {
+      "threshold": 0.9,
+      "links": 50,
+      "precision": 0.74,
+      "recall": 0.1298,
+      "f1": 0.2209
+     },
+     {
+      "threshold": 0.95,
+      "links": 2,
+      "precision": 1.0,
+      "recall": 0.007,
+      "f1": 0.0139
+     }
+    ],
+    "sources": {
+     "jev": 2997
+    },
+    "full_run_links_restricted": {
+     "precision": 0.5984,
+     "recall": 0.7684,
+     "f1": 0.6728,
+     "tp": 219,
+     "fp": 147,
+     "fn": 66
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 2997,
+    "decision_agreement": 0.9566,
+    "cohen_kappa": 0.811,
+    "both_yes": 331,
+    "local_yes_jev_no": 95,
+    "local_no_jev_yes": 35,
+    "both_no": 2536,
+    "spearman_p": 0.7501,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 331,
+    "links_local_only": 95,
+    "links_jev_only": 35,
+    "links_jaccard": 0.718
+   }
+  },
+  {
+   "dataset": "amazon-google",
+   "tag": "laya-s300",
+   "model": "laya",
+   "resolved_models": [
+    "laya-421m"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 285,
+   "how": "many-to-many",
+   "rule": {
+    "entity": "product",
+    "how": "many-to-many",
+    "definition": "Two listings match when they offer the same software product and edition. A different version, platform, license type or bundle is not a match."
+   },
+   "pairs": {
+    "local": 2997,
+    "jev": 2997,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.0875,
+     "recall": 0.8561,
+     "f1": 0.1589,
+     "tp": 244,
+     "fp": 2543,
+     "fn": 41,
+     "pairs_completeness": 0.9754
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.8,
+     "links": 2180.0,
+     "precision": 0.0922,
+     "recall": 0.7053,
+     "f1": 0.1631
+    },
+    "check_at_0.5": {
+     "precision": 0.0875,
+     "recall": 0.8561,
+     "f1": 0.1589,
+     "tp": 244,
+     "fp": 2543,
+     "fn": 41,
+     "pairs_completeness": 0.9754
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 2937,
+      "precision": 0.0892,
+      "recall": 0.9193,
+      "f1": 0.1626
+     },
+     {
+      "threshold": 0.2,
+      "links": 2900,
+      "precision": 0.0883,
+      "recall": 0.8982,
+      "f1": 0.1608
+     },
+     {
+      "threshold": 0.3,
+      "links": 2868,
+      "precision": 0.0882,
+      "recall": 0.8877,
+      "f1": 0.1605
+     },
+     {
+      "threshold": 0.4,
+      "links": 2827,
+      "precision": 0.0888,
+      "recall": 0.8807,
+      "f1": 0.1613
+     },
+     {
+      "threshold": 0.5,
+      "links": 2787,
+      "precision": 0.0875,
+      "recall": 0.8561,
+      "f1": 0.1589
+     },
+     {
+      "threshold": 0.6,
+      "links": 2706,
+      "precision": 0.0883,
+      "recall": 0.8386,
+      "f1": 0.1598
+     },
+     {
+      "threshold": 0.7,
+      "links": 2562,
+      "precision": 0.0894,
+      "recall": 0.8035,
+      "f1": 0.1609
+     },
+     {
+      "threshold": 0.8,
+      "links": 2180,
+      "precision": 0.0922,
+      "recall": 0.7053,
+      "f1": 0.1631
+     },
+     {
+      "threshold": 0.9,
+      "links": 1141,
+      "precision": 0.0868,
+      "recall": 0.3474,
+      "f1": 0.1388
+     },
+     {
+      "threshold": 0.95,
+      "links": 380,
+      "precision": 0.0868,
+      "recall": 0.1158,
+      "f1": 0.0992
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 42,
+      "mean_p": 0.005,
+      "match_rate": 0.31
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 55,
+      "mean_p": 0.122,
+      "match_rate": 0.164
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 113,
+      "mean_p": 0.36,
+      "match_rate": 0.106
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 607,
+      "mean_p": 0.707,
+      "match_rate": 0.071
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 1800,
+      "mean_p": 0.886,
+      "match_rate": 0.093
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 380,
+      "mean_p": 0.972,
+      "match_rate": 0.087
+     }
+    ],
+    "sources": {
+     "jev": 2997
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": {
+     "path": "laya-audit.jsonl",
+     "before": {
+      "lines": 20182,
+      "ok": 18601,
+      "context_rejected": 1581
+     },
+     "after": {
+      "lines": 23086,
+      "ok": 21505,
+      "context_rejected": 1581
+     },
+     "lines": 2904,
+     "ok": 2904,
+     "context_rejected": 0
+    },
+    "calls": 2904,
+    "cached": 93,
+    "retries": 0,
+    "input_tokens": 385561,
+    "dollars": 0.0,
+    "seconds": 44.8,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 120.0,
+    "started_at": "2026-09-23T00:04:30-04:00",
+    "finished_at": "2026-09-23T00:05:15-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=46.1s start=2026-09-23T00:04:29-0400 end=2026-09-23T00:05:15-0400",
+    "raw": {
+     "dir": "bench/out/live/amazon-google-laya-s300",
+     "result": "bench/out/live/amazon-google-laya-s300/result.json",
+     "scores": "bench/out/live/amazon-google-laya-s300/scores.csv",
+     "links": "bench/out/live/amazon-google-laya-s300/links.csv",
+     "settings": "bench/out/live/amazon-google-laya-s300/settings.json",
+     "log": "bench/out/live/amazon-google-laya-s300.log",
+     "compare": "bench/out/live/amazon-google-laya-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/amazon-google",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/amazon-google/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/amazon-google/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/amazon-google/result.json",
+     "pairs": 13610,
+     "at_0.5": {
+      "precision": 0.6033,
+      "recall": 0.7392,
+      "f1": 0.6644,
+      "tp": 961,
+      "fp": 632,
+      "fn": 339,
+      "pairs_completeness": 0.9677
+     },
+     "dollars": 0.2172,
+     "seconds": 60.0
+    },
+    "at_0.5": {
+     "precision": 0.5984,
+     "recall": 0.7684,
+     "f1": 0.6728,
+     "tp": 219,
+     "fp": 147,
+     "fn": 66,
+     "pairs_completeness": 0.9754
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.5,
+     "links": 366.0,
+     "precision": 0.5984,
+     "recall": 0.7684,
+     "f1": 0.6728
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 839,
+      "precision": 0.3266,
+      "recall": 0.9614,
+      "f1": 0.4875
+     },
+     {
+      "threshold": 0.2,
+      "links": 621,
+      "precision": 0.4332,
+      "recall": 0.9439,
+      "f1": 0.5938
+     },
+     {
+      "threshold": 0.3,
+      "links": 509,
+      "precision": 0.499,
+      "recall": 0.8912,
+      "f1": 0.6398
+     },
+     {
+      "threshold": 0.4,
+      "links": 438,
+      "precision": 0.5548,
+      "recall": 0.8526,
+      "f1": 0.6722
+     },
+     {
+      "threshold": 0.5,
+      "links": 366,
+      "precision": 0.5984,
+      "recall": 0.7684,
+      "f1": 0.6728
+     },
+     {
+      "threshold": 0.6,
+      "links": 289,
+      "precision": 0.6298,
+      "recall": 0.6386,
+      "f1": 0.6341
+     },
+     {
+      "threshold": 0.7,
+      "links": 221,
+      "precision": 0.638,
+      "recall": 0.4947,
+      "f1": 0.5573
+     },
+     {
+      "threshold": 0.8,
+      "links": 136,
+      "precision": 0.6912,
+      "recall": 0.3298,
+      "f1": 0.4466
+     },
+     {
+      "threshold": 0.9,
+      "links": 50,
+      "precision": 0.74,
+      "recall": 0.1298,
+      "f1": 0.2209
+     },
+     {
+      "threshold": 0.95,
+      "links": 2,
+      "precision": 1.0,
+      "recall": 0.007,
+      "f1": 0.0139
+     }
+    ],
+    "sources": {
+     "jev": 2997
+    },
+    "full_run_links_restricted": {
+     "precision": 0.5984,
+     "recall": 0.7684,
+     "f1": 0.6728,
+     "tp": 219,
+     "fp": 147,
+     "fn": 66
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 2997,
+    "decision_agreement": 0.1668,
+    "cohen_kappa": -0.01,
+    "both_yes": 328,
+    "local_yes_jev_no": 2459,
+    "local_no_jev_yes": 38,
+    "both_no": 172,
+    "spearman_p": 0.0341,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [],
+    "source_differs_count": 0,
+    "links_both": 328,
+    "links_local_only": 2459,
+    "links_jev_only": 38,
+    "links_jaccard": 0.1161
+   }
+  },
+  {
+   "dataset": "febrl4",
+   "tag": "diffusiongemma-s300",
+   "model": "diffusiongemma",
+   "resolved_models": [
+    "openjev-0.1"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 300,
+   "how": "one-to-one",
+   "rule": {
+    "entity": "person",
+    "how": "one-to-one",
+    "definition": "Both records come from forms filled in by hand, so expect typing errors, swapped or missing fields and abbreviations. Sharing only a surname or only an address does not establish a match."
+   },
+   "pairs": {
+    "local": 3000,
+    "jev": 3000,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 1.0,
+     "recall": 0.7233,
+     "f1": 0.8395,
+     "tp": 217,
+     "fp": 0,
+     "fn": 83,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.1,
+     "links": 235.0,
+     "precision": 1.0,
+     "recall": 0.7833,
+     "f1": 0.8785
+    },
+    "check_at_0.5": {
+     "precision": 1.0,
+     "recall": 0.7233,
+     "f1": 0.8395,
+     "tp": 217,
+     "fp": 0,
+     "fn": 83,
+     "pairs_completeness": 1.0
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 235,
+      "precision": 1.0,
+      "recall": 0.7833,
+      "f1": 0.8785
+     },
+     {
+      "threshold": 0.2,
+      "links": 230,
+      "precision": 1.0,
+      "recall": 0.7667,
+      "f1": 0.8679
+     },
+     {
+      "threshold": 0.3,
+      "links": 224,
+      "precision": 1.0,
+      "recall": 0.7467,
+      "f1": 0.855
+     },
+     {
+      "threshold": 0.4,
+      "links": 220,
+      "precision": 1.0,
+      "recall": 0.7333,
+      "f1": 0.8462
+     },
+     {
+      "threshold": 0.5,
+      "links": 217,
+      "precision": 1.0,
+      "recall": 0.7233,
+      "f1": 0.8395
+     },
+     {
+      "threshold": 0.6,
+      "links": 211,
+      "precision": 1.0,
+      "recall": 0.7033,
+      "f1": 0.8258
+     },
+     {
+      "threshold": 0.7,
+      "links": 206,
+      "precision": 1.0,
+      "recall": 0.6867,
+      "f1": 0.8142
+     },
+     {
+      "threshold": 0.8,
+      "links": 202,
+      "precision": 1.0,
+      "recall": 0.6733,
+      "f1": 0.8048
+     },
+     {
+      "threshold": 0.9,
+      "links": 192,
+      "precision": 1.0,
+      "recall": 0.64,
+      "f1": 0.7805
+     },
+     {
+      "threshold": 0.95,
+      "links": 184,
+      "precision": 1.0,
+      "recall": 0.6133,
+      "f1": 0.7603
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 2755,
+      "mean_p": 0.0,
+      "match_rate": 0.02
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 15,
+      "mean_p": 0.101,
+      "match_rate": 1.0
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 13,
+      "mean_p": 0.298,
+      "match_rate": 1.0
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 15,
+      "mean_p": 0.639,
+      "match_rate": 1.0
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 18,
+      "mean_p": 0.89,
+      "match_rate": 1.0
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 156,
+      "mean_p": 0.995,
+      "match_rate": 1.0
+     }
+    ],
+    "sources": {
+     "jev": 2972,
+     "exact": 28
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": null,
+    "calls": 2972,
+    "cached": 0,
+    "retries": 0,
+    "input_tokens": 745352,
+    "dollars": 0.0,
+    "seconds": 1054.4,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 300.0,
+    "started_at": "2026-09-22T23:41:50-04:00",
+    "finished_at": "2026-09-22T23:59:24-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=1056.9s start=2026-09-22T23:41:48-0400 end=2026-09-22T23:59:25-0400",
+    "raw": {
+     "dir": "bench/out/live/febrl4-diffusiongemma-s300",
+     "result": "bench/out/live/febrl4-diffusiongemma-s300/result.json",
+     "scores": "bench/out/live/febrl4-diffusiongemma-s300/scores.csv",
+     "links": "bench/out/live/febrl4-diffusiongemma-s300/links.csv",
+     "settings": "bench/out/live/febrl4-diffusiongemma-s300/settings.json",
+     "log": "bench/out/live/febrl4-diffusiongemma-s300.log",
+     "compare": "bench/out/live/febrl4-diffusiongemma-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/febrl4",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/febrl4/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/febrl4/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/febrl4/result.json",
+     "pairs": 50000,
+     "at_0.5": {
+      "precision": 1.0,
+      "recall": 0.9208,
+      "f1": 0.9588,
+      "tp": 4604,
+      "fp": 0,
+      "fn": 396,
+      "pairs_completeness": 1.0
+     },
+     "dollars": 0.9714,
+     "seconds": 207.6
+    },
+    "at_0.5": {
+     "precision": 1.0,
+     "recall": 0.9333,
+     "f1": 0.9655,
+     "tp": 280,
+     "fp": 0,
+     "fn": 20,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.1,
+     "links": 300.0,
+     "precision": 0.9967,
+     "recall": 0.9967,
+     "f1": 0.9967
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 300,
+      "precision": 0.9967,
+      "recall": 0.9967,
+      "f1": 0.9967
+     },
+     {
+      "threshold": 0.2,
+      "links": 297,
+      "precision": 1.0,
+      "recall": 0.99,
+      "f1": 0.995
+     },
+     {
+      "threshold": 0.3,
+      "links": 290,
+      "precision": 1.0,
+      "recall": 0.9667,
+      "f1": 0.9831
+     },
+     {
+      "threshold": 0.4,
+      "links": 286,
+      "precision": 1.0,
+      "recall": 0.9533,
+      "f1": 0.9761
+     },
+     {
+      "threshold": 0.5,
+      "links": 280,
+      "precision": 1.0,
+      "recall": 0.9333,
+      "f1": 0.9655
+     },
+     {
+      "threshold": 0.6,
+      "links": 264,
+      "precision": 1.0,
+      "recall": 0.88,
+      "f1": 0.9362
+     },
+     {
+      "threshold": 0.7,
+      "links": 248,
+      "precision": 1.0,
+      "recall": 0.8267,
+      "f1": 0.9051
+     },
+     {
+      "threshold": 0.8,
+      "links": 204,
+      "precision": 1.0,
+      "recall": 0.68,
+      "f1": 0.8095
+     },
+     {
+      "threshold": 0.9,
+      "links": 119,
+      "precision": 1.0,
+      "recall": 0.3967,
+      "f1": 0.568
+     },
+     {
+      "threshold": 0.95,
+      "links": 46,
+      "precision": 1.0,
+      "recall": 0.1533,
+      "f1": 0.2659
+     }
+    ],
+    "sources": {
+     "jev": 2968,
+     "exact": 32
+    },
+    "full_run_links_restricted": {
+     "precision": 1.0,
+     "recall": 0.9333,
+     "f1": 0.9655,
+     "tp": 280,
+     "fp": 0,
+     "fn": 20
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 3000,
+    "decision_agreement": 0.979,
+    "cohen_kappa": 0.862,
+    "both_yes": 217,
+    "local_yes_jev_no": 0,
+    "local_no_jev_yes": 63,
+    "both_no": 2720,
+    "spearman_p": 0.4858,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [
+     {
+      "left_id": "rec-810-org",
+      "right_id": "rec-810-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     },
+     {
+      "left_id": "rec-1485-org",
+      "right_id": "rec-1485-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     },
+     {
+      "left_id": "rec-3891-org",
+      "right_id": "rec-3891-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     },
+     {
+      "left_id": "rec-268-org",
+      "right_id": "rec-268-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     }
+    ],
+    "source_differs_count": 4,
+    "links_both": 217,
+    "links_local_only": 0,
+    "links_jev_only": 63,
+    "links_jaccard": 0.775
+   }
+  },
+  {
+   "dataset": "febrl4",
+   "tag": "laya-s300",
+   "model": "laya",
+   "resolved_models": [
+    "laya-421m"
+   ],
+   "sample": 300,
+   "left": 300,
+   "truth": 300,
+   "how": "one-to-one",
+   "rule": {
+    "entity": "person",
+    "how": "one-to-one",
+    "definition": "Both records come from forms filled in by hand, so expect typing errors, swapped or missing fields and abbreviations. Sharing only a surname or only an address does not establish a match."
+   },
+   "pairs": {
+    "local": 3000,
+    "jev": 3000,
+    "only_local": 0,
+    "only_jev": 0,
+    "only_local_examples": [],
+    "only_jev_examples": [],
+    "same": true
+   },
+   "local": {
+    "at_0.5": {
+     "precision": 0.783,
+     "recall": 0.6133,
+     "f1": 0.6879,
+     "tp": 184,
+     "fp": 51,
+     "fn": 116,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.8,
+     "links": 180.0,
+     "precision": 0.9611,
+     "recall": 0.5767,
+     "f1": 0.7208
+    },
+    "check_at_0.5": {
+     "precision": 0.783,
+     "recall": 0.6133,
+     "f1": 0.6879,
+     "tp": 184,
+     "fp": 51,
+     "fn": 116,
+     "pairs_completeness": 1.0
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 300,
+      "precision": 0.6467,
+      "recall": 0.6467,
+      "f1": 0.6467
+     },
+     {
+      "threshold": 0.2,
+      "links": 283,
+      "precision": 0.6749,
+      "recall": 0.6367,
+      "f1": 0.6552
+     },
+     {
+      "threshold": 0.3,
+      "links": 264,
+      "precision": 0.7235,
+      "recall": 0.6367,
+      "f1": 0.6773
+     },
+     {
+      "threshold": 0.4,
+      "links": 252,
+      "precision": 0.746,
+      "recall": 0.6267,
+      "f1": 0.6812
+     },
+     {
+      "threshold": 0.5,
+      "links": 235,
+      "precision": 0.783,
+      "recall": 0.6133,
+      "f1": 0.6879
+     },
+     {
+      "threshold": 0.6,
+      "links": 219,
+      "precision": 0.8356,
+      "recall": 0.61,
+      "f1": 0.7052
+     },
+     {
+      "threshold": 0.7,
+      "links": 196,
+      "precision": 0.898,
+      "recall": 0.5867,
+      "f1": 0.7097
+     },
+     {
+      "threshold": 0.8,
+      "links": 180,
+      "precision": 0.9611,
+      "recall": 0.5767,
+      "f1": 0.7208
+     },
+     {
+      "threshold": 0.9,
+      "links": 151,
+      "precision": 0.9934,
+      "recall": 0.5,
+      "f1": 0.6652
+     },
+     {
+      "threshold": 0.95,
+      "links": 135,
+      "precision": 1.0,
+      "recall": 0.45,
+      "f1": 0.6207
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "(-0.001, 0.05]",
+      "pairs": 253,
+      "mean_p": 0.026,
+      "match_rate": 0.123
+     },
+     {
+      "bin": "(0.05, 0.2]",
+      "pairs": 1836,
+      "mean_p": 0.122,
+      "match_rate": 0.028
+     },
+     {
+      "bin": "(0.2, 0.5]",
+      "pairs": 541,
+      "mean_p": 0.293,
+      "match_rate": 0.046
+     },
+     {
+      "bin": "(0.5, 0.8]",
+      "pairs": 176,
+      "mean_p": 0.635,
+      "match_rate": 0.102
+     },
+     {
+      "bin": "(0.8, 0.95]",
+      "pairs": 59,
+      "mean_p": 0.866,
+      "match_rate": 0.661
+     },
+     {
+      "bin": "(0.95, 1.0]",
+      "pairs": 107,
+      "mean_p": 0.987,
+      "match_rate": 1.0
+     }
+    ],
+    "sources": {
+     "jev": 2972,
+     "exact": 28
+    },
+    "failed_pairs": 0,
+    "rejected_422": 0,
+    "unjudged_pairs": 0,
+    "error_examples": {},
+    "laya_audit": {
+     "path": "laya-audit.jsonl",
+     "before": {
+      "lines": 23086,
+      "ok": 21505,
+      "context_rejected": 1581
+     },
+     "after": {
+      "lines": 26058,
+      "ok": 24477,
+      "context_rejected": 1581
+     },
+     "lines": 2972,
+     "ok": 2972,
+     "context_rejected": 0
+    },
+    "calls": 2972,
+    "cached": 0,
+    "retries": 0,
+    "input_tokens": 594530,
+    "dollars": 0.0,
+    "seconds": 57.8,
+    "median_latency_ms": null,
+    "concurrency": 4,
+    "timeout": 120.0,
+    "started_at": "2026-09-23T00:05:19-04:00",
+    "finished_at": "2026-09-23T00:06:17-04:00",
+    "exact_shortcut": true,
+    "wrapper": "WRAPPER rc=0 wall=59.5s start=2026-09-23T00:05:18-0400 end=2026-09-23T00:06:17-0400",
+    "raw": {
+     "dir": "bench/out/live/febrl4-laya-s300",
+     "result": "bench/out/live/febrl4-laya-s300/result.json",
+     "scores": "bench/out/live/febrl4-laya-s300/scores.csv",
+     "links": "bench/out/live/febrl4-laya-s300/links.csv",
+     "settings": "bench/out/live/febrl4-laya-s300/settings.json",
+     "log": "bench/out/live/febrl4-laya-s300.log",
+     "compare": "bench/out/live/febrl4-laya-s300/compare.json"
+    }
+   },
+   "jev": {
+    "model": "typesafe/jev-1.13-20260917",
+    "run": "bench/out/live/febrl4",
+    "date": "2026-09-18",
+    "jlink": "0.1.0",
+    "provenance": "Jev's probabilities are the 'p' column of bench/out/live/febrl4/scores.csv (full run of 2026-09-18, typesafe/jev-1.13-20260917, jlink 0.1.0), restricted to the sampled left ids and resolved and scored here; full_run_links_restricted uses bench/out/live/febrl4/links.csv. No Jev call was made on 2026-09-22.",
+    "full_run": {
+     "file": "bench/out/live/febrl4/result.json",
+     "pairs": 50000,
+     "at_0.5": {
+      "precision": 1.0,
+      "recall": 0.9208,
+      "f1": 0.9588,
+      "tp": 4604,
+      "fp": 0,
+      "fn": 396,
+      "pairs_completeness": 1.0
+     },
+     "dollars": 0.9714,
+     "seconds": 207.6
+    },
+    "at_0.5": {
+     "precision": 1.0,
+     "recall": 0.9333,
+     "f1": 0.9655,
+     "tp": 280,
+     "fp": 0,
+     "fn": 20,
+     "pairs_completeness": 1.0
+    },
+    "best_f1_in_sample": {
+     "threshold": 0.1,
+     "links": 300.0,
+     "precision": 0.9967,
+     "recall": 0.9967,
+     "f1": 0.9967
+    },
+    "sweep": [
+     {
+      "threshold": 0.1,
+      "links": 300,
+      "precision": 0.9967,
+      "recall": 0.9967,
+      "f1": 0.9967
+     },
+     {
+      "threshold": 0.2,
+      "links": 297,
+      "precision": 1.0,
+      "recall": 0.99,
+      "f1": 0.995
+     },
+     {
+      "threshold": 0.3,
+      "links": 290,
+      "precision": 1.0,
+      "recall": 0.9667,
+      "f1": 0.9831
+     },
+     {
+      "threshold": 0.4,
+      "links": 286,
+      "precision": 1.0,
+      "recall": 0.9533,
+      "f1": 0.9761
+     },
+     {
+      "threshold": 0.5,
+      "links": 280,
+      "precision": 1.0,
+      "recall": 0.9333,
+      "f1": 0.9655
+     },
+     {
+      "threshold": 0.6,
+      "links": 264,
+      "precision": 1.0,
+      "recall": 0.88,
+      "f1": 0.9362
+     },
+     {
+      "threshold": 0.7,
+      "links": 248,
+      "precision": 1.0,
+      "recall": 0.8267,
+      "f1": 0.9051
+     },
+     {
+      "threshold": 0.8,
+      "links": 204,
+      "precision": 1.0,
+      "recall": 0.68,
+      "f1": 0.8095
+     },
+     {
+      "threshold": 0.9,
+      "links": 119,
+      "precision": 1.0,
+      "recall": 0.3967,
+      "f1": 0.568
+     },
+     {
+      "threshold": 0.95,
+      "links": 46,
+      "precision": 1.0,
+      "recall": 0.1533,
+      "f1": 0.2659
+     }
+    ],
+    "sources": {
+     "jev": 2968,
+     "exact": 32
+    },
+    "full_run_links_restricted": {
+     "precision": 1.0,
+     "recall": 0.9333,
+     "f1": 0.9655,
+     "tp": 280,
+     "fp": 0,
+     "fn": 20
+    }
+   },
+   "agreement": {
+    "pairs_both_scored": 3000,
+    "decision_agreement": 0.9093,
+    "cohen_kappa": 0.5318,
+    "both_yes": 189,
+    "local_yes_jev_no": 181,
+    "local_no_jev_yes": 91,
+    "both_no": 2539,
+    "spearman_p": 0.0818,
+    "local_unscored": {
+     "pairs": 0,
+     "jev_yes": 0,
+     "true_matches": 0
+    },
+    "source_differs": [
+     {
+      "left_id": "rec-810-org",
+      "right_id": "rec-810-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     },
+     {
+      "left_id": "rec-1485-org",
+      "right_id": "rec-1485-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     },
+     {
+      "left_id": "rec-3891-org",
+      "right_id": "rec-3891-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     },
+     {
+      "left_id": "rec-268-org",
+      "right_id": "rec-268-dup-0",
+      "source_local": "jev",
+      "source_jev": "exact"
+     }
+    ],
+    "source_differs_count": 4,
+    "links_both": 183,
+    "links_local_only": 52,
+    "links_jev_only": 97,
+    "links_jaccard": 0.5512
+   }
+  }
+ ],
+ "linktransformer": {
+  "date": "2026-09-23",
+  "script": "bench/lt_sample.py",
+  "machine": "Apple M3 Ultra, 96 GiB unified memory; one arm at a time, nothing else benchmarking",
+  "environment": "bench/out/lt-env: LinkTransformer's own environment, run as a subprocess; jlink never imports it (GPL-3.0). Run with OMP_NUM_THREADS=1: that environment loads three OpenMP runtimes (torch, faiss, scikit-learn), and with more threads MPNet-based models crashed (SIGSEGV) on their first batch, on MPS and on CPU. The models ran on the GPU (MPS), so the setting mainly limits the faiss search.",
+  "comparison": "bench/out/lt-compare/<dataset>/: the 2026-09-20 comparison whose development split trained the fine-tuned models and chose every threshold (report.json, linktransformer.json, split.csv)",
+  "method": "The 300 left records live.py --sample 300 drew (random_state=0) against the full right table. LinkTransformer's own retrieval, merge_knn with k=10, proposes each arm's candidate pairs, scored by cosine similarity (clipped to 0..1, as bench/lt_compare.py does). jlink.resolve links them under the link rule the jlink columns use, at the arm's development-tuned threshold, and jlink.score_against_truth scores the links against the sample's known matches: the code bench/local_models.py uses for Jev, DiffusionGemma and Laya at 0.5. Seconds: load is reading the model, encode_retrieve is merge_knn alone (encoding both tables, indexing, searching), each arm in a fresh process with no warm-up; process includes starting Python. On the two product sets, datasets.<dataset>.one_to_one repeats every method under one-to-one assignment.",
+  "bases": {
+   "sample": "all 300 sampled left records and their known matches",
+   "test_split": "the sampled left records in the test split of the 2026-09-20 comparison, and their known matches; the right table stays whole. Jev, DiffusionGemma and Laya are rescored from their saved scores.csv on these records at 0.5"
+  },
+  "roles": {
+   "zero_shot": "pretrained, not fine-tuned; the company model on firms, elsewhere MiniLM or MPNet, whichever had the higher development F1 in report.json under the dataset's link rule; its threshold used the development labels",
+   "fine_tuned": "ft_supcon: the dataset's pretrained base fine-tuned by LinkTransformer's train_model on development matches (supervised contrastive loss, the package default, 10 epochs)"
+  },
+  "encode_retrieve_seconds_total": {
+   "datasets": [
+    "nber-firms",
+    "abt-buy",
+    "dblp-acm",
+    "amazon-google",
+    "febrl4"
+   ],
+   "zero_shot": 6.8,
+   "fine_tuned": 11.4
+  },
+  "api_cost_usd": 0,
+  "model_api_calls": 0,
+  "datasets": {
+   "nber-firms": {
+    "dataset": "nber-firms",
+    "how": "many-to-one",
+    "on": [
+     "name"
+    ],
+    "k": 10,
+    "overlap": {
+     "sampled_left": 300,
+     "in_development_split": 101,
+     "in_test_split": 199,
+     "known_links_sample": 300,
+     "known_links_test_split": 199,
+     "split": "bench/out/lt-compare/nber-firms/split.csv"
+    },
+    "arms": {
+     "zero_shot": {
+      "arm": "company",
+      "model": "dell-research-harvard/lt-wikidata-comp-en",
+      "revision": "af65d96525b7cb3e125a52b89928ae78b39c6d21",
+      "finetuned": false,
+      "path": null,
+      "weights_sha256": null,
+      "base": null,
+      "how": "many-to-one",
+      "threshold": 0.66,
+      "threshold_source": "tuned here as bench/lt_compare.py tunes the other datasets (development F1 under many-to-one, 0.01 grid) on bench/out/lt-compare/nber-firms/dev-*; report.json has no threshold for firms, whose comparison held the number of links equal instead, and scoring treats the listed matches as complete, as the jlink columns do",
+      "dev_f1": 0.7648,
+      "dev_entities": "dev",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.7778,
+       "recall": 0.5833,
+       "f1": 0.6667,
+       "tp": 175,
+       "fp": 50,
+       "fn": 125,
+       "pairs_completeness": 0.6433,
+       "links": 225
+      },
+      "test_split": {
+       "precision": 0.7616,
+       "recall": 0.5779,
+       "f1": 0.6571,
+       "tp": 115,
+       "fp": 36,
+       "fn": 84,
+       "pairs_completeness": 0.6332,
+       "links": 151
+      },
+      "contaminated_on_sample": false,
+      "seconds": {
+       "load": 0.23,
+       "encode_retrieve": 1.01,
+       "resolve_and_score": 0.01,
+       "process": 5.2
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1439,
+       "max_abs_cosine_difference": 6e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/nber-firms/company-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/nber-firms/company-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/nber-firms/company-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/nber-firms/company-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/nber-firms/company-retrieval.log"
+      }
+     },
+     "fine_tuned": {
+      "arm": "ft_supcon",
+      "model": "bench/out/lt-compare/nber-firms/models/ft_supcon",
+      "revision": null,
+      "finetuned": true,
+      "path": "bench/out/lt-compare/nber-firms/models/ft_supcon",
+      "weights_sha256": "f62b3c69305458f73f48ab419ca94619bb19369a1b2ab6b4bf78c75777e8bba9",
+      "base": {
+       "model": "dell-research-harvard/lt-wikidata-comp-en",
+       "pretrained_arm_revision": "af65d96525b7cb3e125a52b89928ae78b39c6d21",
+       "loss": "supcon",
+       "epochs": 10,
+       "training_pairs": 880
+      },
+      "how": "many-to-one",
+      "threshold": 0.75,
+      "threshold_source": "tuned here as bench/lt_compare.py tunes the other datasets (held-out development entities, not used in training F1 under many-to-one, 0.01 grid) on bench/out/lt-compare/nber-firms/dev-*; report.json has no threshold for firms, whose comparison held the number of links equal instead, and scoring treats the listed matches as complete, as the jlink columns do",
+      "dev_f1": 0.7442,
+      "dev_entities": "tune",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.7919,
+       "recall": 0.5833,
+       "f1": 0.6718,
+       "tp": 175,
+       "fp": 46,
+       "fn": 125,
+       "pairs_completeness": 0.67,
+       "links": 221
+      },
+      "test_split": {
+       "precision": 0.7832,
+       "recall": 0.5628,
+       "f1": 0.655,
+       "tp": 112,
+       "fp": 31,
+       "fn": 87,
+       "pairs_completeness": 0.6181,
+       "links": 143
+      },
+      "contaminated_on_sample": true,
+      "seconds": {
+       "load": 0.25,
+       "encode_retrieve": 1.03,
+       "resolve_and_score": 0.01,
+       "process": 5.2
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1477,
+       "max_abs_cosine_difference": 6e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/nber-firms/ft_supcon-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/nber-firms/ft_supcon-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/nber-firms/ft_supcon-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/nber-firms/ft_supcon-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/nber-firms/ft_supcon-retrieval.log"
+      },
+      "contamination": "101 of the 300 sampled left records are in the development split this model was trained and its threshold tuned on; only test_split is a fair basis for it"
+     }
+    },
+    "others_test_split": {
+     "jev": {
+      "precision": 0.8686,
+      "recall": 0.598,
+      "f1": 0.7083,
+      "tp": 119,
+      "fp": 18,
+      "fn": 80,
+      "pairs_completeness": 0.6382,
+      "links": 137,
+      "scores": "bench/out/live/nber-firms/scores.csv"
+     },
+     "diffusiongemma": {
+      "precision": 0.8276,
+      "recall": 0.603,
+      "f1": 0.6977,
+      "tp": 120,
+      "fp": 25,
+      "fn": 79,
+      "pairs_completeness": 0.6382,
+      "links": 145,
+      "scores": "bench/out/live/nber-firms-diffusiongemma-s300/scores.csv"
+     },
+     "laya": {
+      "precision": 0.2261,
+      "recall": 0.2261,
+      "f1": 0.2261,
+      "tp": 45,
+      "fp": 154,
+      "fn": 154,
+      "pairs_completeness": 0.6382,
+      "links": 199,
+      "scores": "bench/out/live/nber-firms-laya-s300/scores.csv"
+     }
+    }
+   },
+   "abt-buy": {
+    "dataset": "abt-buy",
+    "how": "many-to-many",
+    "on": [
+     "name",
+     "description",
+     "price"
+    ],
+    "k": 10,
+    "overlap": {
+     "sampled_left": 300,
+     "in_development_split": 89,
+     "in_test_split": 211,
+     "known_links_sample": 306,
+     "known_links_test_split": 216,
+     "split": "bench/out/lt-compare/abt-buy/split.csv"
+    },
+    "arms": {
+     "zero_shot": {
+      "arm": "minilm",
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "finetuned": false,
+      "path": null,
+      "weights_sha256": null,
+      "base": null,
+      "how": "many-to-many",
+      "threshold": 0.73,
+      "threshold_source": "bench/out/lt-compare/abt-buy/report.json, arms.lt_minilm_native.threshold (development F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.5242,
+      "dev_entities": "dev",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.2103,
+       "recall": 0.6928,
+       "f1": 0.3227,
+       "tp": 212,
+       "fp": 796,
+       "fn": 94,
+       "pairs_completeness": 0.9706,
+       "links": 1008
+      },
+      "test_split": {
+       "precision": 0.2129,
+       "recall": 0.7176,
+       "f1": 0.3284,
+       "tp": 155,
+       "fp": 573,
+       "fn": 61,
+       "pairs_completeness": 0.9769,
+       "links": 728
+      },
+      "contaminated_on_sample": false,
+      "seconds": {
+       "load": 0.17,
+       "encode_retrieve": 0.73,
+       "resolve_and_score": 0.02,
+       "process": 4.8
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1617,
+       "max_abs_cosine_difference": 5e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/abt-buy/minilm-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/abt-buy/minilm-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/abt-buy/minilm-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/abt-buy/minilm-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/abt-buy/minilm-retrieval.log"
+      }
+     },
+     "fine_tuned": {
+      "arm": "ft_supcon",
+      "model": "bench/out/lt-compare/abt-buy/models/ft_supcon",
+      "revision": null,
+      "finetuned": true,
+      "path": "bench/out/lt-compare/abt-buy/models/ft_supcon",
+      "weights_sha256": "8c36a02bbc2533ec0685594558a2bbb23ac816d38f5bf7baa15db9dc4f9dc752",
+      "base": {
+       "model": "sentence-transformers/all-mpnet-base-v2",
+       "pretrained_arm_revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+       "loss": "supcon",
+       "epochs": 10,
+       "training_pairs": 236
+      },
+      "how": "many-to-many",
+      "threshold": 0.67,
+      "threshold_source": "bench/out/lt-compare/abt-buy/report.json, arms.lt_ft_supcon_native.threshold (held-out development entities (not used in training) F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.9375,
+      "dev_entities": "tune",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.4325,
+       "recall": 0.9314,
+       "f1": 0.5907,
+       "tp": 285,
+       "fp": 374,
+       "fn": 21,
+       "pairs_completeness": 0.9967,
+       "links": 659
+      },
+      "test_split": {
+       "precision": 0.4121,
+       "recall": 0.912,
+       "f1": 0.5677,
+       "tp": 197,
+       "fp": 281,
+       "fn": 19,
+       "pairs_completeness": 0.9954,
+       "links": 478
+      },
+      "contaminated_on_sample": true,
+      "seconds": {
+       "load": 0.25,
+       "encode_retrieve": 1.91,
+       "resolve_and_score": 0.02,
+       "process": 6.1
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1584,
+       "max_abs_cosine_difference": 7.8e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/abt-buy/ft_supcon-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/abt-buy/ft_supcon-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/abt-buy/ft_supcon-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/abt-buy/ft_supcon-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/abt-buy/ft_supcon-retrieval.log"
+      },
+      "contamination": "89 of the 300 sampled left records are in the development split this model was trained and its threshold tuned on; only test_split is a fair basis for it"
+     }
+    },
+    "others_test_split": {
+     "jev": {
+      "precision": 0.9346,
+      "recall": 0.9259,
+      "f1": 0.9302,
+      "tp": 200,
+      "fp": 14,
+      "fn": 16,
+      "pairs_completeness": 0.9815,
+      "links": 214,
+      "scores": "bench/out/live/abt-buy/scores.csv"
+     },
+     "diffusiongemma": {
+      "precision": 0.8783,
+      "recall": 0.9352,
+      "f1": 0.9058,
+      "tp": 202,
+      "fp": 28,
+      "fn": 14,
+      "pairs_completeness": 0.9815,
+      "links": 230,
+      "scores": "bench/out/live/abt-buy-diffusiongemma-s300/scores.csv"
+     },
+     "laya": {
+      "precision": 0.1034,
+      "recall": 0.9167,
+      "f1": 0.1858,
+      "tp": 198,
+      "fp": 1717,
+      "fn": 18,
+      "pairs_completeness": 0.9815,
+      "links": 1915,
+      "scores": "bench/out/live/abt-buy-laya-s300/scores.csv"
+     }
+    },
+    "one_to_one": {
+     "note": "Supplementary: every method again under one-to-one assignment instead of the dataset's many-to-many rule. LinkTransformer at the thresholds report.json tuned for that rule on development labels (arms.lt_<arm>_native_1to1.threshold), the others at 0.5; the headline columns use many-to-many.",
+     "zero_shot": {
+      "threshold": 0.52,
+      "sample": {
+       "precision": 0.6835,
+       "recall": 0.6634,
+       "f1": 0.6733,
+       "tp": 203,
+       "fp": 94,
+       "fn": 103,
+       "pairs_completeness": 0.9706,
+       "links": 297
+      },
+      "test_split": {
+       "precision": 0.6699,
+       "recall": 0.6481,
+       "f1": 0.6588,
+       "tp": 140,
+       "fp": 69,
+       "fn": 76,
+       "pairs_completeness": 0.9769,
+       "links": 209
+      }
+     },
+     "fine_tuned": {
+      "threshold": 0.38,
+      "sample": {
+       "precision": 0.9433,
+       "recall": 0.9248,
+       "f1": 0.934,
+       "tp": 283,
+       "fp": 17,
+       "fn": 23,
+       "pairs_completeness": 0.9967,
+       "links": 300
+      },
+      "test_split": {
+       "precision": 0.9384,
+       "recall": 0.9167,
+       "f1": 0.9274,
+       "tp": 198,
+       "fp": 13,
+       "fn": 18,
+       "pairs_completeness": 0.9954,
+       "links": 211
+      }
+     },
+     "jev": {
+      "threshold": 0.5,
+      "sample": {
+       "precision": 0.9859,
+       "recall": 0.915,
+       "f1": 0.9492,
+       "tp": 280,
+       "fp": 4,
+       "fn": 26,
+       "pairs_completeness": 0.9869,
+       "links": 284
+      },
+      "test_split": {
+       "precision": 0.9848,
+       "recall": 0.8981,
+       "f1": 0.9395,
+       "tp": 194,
+       "fp": 3,
+       "fn": 22,
+       "pairs_completeness": 0.9815,
+       "links": 197
+      }
+     },
+     "diffusiongemma": {
+      "threshold": 0.5,
+      "sample": {
+       "precision": 0.9965,
+       "recall": 0.9314,
+       "f1": 0.9628,
+       "tp": 285,
+       "fp": 1,
+       "fn": 21,
+       "pairs_completeness": 0.9869,
+       "links": 286
+      },
+      "test_split": {
+       "precision": 0.995,
+       "recall": 0.9167,
+       "f1": 0.9542,
+       "tp": 198,
+       "fp": 1,
+       "fn": 18,
+       "pairs_completeness": 0.9815,
+       "links": 199
+      }
+     },
+     "laya": {
+      "threshold": 0.5,
+      "sample": {
+       "precision": 0.1167,
+       "recall": 0.1144,
+       "f1": 0.1155,
+       "tp": 35,
+       "fp": 265,
+       "fn": 271,
+       "pairs_completeness": 0.9869,
+       "links": 300
+      },
+      "test_split": {
+       "precision": 0.1469,
+       "recall": 0.1435,
+       "f1": 0.1452,
+       "tp": 31,
+       "fp": 180,
+       "fn": 185,
+       "pairs_completeness": 0.9815,
+       "links": 211
+      }
+     }
+    }
+   },
+   "dblp-acm": {
+    "dataset": "dblp-acm",
+    "how": "one-to-one",
+    "on": [
+     "title",
+     "authors",
+     "year"
+    ],
+    "k": 10,
+    "overlap": {
+     "sampled_left": 300,
+     "in_development_split": 90,
+     "in_test_split": 210,
+     "known_links_sample": 262,
+     "known_links_test_split": 179,
+     "split": "bench/out/lt-compare/dblp-acm/split.csv"
+    },
+    "arms": {
+     "zero_shot": {
+      "arm": "mpnet",
+      "model": "sentence-transformers/all-mpnet-base-v2",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "finetuned": false,
+      "path": null,
+      "weights_sha256": null,
+      "base": null,
+      "how": "one-to-one",
+      "threshold": 0.81,
+      "threshold_source": "bench/out/lt-compare/dblp-acm/report.json, arms.lt_mpnet_native.threshold (development F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.9909,
+      "dev_entities": "dev",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.9524,
+       "recall": 0.9924,
+       "f1": 0.972,
+       "tp": 260,
+       "fp": 13,
+       "fn": 2,
+       "pairs_completeness": 1.0,
+       "links": 273
+      },
+      "test_split": {
+       "precision": 0.9468,
+       "recall": 0.9944,
+       "f1": 0.97,
+       "tp": 178,
+       "fp": 10,
+       "fn": 1,
+       "pairs_completeness": 1.0,
+       "links": 188
+      },
+      "contaminated_on_sample": false,
+      "seconds": {
+       "load": 0.24,
+       "encode_retrieve": 2.59,
+       "resolve_and_score": 0.02,
+       "process": 6.8
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1532,
+       "max_abs_cosine_difference": 4.3e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/dblp-acm/mpnet-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/dblp-acm/mpnet-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/dblp-acm/mpnet-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/dblp-acm/mpnet-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/dblp-acm/mpnet-retrieval.log"
+      }
+     },
+     "fine_tuned": {
+      "arm": "ft_supcon",
+      "model": "bench/out/lt-compare/dblp-acm/models/ft_supcon",
+      "revision": null,
+      "finetuned": true,
+      "path": "bench/out/lt-compare/dblp-acm/models/ft_supcon",
+      "weights_sha256": "208ab6bc6c09ad7f79726690ab067a339c915266518eb03384c6642876d8eacb",
+      "base": {
+       "model": "sentence-transformers/all-mpnet-base-v2",
+       "pretrained_arm_revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+       "loss": "supcon",
+       "epochs": 10,
+       "training_pairs": 456
+      },
+      "how": "one-to-one",
+      "threshold": 0.67,
+      "threshold_source": "bench/out/lt-compare/dblp-acm/report.json, arms.lt_ft_supcon_native.threshold (held-out development entities (not used in training) F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.9901,
+      "dev_entities": "tune",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.9524,
+       "recall": 0.9924,
+       "f1": 0.972,
+       "tp": 260,
+       "fp": 13,
+       "fn": 2,
+       "pairs_completeness": 1.0,
+       "links": 273
+      },
+      "test_split": {
+       "precision": 0.9368,
+       "recall": 0.9944,
+       "f1": 0.9648,
+       "tp": 178,
+       "fp": 12,
+       "fn": 1,
+       "pairs_completeness": 1.0,
+       "links": 190
+      },
+      "contaminated_on_sample": true,
+      "seconds": {
+       "load": 0.24,
+       "encode_retrieve": 2.66,
+       "resolve_and_score": 0.02,
+       "process": 6.8
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1561,
+       "max_abs_cosine_difference": 4.7e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/dblp-acm/ft_supcon-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/dblp-acm/ft_supcon-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/dblp-acm/ft_supcon-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/dblp-acm/ft_supcon-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/dblp-acm/ft_supcon-retrieval.log"
+      },
+      "contamination": "90 of the 300 sampled left records are in the development split this model was trained and its threshold tuned on; only test_split is a fair basis for it"
+     }
+    },
+    "others_test_split": {
+     "jev": {
+      "precision": 0.9728,
+      "recall": 1.0,
+      "f1": 0.9862,
+      "tp": 179,
+      "fp": 5,
+      "fn": 0,
+      "pairs_completeness": 1.0,
+      "links": 184,
+      "scores": "bench/out/live/dblp-acm/scores.csv"
+     },
+     "diffusiongemma": {
+      "precision": 0.9617,
+      "recall": 0.9832,
+      "f1": 0.9724,
+      "tp": 176,
+      "fp": 7,
+      "fn": 3,
+      "pairs_completeness": 1.0,
+      "links": 183,
+      "scores": "bench/out/live/dblp-acm-diffusiongemma-s300/scores.csv"
+     },
+     "laya": {
+      "precision": 0.6667,
+      "recall": 0.7709,
+      "f1": 0.715,
+      "tp": 138,
+      "fp": 69,
+      "fn": 41,
+      "pairs_completeness": 1.0,
+      "links": 207,
+      "scores": "bench/out/live/dblp-acm-laya-s300/scores.csv"
+     }
+    }
+   },
+   "amazon-google": {
+    "dataset": "amazon-google",
+    "how": "many-to-many",
+    "on": [
+     "name",
+     "manufacturer",
+     "price"
+    ],
+    "k": 10,
+    "overlap": {
+     "sampled_left": 300,
+     "in_development_split": 86,
+     "in_test_split": 214,
+     "known_links_sample": 285,
+     "known_links_test_split": 204,
+     "split": "bench/out/lt-compare/amazon-google/split.csv"
+    },
+    "arms": {
+     "zero_shot": {
+      "arm": "minilm",
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "finetuned": false,
+      "path": null,
+      "weights_sha256": null,
+      "base": null,
+      "how": "many-to-many",
+      "threshold": 0.73,
+      "threshold_source": "bench/out/lt-compare/amazon-google/report.json, arms.lt_minilm_native.threshold (development F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.6002,
+      "dev_entities": "dev",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.2786,
+       "recall": 0.7263,
+       "f1": 0.4027,
+       "tp": 207,
+       "fp": 536,
+       "fn": 78,
+       "pairs_completeness": 0.9544,
+       "links": 743
+      },
+      "test_split": {
+       "precision": 0.2838,
+       "recall": 0.7304,
+       "f1": 0.4088,
+       "tp": 149,
+       "fp": 376,
+       "fn": 55,
+       "pairs_completeness": 0.9657,
+       "links": 525
+      },
+      "contaminated_on_sample": false,
+      "seconds": {
+       "load": 0.16,
+       "encode_retrieve": 1.21,
+       "resolve_and_score": 0.02,
+       "process": 5.3
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1604,
+       "max_abs_cosine_difference": 4e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/amazon-google/minilm-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/amazon-google/minilm-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/amazon-google/minilm-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/amazon-google/minilm-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/amazon-google/minilm-retrieval.log"
+      }
+     },
+     "fine_tuned": {
+      "arm": "ft_supcon",
+      "model": "bench/out/lt-compare/amazon-google/models/ft_supcon",
+      "revision": null,
+      "finetuned": true,
+      "path": "bench/out/lt-compare/amazon-google/models/ft_supcon",
+      "weights_sha256": "5b938546436ec65a692d854eba0ef7ca83ecee13783e3db341b7dfb981660ba3",
+      "base": {
+       "model": "sentence-transformers/all-mpnet-base-v2",
+       "pretrained_arm_revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+       "loss": "supcon",
+       "epochs": 10,
+       "training_pairs": 277
+      },
+      "how": "many-to-many",
+      "threshold": 0.63,
+      "threshold_source": "bench/out/lt-compare/amazon-google/report.json, arms.lt_ft_supcon_native.threshold (held-out development entities (not used in training) F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.8481,
+      "dev_entities": "tune",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.2775,
+       "recall": 0.9368,
+       "f1": 0.4282,
+       "tp": 267,
+       "fp": 695,
+       "fn": 18,
+       "pairs_completeness": 0.9825,
+       "links": 962
+      },
+      "test_split": {
+       "precision": 0.2766,
+       "recall": 0.9167,
+       "f1": 0.425,
+       "tp": 187,
+       "fp": 489,
+       "fn": 17,
+       "pairs_completeness": 0.9755,
+       "links": 676
+      },
+      "contaminated_on_sample": true,
+      "seconds": {
+       "load": 0.25,
+       "encode_retrieve": 2.68,
+       "resolve_and_score": 0.02,
+       "process": 6.9
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1577,
+       "max_abs_cosine_difference": 4.4e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/amazon-google/ft_supcon-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/amazon-google/ft_supcon-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/amazon-google/ft_supcon-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/amazon-google/ft_supcon-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/amazon-google/ft_supcon-retrieval.log"
+      },
+      "contamination": "86 of the 300 sampled left records are in the development split this model was trained and its threshold tuned on; only test_split is a fair basis for it"
+     }
+    },
+    "others_test_split": {
+     "jev": {
+      "precision": 0.6212,
+      "recall": 0.8039,
+      "f1": 0.7009,
+      "tp": 164,
+      "fp": 100,
+      "fn": 40,
+      "pairs_completeness": 0.9804,
+      "links": 264,
+      "scores": "bench/out/live/amazon-google/scores.csv"
+     },
+     "diffusiongemma": {
+      "precision": 0.5581,
+      "recall": 0.8235,
+      "f1": 0.6653,
+      "tp": 168,
+      "fp": 133,
+      "fn": 36,
+      "pairs_completeness": 0.9804,
+      "links": 301,
+      "scores": "bench/out/live/amazon-google-diffusiongemma-s300/scores.csv"
+     },
+     "laya": {
+      "precision": 0.088,
+      "recall": 0.8529,
+      "f1": 0.1595,
+      "tp": 174,
+      "fp": 1804,
+      "fn": 30,
+      "pairs_completeness": 0.9804,
+      "links": 1978,
+      "scores": "bench/out/live/amazon-google-laya-s300/scores.csv"
+     }
+    },
+    "one_to_one": {
+     "note": "Supplementary: every method again under one-to-one assignment instead of the dataset's many-to-many rule. LinkTransformer at the thresholds report.json tuned for that rule on development labels (arms.lt_<arm>_native_1to1.threshold), the others at 0.5; the headline columns use many-to-many.",
+     "zero_shot": {
+      "threshold": 0.61,
+      "sample": {
+       "precision": 0.5872,
+       "recall": 0.5789,
+       "f1": 0.583,
+       "tp": 165,
+       "fp": 116,
+       "fn": 120,
+       "pairs_completeness": 0.9544,
+       "links": 281
+      },
+      "test_split": {
+       "precision": 0.6313,
+       "recall": 0.6127,
+       "f1": 0.6219,
+       "tp": 125,
+       "fp": 73,
+       "fn": 79,
+       "pairs_completeness": 0.9657,
+       "links": 198
+      }
+     },
+     "fine_tuned": {
+      "threshold": 0.57,
+      "sample": {
+       "precision": 0.7028,
+       "recall": 0.7053,
+       "f1": 0.704,
+       "tp": 201,
+       "fp": 85,
+       "fn": 84,
+       "pairs_completeness": 0.9825,
+       "links": 286
+      },
+      "test_split": {
+       "precision": 0.701,
+       "recall": 0.701,
+       "f1": 0.701,
+       "tp": 143,
+       "fp": 61,
+       "fn": 61,
+       "pairs_completeness": 0.9755,
+       "links": 204
+      }
+     },
+     "jev": {
+      "threshold": 0.5,
+      "sample": {
+       "precision": 0.6979,
+       "recall": 0.5754,
+       "f1": 0.6308,
+       "tp": 164,
+       "fp": 71,
+       "fn": 121,
+       "pairs_completeness": 0.9754,
+       "links": 235
+      },
+      "test_split": {
+       "precision": 0.7396,
+       "recall": 0.6127,
+       "f1": 0.6702,
+       "tp": 125,
+       "fp": 44,
+       "fn": 79,
+       "pairs_completeness": 0.9804,
+       "links": 169
+      }
+     },
+     "diffusiongemma": {
+      "threshold": 0.5,
+      "sample": {
+       "precision": 0.6759,
+       "recall": 0.6,
+       "f1": 0.6357,
+       "tp": 171,
+       "fp": 82,
+       "fn": 114,
+       "pairs_completeness": 0.9754,
+       "links": 253
+      },
+      "test_split": {
+       "precision": 0.7127,
+       "recall": 0.6324,
+       "f1": 0.6701,
+       "tp": 129,
+       "fp": 52,
+       "fn": 75,
+       "pairs_completeness": 0.9804,
+       "links": 181
+      }
+     },
+     "laya": {
+      "threshold": 0.5,
+      "sample": {
+       "precision": 0.0933,
+       "recall": 0.0982,
+       "f1": 0.0957,
+       "tp": 28,
+       "fp": 272,
+       "fn": 257,
+       "pairs_completeness": 0.9754,
+       "links": 300
+      },
+      "test_split": {
+       "precision": 0.0841,
+       "recall": 0.0882,
+       "f1": 0.0861,
+       "tp": 18,
+       "fp": 196,
+       "fn": 186,
+       "pairs_completeness": 0.9804,
+       "links": 214
+      }
+     }
+    }
+   },
+   "febrl4": {
+    "dataset": "febrl4",
+    "how": "one-to-one",
+    "on": [
+     "given_name",
+     "surname",
+     "date_of_birth",
+     "address_1",
+     "suburb",
+     "postcode"
+    ],
+    "k": 10,
+    "overlap": {
+     "sampled_left": 300,
+     "in_development_split": 93,
+     "in_test_split": 207,
+     "known_links_sample": 300,
+     "known_links_test_split": 207,
+     "split": "bench/out/lt-compare/febrl4/split.csv"
+    },
+    "arms": {
+     "zero_shot": {
+      "arm": "minilm",
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "finetuned": false,
+      "path": null,
+      "weights_sha256": null,
+      "base": null,
+      "how": "one-to-one",
+      "threshold": 0.72,
+      "threshold_source": "bench/out/lt-compare/febrl4/report.json, arms.lt_minilm_native.threshold (development F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 0.9596,
+      "dev_entities": "dev",
+      "pairs": 3000,
+      "sample": {
+       "precision": 0.913,
+       "recall": 0.91,
+       "f1": 0.9115,
+       "tp": 273,
+       "fp": 26,
+       "fn": 27,
+       "pairs_completeness": 0.9567,
+       "links": 299
+      },
+      "test_split": {
+       "precision": 0.9078,
+       "recall": 0.9034,
+       "f1": 0.9056,
+       "tp": 187,
+       "fp": 19,
+       "fn": 20,
+       "pairs_completeness": 0.9469,
+       "links": 206
+      },
+      "contaminated_on_sample": false,
+      "seconds": {
+       "load": 0.16,
+       "encode_retrieve": 1.27,
+       "resolve_and_score": 0.03,
+       "process": 5.3
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1511,
+       "max_abs_cosine_difference": 3e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/febrl4/minilm-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/febrl4/minilm-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/febrl4/minilm-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/febrl4/minilm-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/febrl4/minilm-retrieval.log"
+      }
+     },
+     "fine_tuned": {
+      "arm": "ft_supcon",
+      "model": "bench/out/lt-compare/febrl4/models/ft_supcon",
+      "revision": null,
+      "finetuned": true,
+      "path": "bench/out/lt-compare/febrl4/models/ft_supcon",
+      "weights_sha256": "e0121deaea97a4ee21890ce2456a820253a49b7b0b840222415145e87b58f857",
+      "base": {
+       "model": "sentence-transformers/all-mpnet-base-v2",
+       "pretrained_arm_revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+       "loss": "supcon",
+       "epochs": 10,
+       "training_pairs": 1050
+      },
+      "how": "one-to-one",
+      "threshold": 0.37,
+      "threshold_source": "bench/out/lt-compare/febrl4/report.json, arms.lt_ft_supcon_native.threshold (held-out development entities (not used in training) F1, 0.01 grid; retuned here and equal)",
+      "dev_f1": 1.0,
+      "dev_entities": "tune",
+      "pairs": 3000,
+      "sample": {
+       "precision": 1.0,
+       "recall": 1.0,
+       "f1": 1.0,
+       "tp": 300,
+       "fp": 0,
+       "fn": 0,
+       "pairs_completeness": 1.0,
+       "links": 300
+      },
+      "test_split": {
+       "precision": 1.0,
+       "recall": 1.0,
+       "f1": 1.0,
+       "tp": 207,
+       "fp": 0,
+       "fn": 0,
+       "pairs_completeness": 1.0,
+       "links": 207
+      },
+      "contaminated_on_sample": true,
+      "seconds": {
+       "load": 0.23,
+       "encode_retrieve": 3.14,
+       "resolve_and_score": 0.02,
+       "process": 7.3
+      },
+      "device": "mps:0",
+      "downloaded": false,
+      "packages": {
+       "linktransformer": "0.1.18",
+       "sentence-transformers": "5.2.2",
+       "torch": "2.10.0",
+       "transformers": "5.1.0",
+       "faiss-cpu": "1.13.2",
+       "pandas": "3.0.0"
+      },
+      "check_against_2026_09_20": {
+       "pairs_in_both": 1503,
+       "max_abs_cosine_difference": 2.1e-07
+      },
+      "raw": {
+       "cosines": "bench/out/local-2026-09-22/lt/febrl4/ft_supcon-native.csv",
+       "links": {
+        "sample": "bench/out/local-2026-09-22/lt/febrl4/ft_supcon-links-sample.csv",
+        "test_split": "bench/out/local-2026-09-22/lt/febrl4/ft_supcon-links-test_split.csv"
+       },
+       "retrieval": "bench/out/local-2026-09-22/lt/febrl4/ft_supcon-retrieval.json",
+       "log": "bench/out/local-2026-09-22/lt/febrl4/ft_supcon-retrieval.log"
+      },
+      "contamination": "93 of the 300 sampled left records are in the development split this model was trained and its threshold tuned on; only test_split is a fair basis for it"
+     }
+    },
+    "others_test_split": {
+     "jev": {
+      "precision": 1.0,
+      "recall": 0.9179,
+      "f1": 0.9572,
+      "tp": 190,
+      "fp": 0,
+      "fn": 17,
+      "pairs_completeness": 1.0,
+      "links": 190,
+      "scores": "bench/out/live/febrl4/scores.csv"
+     },
+     "diffusiongemma": {
+      "precision": 1.0,
+      "recall": 0.715,
+      "f1": 0.8338,
+      "tp": 148,
+      "fp": 0,
+      "fn": 59,
+      "pairs_completeness": 1.0,
+      "links": 148,
+      "scores": "bench/out/live/febrl4-diffusiongemma-s300/scores.csv"
+     },
+     "laya": {
+      "precision": 0.7927,
+      "recall": 0.628,
+      "f1": 0.7008,
+      "tp": 130,
+      "fp": 34,
+      "fn": 77,
+      "pairs_completeness": 1.0,
+      "links": 164,
+      "scores": "bench/out/live/febrl4-laya-s300/scores.csv"
+     }
+    }
+   }
+  },
+  "check": "For every dataset, Jev's, DiffusionGemma's and Laya's F1, precision, recall and counts on the 300 records, recomputed here with the same code, equal runs[].jev.at_0.5 and runs[].local.at_0.5."
+ }
+}
