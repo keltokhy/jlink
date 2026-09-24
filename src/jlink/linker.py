@@ -231,6 +231,77 @@ class Result:
         links = resolve(self.scores, how=s["how"], threshold=s["threshold"], min_margin=s["min_margin"])
         return Result(links, self.scores, s, self.meter, self._left, self._right)
 
+    def resume(self, left: pd.DataFrame | None = None, right: pd.DataFrame | None = None, *,
+               budget: float | None = 5.0, api: str | None = None, model: str | None = None,
+               concurrency: int = 32, cache=True, progress: bool = True, transport=None) -> "Result":
+        """Judge the pairs this run left unjudged (budget) or failed (errors), then choose links again.
+
+        Only those pairs are sent, with the saved question, fields and model; the candidate pairs are
+        the saved ones, so blocking does not run again and a changed default cannot alter them. Pairs
+        already judged keep their saved probabilities. The answer cache already makes a fresh
+        `link` free for pairs it answered; `resume` adds the fixed candidate set, a run that no
+        longer needs that cache, and one folder of provenance. A loaded run needs `left` and
+        `right`, which must match the saved input fingerprints.
+        """
+        validate_budget(budget)
+        left, right = self._frames(left, right)
+        s = deepcopy(self.settings)
+        on = [(lc, rc) for lc, rc in s["on"]]
+        if "inputs" in s:
+            now = input_fingerprints(left, right, fields=parse_on(on, unpaired=True),
+                                     left_id=s["left_id"], right_id=s["right_id"])
+            for side in ("left", "right"):
+                if now[side]["compared"]["sha256"] != s["inputs"][side]["compared"]["sha256"]:
+                    raise ValueError(f"the {side} table differs from the one this run was made from (its IDs "
+                                     "or compared fields changed); pass the original table")
+        style = s.get("style", "identity")
+        if question(s["entity"] or "", s["definition"], style=style)["instructions"] != s["question"]:
+            raise ValueError("this jlink version would word the question differently from the saved run, "
+                             "so resuming would mix two questions; run `link` again instead")
+        todo = self.scores["source"].isin(["unjudged", "error"]).to_numpy()
+        if not todo.any():
+            return self.relink()
+        t0, started_at = time.perf_counter(), datetime.now(timezone.utc).isoformat()
+        api = api or s.get("provider") or s.get("requested_api")
+        model = model or s.get("request_model") or s.get("requested_model")
+        fresh, meter = judge(self.scores.loc[todo, ["left_id", "right_id", "block", "sim"]], left, right, on=on,
+                             entity=s["entity"], definition=s["definition"], style=style,
+                             left_id=s["left_id"], right_id=s["right_id"], api=api, model=model,
+                             concurrency=concurrency, budget=budget, cache=cache, progress=progress,
+                             transport=transport)
+        scores = self.scores.copy()
+        for column in ("p", "answered_at", "source", "error", "model", "provider", "score_origin"):
+            numeric = column in ("p", "answered_at")
+            values = scores[column] if column in scores else pd.Series(pd.NA, index=scores.index)
+            values = pd.to_numeric(values) if numeric else values.astype(object)
+            values[todo] = fresh[column].to_numpy()
+            scores[column] = values
+        total = Meter(provider=meter.provider or self.meter.provider,
+                      requested_model=meter.requested_model or self.meter.requested_model,
+                      calls=self.meter.calls + meter.calls, cached=self.meter.cached + meter.cached,
+                      retries=self.meter.retries + meter.retries, input_tokens=self.meter.input_tokens
+                      + meter.input_tokens, cost=self.meter.cost + meter.cost,
+                      cost_sources={k: self.meter.cost_sources.get(k, 0) + meter.cost_sources.get(k, 0)
+                                    for k in {*self.meter.cost_sources, *meter.cost_sources}},
+                      answer_provenance=deepcopy(self.meter.answer_provenance))
+        for item in meter.answer_provenance:
+            for _ in range(item["count"]):
+                total.note_answer(item)
+        s.update({"calls": total.calls, "cached": total.cached, "retries": total.retries,
+                  "input_tokens": total.input_tokens, "cost": total.cost, "dollars": round(total.cost, 6),
+                  "model": total.model, "resolved_models": total.resolved_models,
+                  "unknown_model_answers": total.unknown_model_answers,
+                  "answer_provenance": total.answer_provenance, "cost_sources": total.cost_sources,
+                  "seconds": round(s.get("seconds", 0) + time.perf_counter() - t0, 1)})
+        s.setdefault("resumes", []).append({
+            "jlink": __version__, "started_at": started_at, "finished_at": datetime.now(timezone.utc).isoformat(),
+            "pairs": int(todo.sum()), "budget": None if budget is None else float(budget), "calls": meter.calls,
+            "cached": meter.cached, "dollars": round(meter.cost, 6),
+            "left_unjudged": int((fresh["source"] == "unjudged").sum()),
+            "failed": int((fresh["source"] == "error").sum())})
+        links = resolve(scores, how=s["how"], threshold=s["threshold"], min_margin=s["min_margin"])
+        return Result(links, scores, s, total, left, right)
+
     def merged(self, left: pd.DataFrame | None = None, right: pd.DataFrame | None = None,
                suffixes: tuple[str, str] = ("_left", "_right")) -> pd.DataFrame:
         """The linked rows side by side: every left and right column, plus p and margin."""

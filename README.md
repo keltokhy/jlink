@@ -311,6 +311,14 @@ unlimited. A positive budget stops new requests at the observed cost, but calls 
 flight can overshoot it. Saved runs retain input fingerprints, blocker parameters, and model
 identities, including cached answers. See [budget semantics and run provenance](https://github.com/keltokhy/jlink/blob/main/docs/run-provenance.md).
 
+When the budget runs out or some calls fail, `result.resume(budget=5.00)` (for a loaded run,
+`jlink.load("linkage/").resume(compustat, patents)`, or `jev-link resume linkage/ LEFT RIGHT`)
+judges only the unjudged and failed pairs and chooses links again. It keeps the saved candidate
+pairs, question and model and skips blocking. It does not save API spend over running `link`
+again: the answer cache on your machine already makes pairs it answered free. It matters when
+blocking is slow, when the cache is gone or was off, or when the candidate pairs must stay exactly
+those of the saved run.
+
 ### Relations, not only identity
 
 By default the question put to Jev is "Record A and record B refer to the same firm", followed

@@ -242,3 +242,32 @@ def test_default_blocking_searches_both_directions_and_report_counts_unpaired_re
     assert (0, 11) in set(zip(result.scores.left_id, result.scores.right_id))
     assert ("Records with no candidate pair: 1 of 2 left, 0 of 12 right (these cannot be linked"
             in result.report())
+
+
+def test_resume_judges_only_the_unjudged_pairs_and_keeps_the_candidates(tmp_path):
+    full = run()
+    uncached = linker()
+    uncached.cache, uncached.concurrency = False, 1
+    with pytest.warns(UserWarning, match="budget ran out"):
+        cut = uncached.link(LEFT, RIGHT, left_id="gvkey", right_id="id", progress=False, budget=0.00003,
+                            transport=FakeJev(oracle).transport)
+    judged = int((cut.scores["source"] == "jev").sum())
+    assert 0 < judged < len(cut.scores)
+    back = jlink.load(cut.save(tmp_path / "run"))
+    with pytest.raises(ValueError, match="loaded from disk"):
+        back.resume()
+    with pytest.raises(ValueError, match="left table differs"):
+        back.resume(LEFT.assign(name=LEFT["name"].str.upper()), RIGHT)
+    again = FakeJev(oracle)
+    done = back.resume(LEFT, RIGHT, budget=None, cache=False, progress=False, transport=again.transport)
+    assert len(again.bodies) == len(cut.scores) - judged  # already-judged pairs are not sent again
+    assert (done.scores["source"] == "jev").all()
+    pd.testing.assert_frame_equal(done.scores[["left_id", "right_id", "block", "sim"]],
+                                  back.scores[["left_id", "right_id", "block", "sim"]])
+    assert set(zip(done.links["left_id"], done.links["right_id"])) == \
+        set(zip(full.links["left_id"], full.links["right_id"]))
+    assert done.settings["calls"] == judged + len(again.bodies)
+    assert done.settings["resumes"][0]["pairs"] == len(cut.scores) - judged
+    assert done.resume(LEFT, RIGHT, transport=FakeJev(oracle).transport).links.equals(done.links)
+    reloaded = jlink.load(done.save(tmp_path / "run"))
+    assert reloaded.settings["resumes"] == done.settings["resumes"]
