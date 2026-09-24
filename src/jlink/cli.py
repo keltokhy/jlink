@@ -16,7 +16,7 @@ from .core import PROVIDERS
 from .fields import check_columns, ids, parse_on
 from .io import FORMATS, read_table, stata_value_labels, write_table
 
-_BLOCK_FORMS = ("ngrams:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name, "
+_BLOCK_FORMS = ("ngrams:name:10, ngrams-reverse:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name, "
                 "window:year:1, window:published=occurred:0..3d, within:state:ngrams:name:10")
 _HOW = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
 _NUMBER = r"[+-]?\d+(?:\.\d+)?"
@@ -47,6 +47,8 @@ def _block_spec(value: str) -> tuple[str, list, dict]:
     parts = value.split(":")
     try:
         kind, options = parts[0], {}
+        if kind == "ngrams-reverse":  # each right record's nearest left records
+            kind, options["reverse"] = "ngrams", True
         if kind in ("ngrams", "embeddings") and len(parts) == 3:
             if not parts[2].isascii() or not parts[2].isdigit() or int(parts[2]) < 1:
                 raise ValueError
@@ -161,7 +163,8 @@ def _add_pair_inputs(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("left", metavar="LEFT", help="left .csv, .tsv, .dta or .parquet file")
     parser.add_argument("right", metavar="RIGHT", help="right .csv, .tsv, .dta or .parquet file")
     _add_fields(parser)
-    _add_blocking(parser, "Default: 10 nearest text matches across all paired --on fields")
+    _add_blocking(parser, "Default: 10 nearest text matches across all paired --on fields, "
+                          "searched from each side (ngrams plus ngrams-reverse)")
 
 
 def _add_blocking(parser: argparse.ArgumentParser, default: str) -> None:

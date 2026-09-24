@@ -1,8 +1,10 @@
 # Candidate search: groups, windows, reverse neighbors, and limits
 
 `block.candidates` unions its passes. An added pass can recover candidates; it cannot
-remove candidates or make an earlier search cheaper. The default remains a forward
-character n-gram pass with `k=10`, `n=(2, 4)`, and `min_sim=0.1`.
+remove candidates or make an earlier search cheaper. The default, `block.default_passes`, is
+two character n-gram passes with `k=10`, `n=(2, 4)`, and `min_sim=0.1`: a forward pass and a
+reverse one (below). Before 0.4.0 the default was the forward pass alone; pass
+`blockers=[block.ngrams(..., k=10)]`, or `--block ngrams:COLS:10`, to get it back.
 
 ## Restrict comparisons with `within`
 
@@ -169,7 +171,9 @@ empty side stays ISO 8601. `estimate` prints, for each window pass, how many rec
 side have a missing or unreadable value. `within` on the command line always uses
 `missing="drop"`.
 
-## Recover candidates from the reverse direction
+## The reverse direction
+
+The default already unions both directions. Written out, with a restriction added:
 
 ```python
 passes = [
@@ -189,7 +193,8 @@ The reverse default name is `ngrams-reverse:<columns>`, distinct from the forwar
 `ngrams:<columns>`. Names do not encode all parameters; use `to_config()` for provenance.
 The symmetric union has at most `k * (len(left) + len(right))` proposals before overlap
 and similarity filtering. It fits and searches each direction separately, so it costs
-more local computation as well as potentially more judging calls. No defaults changed.
+more local computation as well as potentially more judging calls. On the command line the
+reverse pass is `--block ngrams-reverse:COLS:K`.
 
 Ordering is deterministic for fixed inputs and settings. Forward passes traverse left
 rows; reverse passes traverse right rows. Similarity ties use the neighbor's original
@@ -292,7 +297,7 @@ if needed. For nested wrappers, diagnostics summarize the top-level grouped pass
 
 ## Choosing candidate passes
 
-Adding reverse search or increasing `k` can recover candidates missed by a forward pass,
+Increasing `k` can recover candidates the default passes miss,
 while also increasing the number of pairs to judge. Grouping can reduce work but excludes
 true matches whose keys disagree. Compare candidate recall and pair counts on labeled
 data from your application before choosing settings.

@@ -69,6 +69,7 @@ def test_merged_report_and_methods():
     assert len(merged) == 3 and {"name", "firm", "state", "st", "p"} <= set(merged.columns)
     report, methods = result.report(), result.methods()
     assert "Links: 3 (one-to-one" in report and "Rule: Record A and record B refer to the same firm." in report
+    assert "Records with no candidate pair: 0 of 4 left, 0 of 5 right" in report
     assert "4 records to 5 records" in methods and "Subsidiaries are different firms." in methods
     assert "one-to-one" not in methods  # prose, not parameter names
 
@@ -226,3 +227,18 @@ def test_default_identity_link_retains_main_saved_settings(tmp_path):
     back = jlink.load(directory)
     assert back.settings == result.settings and back.report() == result.report()
     assert back.methods() == result.methods()
+
+
+def test_default_blocking_searches_both_directions_and_report_counts_unpaired_records():
+    # Eleven closer names crowd "Acme" out of "Acme Corp"'s forward ten; searching from "Acme" finds it.
+    left = pd.DataFrame({"name": ["Acme Corp", "Zzyzx"]})
+    right = pd.DataFrame({"firm": [f"Acme Corp {i}" for i in range(11)] + ["Acme"]})
+    on = [("name", "firm")]
+    forward = jlink.block.candidates(left, right, on=on, blockers=[jlink.block.ngrams(*on, k=10)])
+    assert (0, 11) not in set(zip(forward.left_id, forward.right_id))
+    result = jlink.Linker("firm", on).link(left, right, progress=False,
+                                           transport=FakeJev(lambda state, question: 0.1).transport)
+    assert result.settings["blockers"] == ["ngrams:name=firm", "ngrams-reverse:name=firm"]
+    assert (0, 11) in set(zip(result.scores.left_id, result.scores.right_id))
+    assert ("Records with no candidate pair: 1 of 2 left, 0 of 12 right (these cannot be linked"
+            in result.report())

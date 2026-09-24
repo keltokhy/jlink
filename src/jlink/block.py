@@ -605,7 +605,7 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
     ``result.attrs['blocking']`` contains JSON-safe pass configurations and counts.
     ``max_pairs`` limits unique pairs; built-ins stream batches and stop on overflow.
     One-sided `on` fields, ``(left, None)`` or ``(None, right)``, join that side's text for
-    ``sim``. The default n-gram pass searches the paired fields only.
+    ``sim``. The default passes search the paired fields only; see ``default_passes``.
     """
     try:
         fields = parse_on(on, unpaired=True)
@@ -620,10 +620,22 @@ def candidates(left: pd.DataFrame, right: pd.DataFrame, *, on: str | list[str | 
     _check_limit(max_pairs)
     if blockers is None:
         if not paired:
-            raise ValueError("the default n-gram pass needs an `on` field that both sides have; every field "
+            raise ValueError("the default n-gram passes need an `on` field that both sides have; every field "
                              "here is one-sided, so choose the passes yourself with `blockers=`")
-        blockers = [ngrams(*[(lc, rc) for _, lc, rc in paired], k=10)]
+        blockers = default_passes(paired)
     return _union(left, right, blockers, a, b, left_ids, right_ids, max_pairs)
+
+
+def default_passes(fields: list) -> list[Blocker]:
+    """The passes used when none are given: 10 nearest n-gram neighbors in each direction.
+
+    The forward pass keeps each left record's 10 nearest right records, the reverse pass each right
+    record's 10 nearest left records. A right record that is not among any left record's ten
+    nearest, because a crowd of similar names outranks it, is still proposed from its own side.
+    ``fields`` are ``parse_on`` triples; one-sided fields are skipped.
+    """
+    columns = [(lc, rc) for _, lc, rc in fields if lc is not None and rc is not None]
+    return [ngrams(*columns, k=10), ngrams(*columns, k=10, reverse=True)]
 
 
 def _check_limit(max_pairs: object) -> None:
