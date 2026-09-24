@@ -139,10 +139,12 @@ What the table says:
   with character-level corruption, and TF-IDF cosine is nearly perfect there and free. jlink
   made no false links (precision 1.00) but was too cautious at 0.5; at a threshold of 0.3 its
   F1 is 0.98.
-- **The firm run was limited by its candidate search.** The default forward top-10 n-gram
-  pass proposed 67% of known links, and jlink found 93% of the true links it proposed. The 67% is
+- **The firm run was limited by its candidate search.** The forward top-10 n-gram pass, which
+  was the default until 0.4.0, proposed 67% of known links, and jlink found 93% of the true links it proposed. The 67% is
   measured blocking recall, not a ceiling for name-based methods, though ownership links such as
   "Homogeneous Metals Inc" to "United Technologies Corp" can be difficult to retrieve from names.
+  jlink now also searches in reverse by default, from each right record to its nearest left
+  records, and the report counts records that no pass paired with anything.
   [Candidate search](https://github.com/keltokhy/jlink/blob/main/docs/blocking.md) describes reverse search, larger `k` and their pair-count
   cost. A sliver of the error is the benchmark's: 11 Compustat names appear under two IDs, which
   accounts for 14 of jlink's 331 false links.

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Default blocking searches both directions: `block.default_passes` unions the forward top-10
+  n-gram pass with a reverse one that keeps each right record's 10 nearest left records. A right
+  record crowded out of every left record's ten nearest is now still proposed. This can add up to
+  as many pairs again to judge; `blockers=[block.ngrams(..., k=10)]` or `--block ngrams:COLS:10`
+  restores the old default. The benchmark figures in the README were run with the forward pass alone.
+- `--block ngrams-reverse:COLS:K` adds a reverse n-gram pass from the command line.
+- `Result.report()` counts records that blocking paired with nothing, on each side. No threshold
+  or rule can link those records.
+
 ## 0.3.1
 
 - The tool itself is unchanged from 0.3.0; this release brings its README on PyPI up to date.

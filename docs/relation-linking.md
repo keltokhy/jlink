@@ -73,7 +73,7 @@ Rules that follow from this:
 - Blocking passes compare a left column with a right column. `exact`, `ngrams`, `initials`,
   `embeddings` and `within` reject a one-sided field and say why. `--block` keeps the stricter
   `name` or `left=right` grammar.
-- With `blockers=None`, the default n-gram pass searches the paired fields only. If every field
+- With `blockers=None`, the default n-gram passes search the paired fields only. If every field
   is one-sided there is no default; choose the passes yourself.
 - Candidate `sim` is still character TF-IDF cosine between the two records' text. Each side's
   text is now its own `on` columns, paired or one-sided. With paired fields only, nothing

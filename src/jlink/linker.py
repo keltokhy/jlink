@@ -98,8 +98,7 @@ class Linker:
         started_at = datetime.now(timezone.utc).isoformat()
         cands = self.candidates(left, right, left_id=left_id, right_id=right_id, max_pairs=max_pairs)
         # Reached only when candidates() accepted the same default, so a paired field exists.
-        passes = self.blockers if self.blockers is not None else [
-            block.ngrams(*[(lc, rc) for _, lc, rc in self.fields if lc is not None and rc is not None], k=10)]
+        passes = self.blockers if self.blockers is not None else block.default_passes(self.fields)
         configs = [blocker_config(b) for b in passes]
         inputs = input_fingerprints(left, right, fields=self.fields, left_id=left_id, right_id=right_id)
         scores, meter = judge(cands, left, right, on=self.on, entity=self.entity, definition=self.definition,
@@ -265,6 +264,7 @@ class Result:
             f"Compared on: {_field_list(s['on'], ' = ', '{} (left only)', '{} (right only)')}",
             f"Records: {s['n_left']:,} left, {s['n_right']:,} right",
             f"Candidate pairs: {len(sc):,} ({'; '.join(f'{k}: {v:,}' for k, v in by_block.items())})",
+            _unproposed(s["n_left"], sc["left_id"], s["n_right"], sc["right_id"]),
             "Judged: " + ", ".join(f"{by_source.get(k, 0):,} {label}" for k, label in (
                 ("jev", "by Jev"), ("exact", "identical after normalization"), ("error", "failed"),
                 ("unjudged", "left unjudged by the budget")) if by_source.get(k, 0)),
@@ -595,6 +595,13 @@ def _id_kind(ids_: pd.Series) -> str:
     if pd.api.types.is_integer_dtype(ids_):
         return "int"
     return "float" if pd.api.types.is_float_dtype(ids_) else "str"
+
+
+def _unproposed(n_left: int, left_ids: pd.Series, n_right: int, right_ids: pd.Series) -> str:
+    """Records blocking never paired with anything: no threshold or rule can link them."""
+    left, right = n_left - left_ids.nunique(), n_right - right_ids.nunique()
+    return (f"Records with no candidate pair: {left:,} of {n_left:,} left, {right:,} of {n_right:,} right"
+            + (" (these cannot be linked; add a blocking pass to reach them)" if left or right else ""))
 
 
 def _field_list(on: list, joiner: str | None, left_only: str, right_only: str) -> str:
