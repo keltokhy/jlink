@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `--api gliner`, a local [GLiNER2.5-Decide](https://huggingface.co/fastino/GLiNER2.5-Decide)
+  server (`JEV_GLINER_URL`, port 8082). Requires `jevkit-runtime>=0.3.2`.
 - Default blocking searches both directions: `block.default_passes` unions the forward top-10
   n-gram pass with a reverse one that keeps each right record's 10 nearest left records. A right
   record crowded out of every left record's ten nearest is now still proposed. This can add up to
