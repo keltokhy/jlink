@@ -218,7 +218,7 @@ def test_one_sided_fields_are_refused_where_columns_must_pair():
         jlink.block.within(jlink.block.exact("published"), (None, "neighborhood"))
     with pytest.raises(ValueError, match="one side only"):
         parse_on([("text", None)])
-    with pytest.raises(ValueError, match="default n-gram pass needs an `on` field that both sides have"):
+    with pytest.raises(ValueError, match="default n-gram passes need an `on` field that both sides have"):
         jlink.block.candidates(ARTICLES, INCIDENTS, on=[("text", None), (None, "neighborhood")])
     with pytest.raises(ValueError, match="`exact_shortcut`.*both sides"):
         linker(exact_shortcut=True)

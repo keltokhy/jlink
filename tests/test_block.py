@@ -129,7 +129,8 @@ def test_sparse_product_is_bounded_and_not_densified(monkeypatch):
 
     def multiply(self, other):
         seen.append(self.shape[0])
-        assert self.shape[0] <= 3
+        # Each chunk's product is at most rows x other-side records; the reverse pass has 13 of them.
+        assert 12 * self.shape[0] * other.shape[1] <= 12 * 23 * 3
         return original(self, other)
 
     def forbidden(*args, **kwargs):
@@ -142,8 +143,9 @@ def test_sparse_product_is_bounded_and_not_densified(monkeypatch):
     left = pd.DataFrame({"name": ["Acme"] * 13})
     right = pd.DataFrame({"name": ["Acme"] * 23})
     result = block.candidates(left, right, on="name")
-    assert len(result) == 130
-    assert seen == [3, 3, 3, 3, 1]
+    # Forward: 13 left x their first 10 right; reverse: 23 right x their first 10 left; 100 in both.
+    assert len(result) == 130 + 230 - 100
+    assert seen == [3, 3, 3, 3, 1] + [5, 5, 5, 5, 3]
 
 
 def test_initials_both_directions_and_acronym_must_be_one_letter_token():
@@ -199,7 +201,8 @@ def test_default_pass_and_index_ids():
     right = pd.DataFrame({"firm": ["alpha", "beta"], "town": ["NY", "LA"]}, index=[7, 3])
     on = [("name", "firm"), ("city", "town")]
     assert_frame_equal(block.candidates(left, right, on=on),
-                       block.candidates(left, right, on=on, blockers=[block.ngrams(*on)]))
+                       block.candidates(left, right, on=on,
+                                        blockers=[block.ngrams(*on), block.ngrams(*on, reverse=True)]))
     result = block.candidates(left, right, on=on, blockers=[block.exact(*on)])
     assert result.left_id.tolist() == ["z", "a"]
     assert result.right_id.tolist() == [7, 3]

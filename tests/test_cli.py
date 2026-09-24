@@ -177,7 +177,13 @@ def test_rule_style_and_one_sided_fields_reach_the_linker(downstream, inputs, ca
     assert_error(link_args(inputs) + ["--block", "exact:city="], capsys, "accepted forms are")
 
 
-@pytest.mark.parametrize("rule", ["", "random:name", "ngrams:name", "ngrams:name:0", "ngrams:name:-1",
+def test_reverse_ngrams_block_form(downstream, inputs, capsys):
+    command.cli(link_args(inputs) + ["--block", "ngrams:name:10", "--block", "ngrams-reverse:name:5"])
+    assert downstream.constructor["blockers"] == [("ngrams", ("name",), {"k": 10}),
+                                                  ("ngrams", ("name",), {"k": 5, "reverse": True})]
+
+
+@pytest.mark.parametrize("rule", ["", "random:name", "ngrams:name", "ngrams-reverse:name", "ngrams:name:0", "ngrams:name:-1",
                                   "ngrams:name:1.5", "ngrams:name:nan", "ngrams::10", "exact:name:10",
                                   "exact:=st", "exact:a=b=c", "exact:name+", "initials:name+city",
                                   "initials:name:2"])
