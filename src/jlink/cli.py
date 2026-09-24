@@ -216,6 +216,27 @@ def _parser() -> argparse.ArgumentParser:
     link.add_argument("-o", "--output", metavar="FILE", help="links table; default: CSV on standard output")
     _add_judging(link)
     link.set_defaults(run=_link)
+    resume = sub.add_parser(
+        "resume", help="judge the pairs a saved run left unjudged or failed",
+        description="Finish a run saved with --save: judge only its unjudged and failed pairs with the "
+                    "saved question, fields and model, choose links again, and write the run back to "
+                    "its folder. Blocking does not run again; the candidate pairs stay the saved ones. "
+                    "Pairs the answer cache already holds cost nothing either way.",
+        epilog="Example: jev-link resume run/ firms.dta registry.dta --budget 10",
+    )
+    resume.add_argument("run_dir", metavar="RUN", help="folder written by link --save")
+    resume.add_argument("left", metavar="LEFT", help="the left table the run was made from")
+    resume.add_argument("right", metavar="RIGHT", help="the right table the run was made from")
+    resume.add_argument("--budget", type=_nonnegative, default=5.0,
+                        help="stop new requests at this observed USD cost for this resume (default: 5)")
+    resume.add_argument("--api", choices=tuple(PROVIDERS), help="API provider (default: the run's)")
+    resume.add_argument("--model", metavar="ID", help="model identifier (default: the run's)")
+    resume.add_argument("--no-cache", action="store_true", help="do not reuse or save cached judgments")
+    resume.add_argument("-j", type=_positive, default=32, dest="concurrency", metavar="N",
+                        help="maximum simultaneous API requests (default: 32)")
+    resume.add_argument("-o", "--output", metavar="FILE", help="also write the links table here")
+    resume.add_argument("--report", metavar="FILE", help="save the report as Markdown")
+    resume.set_defaults(run=_resume)
     dedupe = sub.add_parser(
         "dedupe", help="group the records of one dataset that match each other",
         description="Link one dataset to itself: propose pairs of its records, judge each unordered pair "
@@ -420,6 +441,28 @@ def _link(args: argparse.Namespace) -> None:
     print(f"jlink: {len(left):,} left records, {len(right):,} right records; "
           f"{len(result.candidates):,} candidate pairs; {len(result.links):,} links; "
           f"{result.meter.calls:,} calls; ${result.meter.cost:.4f}", file=sys.stderr)
+
+
+def _resume(args: argparse.Namespace) -> None:
+    _outputs([args.left, args.right], [args.output], args.report, (args.run_dir, "links.csv"))
+    from .linker import Result, load
+
+    folder = Path(args.run_dir).expanduser()
+    result = load(folder)
+    if not isinstance(result, Result):
+        raise ValueError(f"{args.run_dir!r} holds a dedupe run; resume finishes two-table link runs")
+    left, right = read_table(args.left), read_table(args.right)
+    before = result.meter.calls
+    result = result.resume(left, right, budget=args.budget, api=args.api, model=args.model,
+                           concurrency=args.concurrency, cache=not args.no_cache, progress=sys.stderr.isatty())
+    result.save(folder)
+    if args.output:
+        write_table(result.links, args.output)
+    if args.report:
+        Path(args.report).expanduser().write_text(result.report(), encoding="utf-8")
+    left_over = int(result.scores["source"].isin(["unjudged", "error"]).sum())
+    print(f"jlink: {len(result.links):,} links; {result.meter.calls - before:,} new calls; "
+          f"{left_over:,} pairs still unjudged or failed; saved to {folder}", file=sys.stderr)
 
 
 def _estimate(args: argparse.Namespace) -> None:

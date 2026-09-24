@@ -124,3 +124,31 @@ def test_benchmark_registry_supports_integrated_grouped_reverse_search(monkeypat
     config = candidates.attrs["blocking"]["passes"][0]["config"]
     assert config["type"] == "within" and config["blocker"]["reverse"] is True
     json.dumps(candidates.attrs["blocking"], allow_nan=False)
+
+
+def test_resume_finishes_a_saved_run_from_the_command_line(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    for key in ("TYPESAFE_API_KEY", "JEV_API", "JEV_MODEL", "JEV_URL"):
+        monkeypatch.delenv(key, raising=False)
+    fake = FakeJev(lambda state, question: 0.9 if state["record_a"]["name"][:4] == state["record_b"]["name"][:4]
+                   else 0.1)
+    linker = importlib.import_module("jlink.linker")
+    real = linker.judge
+    monkeypatch.setattr(linker, "judge", lambda *a, **kw: real(*a, **{**kw, "transport": fake.transport}))
+    left, right, run = tmp_path / "left.csv", tmp_path / "right.csv", tmp_path / "linkage"
+    pd.DataFrame({"id": ["001", "NA"], "name": ["Acme Inc", "Zeta LLC"]}).to_csv(left, index=False)
+    pd.DataFrame({"id": ["7", "8"], "name": ["Acme Incorporated", "Zeta Holdings"]}).to_csv(right, index=False)
+    cli(["link", str(left), str(right), "--on", "name", "--entity", "firm", "--left-id", "id",
+         "--right-id", "id", "--no-cache", "-j", "1", "--budget", "0.00001", "-o", str(tmp_path / "links.csv"),
+         "--save", str(run)])
+    cut = jlink.load(run)
+    first = len(fake.bodies)
+    assert 0 < first < len(cut.scores) and (cut.scores["source"] == "unjudged").any()
+    cli(["resume", str(run), str(left), str(right), "--no-cache"])
+    assert "0 pairs still unjudged or failed" in capsys.readouterr().err
+    done = jlink.load(run)
+    assert len(fake.bodies) == len(cut.scores)  # each pair was sent once across both commands
+    assert (done.scores["source"] == "jev").all() and len(done.settings["resumes"]) == 1
+    assert set(zip(done.links.left_id, done.links.right_id)) == {("001", "7"), ("NA", "8")}

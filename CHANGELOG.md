@@ -10,6 +10,11 @@
 - `--block ngrams-reverse:COLS:K` adds a reverse n-gram pass from the command line.
 - `Result.report()` counts records that blocking paired with nothing, on each side. No threshold
   or rule can link those records.
+- Add `Result.resume()` and `jev-link resume RUN LEFT RIGHT`, which judge only a saved run's
+  unjudged and failed pairs, with its question, fields, model and candidate pairs, and choose links
+  again. The tables must match the saved input fingerprints. Settings sum the calls and cost of
+  every session and list each resume under `resumes`. The answer cache already made a repeated
+  `link` free for answered pairs; resume skips blocking and does not depend on that cache.
 
 ## 0.3.1
 
