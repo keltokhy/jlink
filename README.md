@@ -69,15 +69,15 @@ A key can also live in `~/.config/jev/typesafe.key` or `~/.config/jev/openrouter
 
 ### Local servers (experimental)
 
-`--api diffusiongemma` and `--api laya`, or `JEV_API` set to either name for the Python, Stata
+`--api diffusiongemma`, `--api laya` and `--api gliner`, or `JEV_API` set to one of those names for the Python, Stata
 and R entry points, send the same pair questions to a System One server on your own machine, an
-[OpenJev](https://github.com/razorback16/openjev) or [laya-mlx](https://github.com/mizorewww/laya-mlx)
+[OpenJev](https://github.com/razorback16/openjev), [laya-mlx](https://github.com/mizorewww/laya-mlx) or [GLiNER2.5-Decide](https://huggingface.co/fastino/GLiNER2.5-Decide)
 process that you run separately. They are never chosen automatically, need no key, and count as $0
 in the cost meter and a saved run's settings unless `JEV_PRICE_PER_MTOK` is set. The report still
 counts a local model's answers "by Jev" and `scores.csv` marks them `source=jev`; the report's
 `Model:` line, the `model` and `provider` columns of `scores.csv` and `settings.json` name the
-model that answered. The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md)
-and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guides explain the
+model that answered. The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md),
+[Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) and [GLiNER](https://github.com/keltokhy/jevkit-core/blob/main/docs/gliner.md) guides explain the
 setup; keep concurrency low while a local model warms up.
 
 [On a local server](#on-a-local-server) compares both with Jev on the five benchmarks, and the
