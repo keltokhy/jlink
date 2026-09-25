@@ -1,6 +1,6 @@
 [project]
 name = "jlink"
-version = "0.4.0"
+version = "0.5.0"
 description = "Record linkage for economists: match rules in plain English, judged by TypeSafe's Jev model"
 readme = "README.md"
 license = "MIT"
