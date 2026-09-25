@@ -1,13 +1,13 @@
 [project]
 name = "jlink"
-version = "0.4.0"
+version = "0.5.0"
 description = "Record linkage for economists: match rules in plain English, judged by TypeSafe's Jev model"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Khaled Eltokhy" }]
 requires-python = ">=3.10"
 dependencies = [
-    "jevkit-runtime>=0.3.2,<0.4.0",
+    "jevkit-runtime>=0.4.0,<0.5.0",
     "httpx>=0.27",
     "numpy>=1.24",
     "pandas>=2.0",

@@ -69,8 +69,8 @@ The child uses one OpenMP thread and disables tokenizer parallelism for native-r
 compatibility; its timing is not an equal-thread speed comparison with jlink.
 
 Add `--judge` for cache-only Jev scoring or `--live --budget 0.50` for an explicitly paid run.
-The positive budget covers both partitions using observed cost, with the existing in-flight
-overshoot caveat. Each partition's union is scored once, then identical scores are projected
+The positive budget covers both partitions, each request setting its estimated price aside
+before it goes out. Each partition's union is scored once, then identical scores are projected
 back to every candidate pool. All use the same rule, cardinality, fixed threshold 0.5 and
 disabled exact shortcut. This isolates retrieval effects on final links. Unjudged pairs stay
 missing and are counted; partial coverage must not be presented as a complete judge comparison.

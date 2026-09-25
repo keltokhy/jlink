@@ -64,6 +64,7 @@ You need a key for one of two APIs. With keys for both, jlink uses TypeSafe's.
 |---|---|---|
 | TypeSafe | `TYPESAFE_API_KEY` | [console.typesafe.ai](https://console.typesafe.ai/settings/keys) |
 | OpenRouter | `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| A System One gateway of your own | `JEV_GATEWAY_URL` and `JEV_GATEWAY_API_KEY` | |
 
 A key can also live in `~/.config/jev/typesafe.key` or `~/.config/jev/openrouter.key`.
 
@@ -294,11 +295,12 @@ linker = jlink.Linker(
     blockers=[jlink.block.ngrams(("conm", "assignee"), k=10), jlink.block.initials(("conm", "assignee"))],
 )
 linker.estimate(compustat, patents, left_id="gvkey", right_id="assignee_id")   # blocking only, no API calls
-# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': 0.6316, 'seconds': 227.8,
-#  'assumptions': {'tokens_per_pair': 330, 'price_per_million_tokens': 0.042,
-#                  'pairs_per_second': 200, 'token_basis': 'short_records',
+# {'left': 4585, 'right': 2488, 'pairs': 45567, 'dollars': ..., 'seconds': 227.8,
+#  'assumptions': {'tokens_per_pair': ..., 'price_per_million_tokens': 0.042,
+#                  'pairs_per_second': 200, 'token_basis': 'sampled_records',
 #                  'throughput_basis': 'short_records'}}
-# (the real run on these data cost $0.62 and took 176 seconds)
+# (tokens_per_pair is measured on a sample of these candidates' own records; the real run on
+#  these data cost $0.62 and took 176 seconds)
 
 result = linker.link(compustat, patents, left_id="gvkey", right_id="assignee_id", budget=2.00)
 strict = result.relink(threshold=0.9, min_margin=0.3)     # no new calls
@@ -307,9 +309,12 @@ result.save("linkage/")                                   # links.csv, scores.cs
 ```
 
 `budget=0` allows cache hits and explicitly enabled exact shortcuts only; `budget=None` is
-unlimited. A positive budget stops new requests at the observed cost, but calls already in
-flight can overshoot it. Saved runs retain input fingerprints, blocker parameters, and model
-identities, including cached answers. See [budget semantics and run provenance](https://github.com/keltokhy/jlink/blob/main/docs/run-provenance.md).
+unlimited. A positive budget sets each request's estimated price aside before it goes out,
+sends the first request alone to learn the real price, and spends on the most similar pairs
+first, so requests in flight together cannot pass it; only a price that rises while requests are
+in the air can. On the command line `--budget none` is unlimited and `JEV_BUDGET` sets the default.
+Saved runs retain input fingerprints, blocker parameters, model identities including cached
+answers, and the runtime's record of the run under `settings["run"]`. See [budget semantics and run provenance](https://github.com/keltokhy/jlink/blob/main/docs/run-provenance.md).
 
 When the budget runs out or some calls fail, `result.resume(budget=5.00)` (for a loaded run,
 `jlink.load("linkage/").resume(compustat, patents)`, or `jev-link resume linkage/ LEFT RIGHT`)

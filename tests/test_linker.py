@@ -198,18 +198,22 @@ def test_merged_accepts_ids_already_named_left_id_and_right_id(tmp_path):
 
 
 @pytest.mark.parametrize("dedupe", [False, True])
-def test_estimate_exposes_short_record_assumptions_and_accepts_token_input(dedupe):
+def test_estimate_measures_the_records_and_accepts_token_input(dedupe):
     estimator = jlink.Linker("article", "text", blockers=[jlink.block.exact("group")])
     short = pd.DataFrame({"text": ["a"] * 10, "group": [1] * 10})
     long = short.assign(text="a" * 50_000)
     estimates = [estimator.estimate(frame, *([] if dedupe else [frame])) for frame in (short, long)]
-    assert estimates[0]["dollars"] == estimates[1]["dollars"]  # pair-count scenario, no length inference
-    assumptions = {"tokens_per_pair": 330, "price_per_million_tokens": 0.042, "pairs_per_second": 200,
-                   "token_basis": "short_records", "throughput_basis": "short_records"}
-    assert estimates[0]["assumptions"] == estimates[1]["assumptions"] == assumptions
+    assert estimates[0]["pairs"] == estimates[1]["pairs"]
+    assert estimates[1]["dollars"] > 10 * estimates[0]["dollars"]  # long records cost more to judge
+    for estimate in estimates:
+        assert estimate["assumptions"] | {"tokens_per_pair": None} == {
+            "tokens_per_pair": None, "price_per_million_tokens": 0.042, "pairs_per_second": 200,
+            "token_basis": "sampled_records", "throughput_basis": "short_records"}
+    assert estimates[1]["assumptions"]["tokens_per_pair"] > 25_000  # two 50,000-character records
     supplied = estimator.estimate(long, *([] if dedupe else [long]), tokens_per_pair=10_000)
     assert supplied["dollars"] == round(supplied["pairs"] * 10_000 * 0.042 / 1e6, 4)
-    assert supplied["assumptions"] == assumptions | {"tokens_per_pair": 10_000, "token_basis": "caller_supplied"}
+    assert supplied["assumptions"]["tokens_per_pair"] == 10_000
+    assert supplied["assumptions"]["token_basis"] == "caller_supplied"
     assert supplied["seconds"] == estimates[0]["seconds"]  # no new throughput calibration
 
 

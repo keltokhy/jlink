@@ -85,7 +85,7 @@ def test_identity_and_rule_answers_never_share_a_cache_entry():
         again, fake = run(style=style, budget=0)
         assert not fake.bodies and again.meter.cached == pairs
         pd.testing.assert_series_equal(again.scores.p, expected.scores.p)
-    assert question("event", RULE)["instructions"] != question("", RULE, style="rule")["instructions"]
+    assert question("event", RULE).text != question("", RULE, style="rule").text
 
 
 @pytest.mark.parametrize("style", ["identity", "rule"])
