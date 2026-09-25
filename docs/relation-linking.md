@@ -100,11 +100,11 @@ same entity, lists which source each one-sided field came from, and quotes the p
   `jlink.block.window(("published", "occurred"), between=(0, 3), unit="days")`.
 - Jev reads the fields it is given and returns a probability. It does not extract a name, an
   address or a date from the text, and it never generates text.
-- The default `estimate` figures are a short-record scenario: 330 input tokens per pair,
-  $0.042 per million tokens and 200 pairs per second. The API returns these `assumptions`;
-  the CLI labels the scenario. Field lengths do not enter the calculation. Pass
-  `linker.estimate(left, right, tokens_per_pair=...)` to supply a token assumption; the time
-  scenario still uses short-record throughput. Article cost and throughput have not been measured.
+- `estimate` measures input tokens per pair on a sample of the candidates' own records, with
+  the runtime's estimator, and prices them at the provider's list price; long article texts
+  therefore cost more than short names. The time scenario is 200 pairs per second, measured on
+  short records. Pass `linker.estimate(left, right, tokens_per_pair=...)` to supply a token
+  figure instead. Article throughput has not been measured.
 - Rule style asks whether the supplied relationship holds between the records.
   Identity style remains the default.
 - Nothing here measures Jev on article-to-incident pairs or any other relation. Whether it

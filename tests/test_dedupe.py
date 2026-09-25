@@ -445,9 +445,9 @@ def test_rule_style_dedupe_collapses_articles_into_events():
     linker = jlink.Linker(style="rule", definition=rule, on=["text", "published"],
                           blockers=[block.window("published", 3, unit="days")])
     estimate = linker.estimate(articles)
-    assert {k: estimate[k] for k in ("records", "pairs", "dollars", "seconds")} == {
-        "records": 5, "pairs": 3, "dollars": 0.0, "seconds": 0.0}
-    assert estimate["assumptions"]["token_basis"] == "short_records"
+    assert {k: estimate[k] for k in ("records", "pairs", "seconds")} == {"records": 5, "pairs": 3, "seconds": 0.0}
+    assert 0 <= estimate["dollars"] < 0.001 and estimate["assumptions"]["tokens_per_pair"] > 270
+    assert estimate["assumptions"]["token_basis"] == "sampled_records"
     result = linker.dedupe(articles, progress=False, transport=fake.transport)
     # The vigil is six days later and the brief has no date: the window never proposes them.
     assert result.clusters.cluster_id.tolist() == [0, 0, 1, 2, 3] and len(fake.bodies) == 3

@@ -146,8 +146,9 @@ def test_link_all_options_and_files(downstream, inputs, tmp_path, capsys):
         ("ngrams", ("name",), {"k": 10}), ("ngrams", ("name", "city"), {"k": 20}),
         ("exact", ("state",), {}), ("exact", (("state", "st"),), {}), ("initials", ("name",), {}),
     ]
-    for key, value in dict(how="many-to-one", threshold=0.8, min_margin=-0.2, budget=0).items():
+    for key, value in dict(how="many-to-one", threshold=0.8, min_margin=-0.2).items():
         assert downstream.link[key] == value
+    assert downstream.link["budget"].limit == 0  # a runtime Budget: 0 answers from the cache only
     for key, value in dict(api="openrouter", model="fake/jev", cache=False, concurrency=4).items():
         assert downstream.constructor[key] == value
 
@@ -255,7 +256,7 @@ def test_one_line_runtime_error(downstream, inputs, capsys, monkeypatch):
 def test_estimate_never_constructs_linker(downstream, inputs, capsys):
     command.cli(["estimate", *inputs, "--on", "name", "--left-id", "id", "--right-id", "rid"])
     captured = capsys.readouterr()
-    assert "2 candidate pairs" in captured.out and "$0.000028" in captured.out
+    assert "2 candidate pairs" in captured.out and "Judging cost scenario: $0.0000" in captured.out
     assert "200 pairs/second" in captured.out and "No API calls" in captured.out
     assert not hasattr(downstream, "constructor")
 
@@ -423,6 +424,6 @@ def test_installed_entrypoints(program):
 def test_cli_estimate_names_the_short_record_scenario(downstream, inputs, capsys):
     command.cli(["estimate", *map(str, inputs), "--on", "name"])
     output = capsys.readouterr().out
-    assert "Short-record judging cost scenario:" in output
-    assert "Short-record judging time scenario:" in output
-    assert "330 input tokens" in output and "No API calls" in output
+    assert "Judging cost scenario:" in output and "Judging time scenario:" in output
+    assert "input tokens per pair (the runtime's estimate over a sample of these records)" in output
+    assert "No API calls" in output

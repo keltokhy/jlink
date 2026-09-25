@@ -43,8 +43,8 @@ def test_states_questions_and_scores():
     assert fake.bodies[0]["state"] == {"record_a": {"name": "Zeta Holdings", "year": 2001},
                                        "record_b": {"name": "Omega Partners", "year": 2001}}
     assert fake.bodies[1]["state"]["record_a"] == {"name": "International Business Machines", "year": 1985}
-    assert fake.bodies[0]["questions"]["match"] == question("firm", "Subsidiaries are different firms.")
-    assert "Record A and record B refer to the same firm. Subsidiaries" in question("firm", "Subsidiaries x")["instructions"]
+    assert fake.bodies[0]["questions"]["match"] == question("firm", "Subsidiaries are different firms.").body()
+    assert "Record A and record B refer to the same firm. Subsidiaries" in question("firm", "Subsidiaries x").text
 
 
 def test_missing_fields_are_dropped_from_the_state():
@@ -215,7 +215,7 @@ def test_positive_exhausted_budget_still_reads_later_cache_hits():
     assert scores.loc[2, "p"] == 0.7 and meter.cached == 1 and len(fake.bodies) == 1
 
 
-def test_in_flight_calls_finish_and_may_overshoot_positive_budget():
+def test_the_first_request_learns_the_price_alone_so_a_dear_price_costs_one_call():
     import asyncio
     import httpx
 
@@ -229,8 +229,8 @@ def test_in_flight_calls_finish_and_may_overshoot_positive_budget():
     with pytest.warns(UserWarning, match="budget ran out"):
         scores, meter = judge(cands, LEFT, RIGHT, on=ON, entity="firm", left_id="gvkey", right_id="id",
                               budget=0.001, concurrency=2, progress=False, transport=httpx.MockTransport(handler))
-    assert meter.calls == 2 and meter.cost == 0.04
-    assert scores["source"].tolist() == ["jev", "jev", "unjudged", "unjudged"]
+    assert meter.calls == 1 and meter.cost == 0.02
+    assert scores["source"].tolist() == ["jev", "unjudged", "unjudged", "unjudged"]
 
 
 def test_zero_budget_can_read_cache_without_credentials(monkeypatch):

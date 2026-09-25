@@ -16,16 +16,18 @@ import pandas as pd
 
 from . import __version__, audit, block
 from .cluster import LINKAGES, UNPROPOSED, cluster
-from jevkit_runtime import Meter, Settings
+from jevkit_runtime import Budget, Meter, Settings
+from jevkit_runtime import resolve as resolve_backend
+
+from .core import PROVIDERS
 from .fields import ids, parse_on
-from .judge import EXACT_POLICY, judge, question, validate_budget, validate_question
+from .judge import EXACT_POLICY, judge, pair_tokens, question, validate_budget, validate_question
 from .provenance import blocker_config, frame_fingerprint, input_fingerprints
 from .resolve import resolve
 
 _KEEP = object()  # relink: "leave this setting as it is", distinct from None, which turns the margin off
 HOWS = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
-# Measured on OpenRouter in September 2026; used only for estimates.
-TOKENS_PER_PAIR, PAIRS_PER_SECOND, PRICE_PER_MTOK = 330, 200, 0.042
+PAIRS_PER_SECOND = 200  # measured on OpenRouter with short records in September 2026; only for estimates
 
 
 class Linker:
@@ -67,24 +69,31 @@ class Linker:
                  right_id=None, tokens_per_pair: float | None = None) -> dict:
         """Run blocking and return a cost/time scenario with its assumptions. No API calls.
 
-        With one table the estimate is for `dedupe`, and `left_id` names its ID column.
-        By default both scenarios use short-record measurements, without reading field lengths.
-        `tokens_per_pair` overrides the token assumption; throughput remains a short-record scenario.
+        With one table the estimate is for `dedupe`, and `left_id` names its ID column. Tokens per pair
+        are the runtime's estimate over a sample of these candidates' own records, at the provider's list
+        price; `tokens_per_pair` overrides the token figure. Throughput remains a short-record scenario.
         """
-        tokens = TOKENS_PER_PAIR if tokens_per_pair is None else tokens_per_pair
-        if isinstance(tokens, bool) or not isinstance(tokens, (int, float)) or not math.isfinite(tokens) or tokens <= 0:
+        if tokens_per_pair is not None and (isinstance(tokens_per_pair, bool)
+                                            or not isinstance(tokens_per_pair, (int, float))
+                                            or not math.isfinite(tokens_per_pair) or tokens_per_pair <= 0):
             raise ValueError("`tokens_per_pair` must be a finite positive number")
         if right is None:
-            pairs = len(block.self_candidates(left, on=self.on, blockers=self.blockers, id=left_id))
-            sizes = {"records": len(left)}
+            cands = block.self_candidates(left, on=self.on, blockers=self.blockers, id=left_id)
+            sizes, other, other_id = {"records": len(left)}, left, left_id
         else:
-            pairs = len(self.candidates(left, right, left_id=left_id, right_id=right_id))
-            sizes = {"left": len(left), "right": len(right)}
-        return sizes | {"pairs": pairs, "dollars": round(pairs * tokens * PRICE_PER_MTOK / 1e6, 4),
+            cands = self.candidates(left, right, left_id=left_id, right_id=right_id)
+            sizes, other, other_id = {"left": len(left), "right": len(right)}, right, right_id
+        backend = resolve_backend(PROVIDERS, self.api, model=self.model, require_key=False)
+        measured = pair_tokens(cands, left, other, on=self.on, entity=self.entity, definition=self.definition,
+                               style=self.style, left_id=left_id, right_id=other_id, model=backend.model)
+        tokens = tokens_per_pair if tokens_per_pair is not None else (measured or 0.0)
+        price, pairs = backend.price_per_mtok, len(cands)
+        return sizes | {"pairs": pairs, "dollars": round(pairs * tokens * price / 1e6, 4),
                         "seconds": round(pairs / PAIRS_PER_SECOND, 1),
-                        "assumptions": {"tokens_per_pair": tokens, "price_per_million_tokens": PRICE_PER_MTOK,
+                        "assumptions": {"tokens_per_pair": round(tokens, 1), "price_per_million_tokens": price,
                                         "pairs_per_second": PAIRS_PER_SECOND,
-                                        "token_basis": "short_records" if tokens_per_pair is None else "caller_supplied",
+                                        "token_basis": "sampled_records" if tokens_per_pair is None
+                                        else "caller_supplied",
                                         "throughput_basis": "short_records"}}
 
     def link(self, left: pd.DataFrame, right: pd.DataFrame, *, left_id: str | None = None,
@@ -157,13 +166,13 @@ class Linker:
         """A saved run's settings. `specific` holds IDs, sizes and how pairs became links or clusters."""
         # Quote the question judge() sent. Rebuilding it here is only a fallback for a replaced judge.
         asked = scores.attrs.get("question") or question(
-            self.entity or "", self.definition, style=self.style)["instructions"]
+            self.entity or "", self.definition, style=self.style).text
         settings = {
             "jlink": __version__, "date": date.today().isoformat(), "entity": self.entity,
             "definition": self.definition, "question": asked,
             "on": [[lc, rc] for _, lc, rc in self.fields], **specific,
             "blockers": [b.name for b in passes], "blocker_configs": configs,
-            "budget": None if budget is None else float(budget), "model": meter.model,
+            "budget": _limit(budget), "model": meter.model,
             "calls": meter.calls, "cached": meter.cached, "input_tokens": meter.input_tokens,
             "dollars": round(meter.cost, 6), "seconds": round(time.perf_counter() - t0, 1),
             "provenance_version": 1, "started_at": started_at,
@@ -187,6 +196,8 @@ class Linker:
             settings["style"] = self.style
         if "blocking" in cands.attrs:
             settings["blocking"] = deepcopy(cands.attrs["blocking"])
+        if "run" in scores.attrs:
+            settings["run"] = deepcopy(scores.attrs["run"])  # the runtime's record: who answered, cost, budget
         return settings
 
 
@@ -255,7 +266,7 @@ class Result:
                     raise ValueError(f"the {side} table differs from the one this run was made from (its IDs "
                                      "or compared fields changed); pass the original table")
         style = s.get("style", "identity")
-        if question(s["entity"] or "", s["definition"], style=style)["instructions"] != s["question"]:
+        if question(s["entity"] or "", s["definition"], style=style).text != s["question"]:
             raise ValueError("this jlink version would word the question differently from the saved run, "
                              "so resuming would mix two questions; run `link` again instead")
         todo = self.scores["source"].isin(["unjudged", "error"]).to_numpy()
@@ -295,7 +306,7 @@ class Result:
                   "seconds": round(s.get("seconds", 0) + time.perf_counter() - t0, 1)})
         s.setdefault("resumes", []).append({
             "jlink": __version__, "started_at": started_at, "finished_at": datetime.now(timezone.utc).isoformat(),
-            "pairs": int(todo.sum()), "budget": None if budget is None else float(budget), "calls": meter.calls,
+            "pairs": int(todo.sum()), "budget": _limit(budget), "calls": meter.calls,
             "cached": meter.cached, "dollars": round(meter.cost, 6),
             "left_unjudged": int((fresh["source"] == "unjudged").sum()),
             "failed": int((fresh["source"] == "error").sum())})
@@ -699,6 +710,13 @@ def _model_description(settings: dict) -> str:
     if unknown:
         description += f"; {unknown:,} answers with unknown model identity"
     return description
+
+
+def _limit(budget) -> float | None:
+    """A budget as saved settings record it: its dollar limit, or None for no limit."""
+    if isinstance(budget, Budget):
+        return None if budget.unlimited else budget.limit
+    return None if budget is None else float(budget)
 
 
 def _check_clustering(linkage: str, threshold: float, unproposed: str) -> None:

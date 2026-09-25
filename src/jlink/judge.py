@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import math
 import warnings
-from concurrent.futures import ThreadPoolExecutor
 from numbers import Integral, Real
 from pathlib import Path
 
@@ -18,7 +17,23 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-from jevkit_runtime import AnswerStore, Client, JevBudgetExceeded, JevError, JevFatal, Meter, resolve
+from jevkit_runtime import (
+    AnswerStore,
+    Budget,
+    Client,
+    JevBudgetExceeded,
+    JevError,
+    JevFatal,
+    Meter,
+    Noul,
+    Run,
+    estimate_tokens,
+    request_body,
+    resolve,
+)
+from jevkit_runtime.cli import run_sync
+
+from . import __version__
 from .core import PROVIDERS
 from .fields import check_columns, clean, ids, normalize, parse_on, side_fields
 
@@ -27,24 +42,34 @@ EXACT_POLICY = "all_fields_nonempty_and_equal_v1"
 STYLES = ("identity", "rule")
 
 
-def validate_budget(budget: float | None) -> None:
+def validate_budget(budget: float | Budget | None) -> None:
     """None is unlimited; zero allows only exact, cached, or already in-flight answers."""
+    if isinstance(budget, Budget):
+        return
     if budget is not None and (isinstance(budget, (bool, np.bool_)) or not isinstance(budget, Real)
                                or not math.isfinite(budget) or budget < 0):
-        raise ValueError("`budget` must be a finite nonnegative number of dollars, or None for unlimited")
+        raise ValueError("`budget` must be a finite nonnegative number of dollars, None for unlimited, "
+                         "or a jevkit_runtime.Budget")
 
 
-def question(entity: str, definition: str = "", *, style: str = "identity") -> dict:
+def as_budget(budget: float | Budget | None) -> Budget:
+    """The runtime budget a `budget=` argument stands for: dollars, None for no limit, or a Budget."""
+    validate_budget(budget)
+    if isinstance(budget, Budget):
+        return budget
+    return Budget(math.inf if budget is None else float(budget))
+
+
+def question(entity: str, definition: str = "", *, style: str = "identity") -> Noul:
     """Build the match proposition; rule style lets the definition name the relation."""
     if style not in {"identity", "rule"}:
         raise ValueError("question style must be 'identity' or 'rule'")
     if style == "rule" and definition and definition.strip():
-        return {"type": "noul", "instructions":
-                "Record A and record B satisfy the following match rule. " + definition.strip()}
+        return Noul("Record A and record B satisfy the following match rule. " + definition.strip())
     text = f"Record A and record B refer to the same {entity.strip()}."
     if definition and definition.strip():
         text += " " + definition.strip()
-    return {"type": "noul", "instructions": text}
+    return Noul(text)
 
 
 def validate_question(entity: str | None, definition: str, style: str) -> None:
@@ -63,16 +88,20 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
           entity: str | None = None, definition: str = "", style: str = "identity",
           left_id: str | None = None, right_id: str | None = None,
           api: str | None = None, model: str | None = None, concurrency: int = 32,
-          budget: float | None = 5.0, cache: bool | str | Path | AnswerStore = True, exact_shortcut: bool = False,
+          budget: float | Budget | None = 5.0, cache: bool | str | Path | AnswerStore = True,
+          exact_shortcut: bool = False,
           progress: bool = True, transport=None) -> tuple[pd.DataFrame, Meter]:
     """Score every candidate pair. Returns the scores table (candidates plus p, source, error) and the meter.
 
-    ``scores.attrs["question"]`` holds the proposition exactly as it was put to the model.
+    ``scores.attrs["question"]`` holds the proposition exactly as it was put to the model, and
+    ``scores.attrs["run"]`` the runtime's record of the judging: who answered, what it cost, the budget.
+    ``budget`` is dollars, None for no limit, or a jevkit_runtime Budget; requests go out in similarity
+    order, each setting its estimated price aside first, so the budget is spent on the likeliest pairs.
     ``style="rule"`` asks whether the pair satisfies ``definition``, a relation that need not be
     identity; ``entity`` is then not part of the question. One-sided ``on`` fields, ``(left, None)``
     or ``(None, right)``, appear only in that side's record.
     """
-    validate_budget(budget)
+    budget = as_budget(budget)
     if not isinstance(exact_shortcut, (bool, np.bool_)):
         raise ValueError("`exact_shortcut` must be a boolean; enable only when equal fields establish identity")
     if isinstance(concurrency, (bool, np.bool_)) or not isinstance(concurrency, Integral) or concurrency < 1:
@@ -112,10 +141,11 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
     todo = np.flatnonzero(source == "unjudged")
     todo = todo[np.argsort(-scores["sim"].to_numpy()[todo], kind="stable")]
     record_a, record_b = a["record"].to_dict(), b["record"].to_dict()
-    backend = resolve(PROVIDERS, api, model=model, require_key=bool(len(todo)) and budget != 0)
+    backend = resolve(PROVIDERS, api, model=model, require_key=bool(len(todo)) and budget.limit != 0)
     store = cache if isinstance(cache, AnswerStore) else AnswerStore(Path(cache)) if isinstance(cache, (str, Path)) \
         else AnswerStore() if cache else None
-    jev = Client(backend, concurrency=concurrency, store=store, transport=transport)
+    jev = Client(backend, concurrency=concurrency, store=store, budget=budget, transport=transport)
+    run = Run("jlink", __version__)
     ask = question(entity or "", definition, style=style)
 
     async def work() -> None:
@@ -127,8 +157,8 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
         async def one(i: int) -> None:
             try:
                 state = {"record_a": record_a[left_ids[i]], "record_b": record_b[right_ids[i]]}
-                answer = await jev.ask(state, {"match": ask}, allow_paid=budget is None or jev.meter.cost < budget)
-                p[i], source[i] = float(answer["match"]["noul"]), "jev"
+                answer = await jev.ask(state, {"match": ask})
+                p[i], source[i] = ask.value(answer["match"]), "jev"
                 meta = answer.origins["match"]
                 models[i], providers[i] = meta.get("resolved_model") or pd.NA, meta.get("provider") or pd.NA
                 origins[i], answered_at[i] = meta["source"], meta.get("answered_at", np.nan)
@@ -161,16 +191,17 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
         if fatal:
             raise fatal[0]
 
-    _run(work())
+    run_sync(work())
     scores["p"], scores["source"], scores["error"] = p, source, error
     scores["model"], scores["provider"], scores["score_origin"] = models, providers, origins
     scores["answered_at"] = answered_at
     # The one place the proposition is built. Callers quote this text, never a rebuilt copy, so a
     # report or methods paragraph cannot name a sentence the model did not see.
-    scores.attrs["question"] = ask["instructions"]
+    scores.attrs["question"] = ask.text
+    scores.attrs["run"] = run.record(jev)
     left_over = int((source == "unjudged").sum())
     if left_over:
-        warnings.warn(f"the ${budget:.2f} budget ran out with {left_over:,} of {n:,} pairs unjudged; "
+        warnings.warn(f"the ${budget.limit:.2f} budget ran out with {left_over:,} of {n:,} pairs unjudged; "
                       "new requests were prioritized by similarity; cached and exact scores were retained. "
                       "Raise `budget` to judge more pairs.", stacklevel=2)
     errors = int((source == "error").sum())
@@ -189,11 +220,18 @@ def _records(frame: pd.DataFrame, index: pd.Index, fields: list[tuple[str, str]]
     return pd.DataFrame({"record": record, "exact_key": [key if all(key) else None for key in keys]}, index=index)
 
 
-def _run(coro):
-    """Run a coroutine to completion, including inside Jupyter, where a loop is already running."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(asyncio.run, coro).result()
+def pair_tokens(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, on, entity: str | None,
+                definition: str, style: str, left_id: str | None, right_id: str | None, model: str,
+                sample: int = 200, seed: int = 0) -> float | None:
+    """The runtime's token estimate for a judged pair, averaged over a sample of these candidates' own
+    records; None without candidates."""
+    if not len(candidates):
+        return None
+    fields = parse_on(on, unpaired=True)
+    a = _records(left, ids(left, left_id, "left"), side_fields(fields, "left"))["record"].to_dict()
+    b = _records(right, ids(right, right_id, "right"), side_fields(fields, "right"))["record"].to_dict()
+    pairs = candidates.sample(n=min(sample, len(candidates)), random_state=seed)
+    ask = {"match": question(entity or "", definition, style=style)}
+    sizes = [estimate_tokens(request_body(model, {"record_a": a[l], "record_b": b[r]}, ask))
+             for l, r in zip(pairs["left_id"], pairs["right_id"]) if l in a and r in b]
+    return float(np.mean(sizes)) if sizes else None

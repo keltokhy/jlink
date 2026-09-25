@@ -38,12 +38,14 @@ The settings record `exact_policy="all_fields_nonempty_and_equal_v1"`.
 - Negative, infinite, NaN, Boolean, and nonnumeric budgets raise `ValueError` before blocking
   or API setup. `concurrency` must be a positive integer.
 
-**A positive budget is not a hard dollar cap.** Request cost is known only after a response.
-Calls already in flight finish, including their retries. One response alone may cost more
-than the remaining budget, and multiple concurrent responses can increase the overshoot.
-Failed requests may also incur provider charges that are absent from the local meter.
-There is no guaranteed dollar bound on that overshoot. `concurrency=1` reduces exposure but
-still cannot make the budget a hard cap. A zero-budget run starts no paid request at all.
+**How a positive budget holds.** Each request sets its estimated price aside before it goes
+out (`jevkit_runtime.Budget`): the runtime's token estimate for the request, at the dearest rate
+the provider has charged so far, or 1.5 times the list price before the first charge. The first
+request goes alone, so a price far from the estimate is learned from one call. A request that
+does not fit waits for money held by others to come back and is refused only when nothing is in
+the air, so requests in flight together cannot pass the limit. Spending can still pass it when a
+price rises while requests are in the air, and failed requests may incur provider charges absent
+from the local meter. A zero-budget run starts no paid request at all.
 
 Cost is the API-reported amount when present; otherwise jlink estimates it from input tokens
 using `JEV_PRICE_PER_MTOK` (default `$0.042` per million). Settings retain the unrounded local
@@ -142,27 +144,16 @@ label without creating requested-provider, resolved-model, blocker-parameter, or
 metadata that was never recorded. Legacy exact decisions also remain as saved; loading does
 not retrospectively apply the corrected exact policy. Relinking only reuses saved scores.
 
-The SQLite cache keeps the original `answers(key, answer, at)` table and key computation
-unchanged. Optional provenance lives in a separate `answer_metadata` table, joined by both
-key and write time. Older tools can still read/write `answers`; an older writer's replacement
-invalidates stale metadata. `Cache.get/put` and the dictionary returned by `Jev.ask` remain
-compatible. New optional interfaces are `Cache.get_entry`, `Cache.put(..., metadata=...)`,
-`Jev.ask(..., allow_paid=False, provenance=...)`, and
-`resolve_backend(..., require_key=False)`. Missing legacy cache metadata stays unknown even
-when the current requested model is pinned. Cache keys historically omit the provider;
-per-answer provenance therefore records the originating provider separately from the current
-backend selection.
-
-`src/jlink/core.py` was historically shared verbatim with jgrep. These additive changes create
-a documented divergence; this work does not modify the jgrep repository. The shared cache
-schema and old public call patterns remain supported. Private `_call`/`_record` internals now
-return provenance along with answers.
+Answers are stored by `jevkit-runtime` (`~/.cache/jev/answers.v3.sqlite` from runtime 0.4), keyed on
+the provider, endpoint, requested model and exact question and records, with each answer's provider,
+resolved model and time in the same row. `settings["run"]` holds the runtime's record of the judging:
+the backends, the models that answered and how often, the question as asked, calls, tokens, cost
+and the budget.
 
 ## Verification scope
 
 Offline tests cover field-boundary collisions, missing fields, normalized exact matches,
-zero/unlimited/invalid budgets, post-budget cache hits, concurrent overshoot, legacy cache
-writes, mixed model versions, old saved results, blocker serialization, input fingerprints,
+zero/unlimited/invalid budgets, post-budget cache hits, a first charge dearer than the budget, mixed model versions, old saved results, blocker serialization, input fingerprints,
 and saved IDs/probabilities/errors through relinking and merging. Existing saved results for
 NBER firms, DBLP–ACM, Abt–Buy, Amazon–Google, and FEBRL4 were also loaded, saved, relinked, and
 merged without API calls: all 146,119 score rows and the existing link sets were preserved.

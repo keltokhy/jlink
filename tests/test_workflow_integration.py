@@ -141,7 +141,7 @@ def test_resume_finishes_a_saved_run_from_the_command_line(tmp_path, monkeypatch
     pd.DataFrame({"id": ["001", "NA"], "name": ["Acme Inc", "Zeta LLC"]}).to_csv(left, index=False)
     pd.DataFrame({"id": ["7", "8"], "name": ["Acme Incorporated", "Zeta Holdings"]}).to_csv(right, index=False)
     cli(["link", str(left), str(right), "--on", "name", "--entity", "firm", "--left-id", "id",
-         "--right-id", "id", "--no-cache", "-j", "1", "--budget", "0.00001", "-o", str(tmp_path / "links.csv"),
+         "--right-id", "id", "--no-cache", "-j", "1", "--budget", "0.000025", "-o", str(tmp_path / "links.csv"),
          "--save", str(run)])
     cut = jlink.load(run)
     first = len(fake.bodies)

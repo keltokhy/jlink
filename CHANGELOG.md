@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+On `jevkit-runtime` 0.4 ([jevkit-core#14](https://github.com/keltokhy/jevkit-core/issues/14)).
+
+- A positive budget now holds: each request sets its estimated price aside before it goes out, the
+  first request goes alone to learn the price, and requests still go out in descending similarity,
+  so requests in flight together cannot pass the budget. `budget=` also takes a runtime `Budget`;
+  `--budget none` is unlimited on the command line and `JEV_BUDGET` sets its default.
+- `estimate()` measures tokens per pair on a sample of the candidates' own records, at the
+  provider's list price, instead of assuming 330 tokens at $0.042 (`token_basis: sampled_records`).
+- Saved settings include the runtime's record of the run under `settings["run"]`: who answered,
+  each question as asked, calls, tokens, cost and the budget.
+- The model is pinned to `jev-1.13.0` (`typesafe/jev-1.13` on OpenRouter).
+- A System One gateway of your own (`JEV_GATEWAY_URL`, `JEV_GATEWAY_API_KEY`) is offered, as in the
+  other JevKit tools.
+- The match question is a runtime `Noul`; `scores.attrs["question"]` is its exact text.
+- The cache moves to `~/.cache/jev/answers.v3.sqlite`; the first run after upgrading re-asks.
+
 ## 0.4.0
 
 - Add `--api gliner`, a local [GLiNER2.5-Decide](https://huggingface.co/fastino/GLiNER2.5-Decide)

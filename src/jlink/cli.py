@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from jevkit_runtime.cli import parse_budget
+
 from . import __version__
 from .core import PROVIDERS
 from .fields import check_columns, ids, parse_on
@@ -18,6 +20,7 @@ from .io import FORMATS, read_table, stata_value_labels, write_table
 
 _BLOCK_FORMS = ("ngrams:name:10, ngrams-reverse:name:10, embeddings:name:10, ngrams:name+city:20, exact:state, initials:name, "
                 "window:year:1, window:published=occurred:0..3d, within:state:ngrams:name:10")
+DEFAULT_BUDGET = 5.0  # dollars, per run: record linkage bills per candidate pair
 _HOW = ("one-to-one", "many-to-one", "one-to-many", "many-to-many")
 _NUMBER = r"[+-]?\d+(?:\.\d+)?"
 _WINDOW = re.compile(rf"(?:(?P<low>{_NUMBER})\.\.(?P<high>{_NUMBER})|(?P<tolerance>{_NUMBER}))"
@@ -101,6 +104,13 @@ def _nonnegative(value: str) -> float:
     return _number(value, low=0)
 
 
+def _budget(args: argparse.Namespace):
+    """--budget, else JEV_BUDGET, else five dollars: a runtime Budget."""
+    from jevkit_runtime import Budget
+
+    return Budget.from_settings(DEFAULT_BUDGET) if args.budget is None else Budget(args.budget)
+
+
 def _margin(value: str) -> float:
     return _number(value, low=-1, high=1)
 
@@ -139,9 +149,10 @@ def _add_clustering(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_judging(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--budget", type=_nonnegative, default=5.0,
-                        help="stop new requests at this observed USD cost; in-flight calls may overshoot "
-                             "(default: 5; 0: cached/exact only)")
+    parser.add_argument("--budget", type=parse_budget, default=None, metavar="DOLLARS",
+                        help="send no request that would take spending past this; each sets its estimated "
+                             "price aside first (default: 5, or $JEV_BUDGET; none: no limit; 0: cached and "
+                             "exact only)")
     parser.add_argument("--scores", metavar="FILE", help="save all candidate scores for a later audit")
     parser.add_argument("--report", metavar="FILE", help="save the report as Markdown")
     parser.add_argument("--save", metavar="DIR",
@@ -227,8 +238,9 @@ def _parser() -> argparse.ArgumentParser:
     resume.add_argument("run_dir", metavar="RUN", help="folder written by link --save")
     resume.add_argument("left", metavar="LEFT", help="the left table the run was made from")
     resume.add_argument("right", metavar="RIGHT", help="the right table the run was made from")
-    resume.add_argument("--budget", type=_nonnegative, default=5.0,
-                        help="stop new requests at this observed USD cost for this resume (default: 5)")
+    resume.add_argument("--budget", type=parse_budget, default=None, metavar="DOLLARS",
+                        help="send no request that would take this resume's spending past this "
+                             "(default: 5, or $JEV_BUDGET; none: no limit)")
     resume.add_argument("--api", choices=tuple(PROVIDERS), help="API provider (default: the run's)")
     resume.add_argument("--model", metavar="ID", help="model identifier (default: the run's)")
     resume.add_argument("--no-cache", action="store_true", help="do not reuse or save cached judgments")
@@ -426,7 +438,7 @@ def _link(args: argparse.Namespace) -> None:
                     style=args.style, api=args.api, model=args.model, cache=not args.no_cache,
                     concurrency=args.concurrency, exact_shortcut=args.exact_shortcut)
     result = linker.link(left, right, left_id=args.left_id, right_id=args.right_id, how=args.how,
-                         threshold=args.threshold, min_margin=args.min_margin, budget=args.budget,
+                         threshold=args.threshold, min_margin=args.min_margin, budget=_budget(args),
                          progress=sys.stderr.isatty())  # no progress bar in Stata logs, R output or pipes
     if args.output:
         write_table(result.links, args.output)
@@ -453,7 +465,7 @@ def _resume(args: argparse.Namespace) -> None:
         raise ValueError(f"{args.run_dir!r} holds a dedupe run; resume finishes two-table link runs")
     left, right = read_table(args.left), read_table(args.right)
     before = result.meter.calls
-    result = result.resume(left, right, budget=args.budget, api=args.api, model=args.model,
+    result = result.resume(left, right, budget=_budget(args), api=args.api, model=args.model,
                            concurrency=args.concurrency, cache=not args.no_cache, progress=sys.stderr.isatty())
     result.save(folder)
     if args.output:
@@ -470,11 +482,27 @@ def _estimate(args: argparse.Namespace) -> None:
     from .block import candidates
 
     pairs = candidates(left, right, on=on, blockers=blockers, left_id=args.left_id, right_id=args.right_id)
-    _print_estimate(pairs, f"{len(left):,} left records; {len(right):,} right records")
+    _print_estimate(pairs, f"{len(left):,} left records; {len(right):,} right records",
+                    _pair_price(pairs, left, right, on, args.left_id, args.right_id, args))
 
 
-def _print_estimate(pairs: pd.DataFrame, sizes: str) -> None:
+def _pair_price(pairs, left, right, on, left_id, right_id, args) -> tuple[float, float]:
+    """The runtime's token estimate for a pair of these records, and the provider's list price."""
+    from jevkit_runtime import resolve as resolve_backend
+
+    from .judge import pair_tokens
+
+    backend = resolve_backend(PROVIDERS, getattr(args, "api", None), model=getattr(args, "model", None),
+                              require_key=False)
+    tokens = pair_tokens(pairs, left, right, on=on, entity=getattr(args, "entity", None) or "record",
+                         definition=getattr(args, "definition", "") or "", style=getattr(args, "style", "identity"),
+                         left_id=left_id, right_id=right_id, model=backend.model)
+    return tokens or 0.0, backend.price_per_mtok
+
+
+def _print_estimate(pairs: pd.DataFrame, sizes: str, price: tuple[float, float]) -> None:
     n = len(pairs)
+    tokens, per_million = price
     for item in pairs.attrs.get("blocking", {}).get("passes", []):
         lost = item.get("dropped_values")
         counts = lost and {side: lost[side]["missing"] + lost[side]["unparseable"]
@@ -483,11 +511,11 @@ def _print_estimate(pairs: pd.DataFrame, sizes: str) -> None:
             print(f"{item['name']}: {counts['left']:,} left and {counts['right']:,} right records have a "
                   f"missing or unreadable value and cannot pair in this pass")
     print(f"{sizes}; {n:,} candidate pairs\n"
-          f"Short-record judging cost scenario: ${n * 330 * 0.042 / 1_000_000:.6f}\n"
-          f"Short-record judging time scenario: {n / 200:.1f} seconds\n"
-          "Assumes 330 input tokens per pair at $0.042 per million and 200 pairs/second. "
-          "Actual cost and time depend on caching, exact matches, record length and the provider. "
-          "No API calls.")
+          f"Judging cost scenario: ${n * tokens * per_million / 1_000_000:.6f}\n"
+          f"Judging time scenario: {n / 200:.1f} seconds\n"
+          f"Assumes {tokens:,.0f} input tokens per pair (the runtime's estimate over a sample of these "
+          f"records) at ${per_million:g} per million, and 200 pairs/second (short records). "
+          "Actual cost and time depend on caching, exact matches and the provider. No API calls.")
 
 
 def _question(args: argparse.Namespace) -> None:
@@ -514,14 +542,15 @@ def _dedupe(args: argparse.Namespace) -> None:
         from .block import self_candidates
 
         pairs = self_candidates(frame, on=on, blockers=blockers, id=args.id)
-        return _print_estimate(pairs, f"{len(frame):,} records, paired with each other")
+        return _print_estimate(pairs, f"{len(frame):,} records, paired with each other",
+                               _pair_price(pairs, frame, frame, on, args.id, args.id, args))
     from .linker import Linker
 
     linker = Linker(entity=args.entity, definition=args.definition, on=on, blockers=blockers,
                     style=args.style, api=args.api, model=args.model, cache=not args.no_cache,
                     concurrency=args.concurrency, exact_shortcut=args.exact_shortcut)
     result = linker.dedupe(frame, id=args.id, threshold=args.threshold, linkage=args.linkage,
-                           unproposed=args.unproposed, budget=args.budget, progress=sys.stderr.isatty())
+                           unproposed=args.unproposed, budget=_budget(args), progress=sys.stderr.isatty())
     _write_clusters(result.clusters, result.links, args)
     if args.scores:
         write_table(result.scores, args.scores)
