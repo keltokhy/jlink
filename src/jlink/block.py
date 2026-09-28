@@ -707,9 +707,10 @@ def _union(left: pd.DataFrame, right: pd.DataFrame, blockers: list, a: list[str]
     del union
     sim = _pair_similarities(left, right, a, b, pairs) if len(pairs) else np.empty(0, dtype=float)
     order = np.lexsort((pairs[:, 1], -sim, pairs[:, 0]))
+    # A MultiIndex of IDs becomes a column of tuples; pandas 2.0 cannot build that column on its own.
     result = pd.DataFrame({
-        "left_id": left_ids.take(pairs[:, 0]),
-        "right_id": right_ids.take(pairs[:, 1]),
+        "left_id": left_ids.take(pairs[:, 0]).to_flat_index(),
+        "right_id": right_ids.take(pairs[:, 1]).to_flat_index(),
         "block": pd.Series(blocks, dtype=object),
         "sim": sim,
     }).iloc[order].reset_index(drop=True)
