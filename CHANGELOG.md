@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Needs jevkit-runtime 0.4.2, whose client opens and closes the answer store itself: `judge` left a
+  SQLite connection for the garbage collector on every call.
+
 ## 0.5.1
 
 - Support pandas 3 as well as pandas 2. pandas 3 returns read-only arrays from `.to_numpy()`, so

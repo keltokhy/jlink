@@ -142,9 +142,8 @@ def judge(candidates: pd.DataFrame, left: pd.DataFrame, right: pd.DataFrame, *, 
     todo = todo[np.argsort(-scores["sim"].to_numpy()[todo], kind="stable")]
     record_a, record_b = a["record"].to_dict(), b["record"].to_dict()
     backend = resolve(PROVIDERS, api, model=model, require_key=bool(len(todo)) and budget.limit != 0)
-    store = cache if isinstance(cache, AnswerStore) else AnswerStore(Path(cache)) if isinstance(cache, (str, Path)) \
-        else AnswerStore() if cache else None
-    jev = Client(backend, concurrency=concurrency, store=store, budget=budget, transport=transport)
+    # True or a path opens a store the client closes with itself; a store passed in stays the caller's.
+    jev = Client(backend, concurrency=concurrency, store=cache, budget=budget, transport=transport)
     run = Run("jlink", __version__)
     ask = question(entity or "", definition, style=style)
 
