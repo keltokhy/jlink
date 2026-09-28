@@ -6,6 +6,8 @@
   `block.window` raised "output array is read-only"; it also infers `str` for text IDs and
   microsecond resolution for dates where pandas 2 inferred `object` and nanoseconds. `window`
   works again, and review snapshots keep the ID column's dtype.
+- Candidate pairs with MultiIndex IDs work on pandas 2.0, the oldest version jlink allows; building the
+  tuple ID columns raised `AttributeError` there.
 
 ## 0.5.0
 
