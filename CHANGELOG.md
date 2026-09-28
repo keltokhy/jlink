@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1
 
 - Support pandas 3 as well as pandas 2. pandas 3 returns read-only arrays from `.to_numpy()`, so
   `block.window` raised "output array is read-only"; it also infers `str` for text IDs and
