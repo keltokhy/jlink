@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Support pandas 3 as well as pandas 2. pandas 3 returns read-only arrays from `.to_numpy()`, so
+  `block.window` raised "output array is read-only"; it also infers `str` for text IDs and
+  microsecond resolution for dates where pandas 2 inferred `object` and nanoseconds. `window`
+  works again, and review snapshots keep the ID column's dtype.
+
 ## 0.5.0
 
 On `jevkit-runtime` 0.4 ([jevkit-core#14](https://github.com/keltokhy/jevkit-core/issues/14)).

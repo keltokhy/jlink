@@ -96,6 +96,20 @@ def _table(frame: pd.DataFrame) -> dict:
         for row in frame.itertuples(index=False, name=None)]}
 
 
+def _id_column(values: list) -> pd.Series:
+    """Rebuild an ID column without changing the types the review captured.
+
+    Numeric IDs keep object dtype: pandas would infer int64/float64 and turn the stored Python
+    ints and floats into numpy scalars, and a mixed integer/float column would round integers
+    above 2**53. String IDs are left to pandas instead, so the dtype matches the frame the
+    snapshot came from -- pandas 2 infers object and pandas 3 infers ``str``, and hard-coding
+    either one would disagree with the other.
+    """
+    if all(isinstance(value, str) for value in values):
+        return pd.Series(values)
+    return pd.Series(values, dtype=object)
+
+
 def _frame(table: dict) -> pd.DataFrame:
     if not isinstance(table, dict) or set(table) != {"columns", "rows"}:
         raise ValueError("review tables need columns and rows")
@@ -108,8 +122,7 @@ def _frame(table: dict) -> pd.DataFrame:
     for side in ("left_id", "right_id"):
         if side not in cols:
             raise ValueError(f"review table needs {side}")
-        # Object dtype prevents a mixed integer/float ID column from rounding large integers.
-        result[side] = pd.Series([_decode_id(v) for v in result[side]], dtype=object)
+        result[side] = _id_column([_decode_id(v) for v in result[side]])
     for name in ("p", "sim", "margin"):
         if name in result:
             result[name] = pd.to_numeric(result[name], errors="raise").astype(float)

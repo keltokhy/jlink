@@ -231,8 +231,11 @@ def test_window_inside_within_matches_a_grouped_oracle(missing):
 
     def same_group(i, j):
         a, b = left.boro.iloc[i], right.borough.iloc[j]
-        return (a is None and b is None and missing == "match") or (
-            a is not None and b is not None and a.lower() == b)
+        # Missing groups arrive as None on object dtype (pandas 2) but NaN on str dtype (pandas 3),
+        # so test missingness with isna rather than identity.
+        if pd.isna(a) and pd.isna(b):
+            return missing == "match"
+        return not pd.isna(a) and not pd.isna(b) and str(a).lower() == str(b)
 
     grouped = block.within(block.window("day", between=(0, 2)), ("boro", "borough"), missing=missing)
     got = grouped.pairs(left, right)
@@ -299,7 +302,9 @@ def test_saturating_bounds_near_the_ends_of_the_timestamp_range():
     days = 290 * 365
     wide = block.window("t", days, unit="days")
     # Python integers cannot wrap, so they are the reference for sums that leave the int64 range.
-    stamps = [int(value) for value in edge.t.astype("int64")]
+    # `astype("int64")` is not that reference: pandas 3 defaults to datetime64[us], so it yields
+    # microseconds. Pin the unit to nanoseconds before converting.
+    stamps = [int(value) for value in edge.t.astype("datetime64[ns]").astype("int64")]
     expected = [[i, j] for i, a in enumerate(stamps) for j, b in enumerate(stamps)
                 if abs(a - b) <= days * 86_400 * 10**9]
     assert [0, 1] not in expected and [1, 2] in expected and [0, 3] not in expected

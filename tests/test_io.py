@@ -68,7 +68,11 @@ def test_stata_empty_nullable_and_dates(tmp_path):
     assert result.id.tolist() == ["00123", ""]
     assert result["count"].iloc[0] == 1 and pd.isna(result["count"].iloc[1])
     assert result.error.tolist() == ["", ""]
-    pd.testing.assert_series_equal(result.when, frame.when)
+    # Stata stores dates at its own resolution, so the unit after a round trip is not the one
+    # pandas 3 infers on the way in (`datetime64[us]`). Compare the instants, not the storage unit:
+    # normalizing to nanoseconds would fail for valid Stata dates outside 1677-2262.
+    pd.testing.assert_series_equal(result.when.astype("datetime64[ms]"),
+                                   frame.when.astype("datetime64[ms]"), check_names=False)
 
 
 @pytest.mark.parametrize("operation", [read_table, lambda path: write_table(pd.DataFrame({"id": [1]}), path)])

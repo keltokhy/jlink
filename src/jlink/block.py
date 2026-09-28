@@ -483,7 +483,9 @@ def _window_values(series: pd.Series, unit: str | None, date_format: str | None,
         except (pd.errors.OutOfBoundsDatetime, OverflowError) as error:
             raise ValueError(f"the {side} column {column!r} has dates outside the years 1677 to 2262, "
                              "which nanosecond timestamps cannot hold") from error
-    usable &= ~missing
+    # Rebind instead of updating in place: `.to_numpy()` returns a read-only array on pandas 3,
+    # so `usable &= ~missing` raises "output array is read-only".
+    usable = usable & ~missing
     counts = {"column": column, "missing": int(missing.sum()), "unparseable": int((~usable & ~missing).sum()),
               "time_zone": ("utc_offsets" if aware else "none") if unit is not None else None}
     return values, usable, counts
