@@ -7,7 +7,7 @@
     print(result.methods()) # a paragraph for the data appendix
 """
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 
 from . import block  # noqa: E402
 from .audit import Evaluation, audit_sample, evaluate, score_against_truth  # noqa: E402
